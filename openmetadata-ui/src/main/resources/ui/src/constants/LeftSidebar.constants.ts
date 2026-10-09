@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Cube01 } from '@untitledui/icons';
+import { Cube01, RefreshCw01 } from '@untitledui/icons';
 import { ReactComponent as GovernIcon } from '../assets/svg/bank.svg';
 import { ReactComponent as ClassificationIcon } from '../assets/svg/classification.svg';
 import { ReactComponent as MemoriesIcon } from '../assets/svg/common/memories.svg';
@@ -52,6 +52,10 @@ type UntitledIconType = React.ComponentType<{
 }>;
 
 const DataProductIcon = createIconWithStroke(Cube01 as UntitledIconType, 1.2);
+const IntegrationIcon = createIconWithStroke(
+  RefreshCw01 as UntitledIconType,
+  1.2
+);
 
 export const SIDEBAR_NESTED_KEYS = {
   [ROUTES.OBSERVABILITY_ALERTS]: ROUTES.OBSERVABILITY_ALERTS,
@@ -65,6 +69,7 @@ export const SIDEBAR_NESTED_KEYS = {
 };
 
 export const SIDEBAR_ENTITY_PATH_ALIASES: Record<string, string> = {
+  [ROUTES.HOSPITAL_INTEGRATION]: ROUTES.HOSPITAL_INTEGRATION,
   [`/${ENTITY_PATH.metrics}`]: ROUTES.METRICS,
   [`/${ENTITY_PATH.tags}`]: ROUTES.TAGS,
   '/glossary-term': ROUTES.GLOSSARY,
@@ -79,6 +84,13 @@ export const SIDEBAR_LIST: Array<LeftSidebarItem> = [
     redirect_url: ROUTES.MY_DATA,
     icon: HomeIcon,
     dataTestId: `app-bar-item-${SidebarItem.HOME}`,
+  },
+  {
+    key: ROUTES.HOSPITAL_INTEGRATION,
+    title: 'hospitalIntegration.title',
+    redirect_url: ROUTES.HOSPITAL_INTEGRATION,
+    icon: IntegrationIcon,
+    dataTestId: `app-bar-item-${SidebarItem.HOSPITAL_INTEGRATION}`,
   },
   {
     key: ROUTES.EXPLORE,

@@ -1,0 +1,318 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hospital-integration-config
+  labels:
+    app.kubernetes.io/part-of: hospital-integration
+data:
+  HOSPITAL_INTEGRATION_ENABLED: "true"
+  HOSPITAL_SEATUNNEL_URL: http://hospital-seatunnel:8080
+  HOSPITAL_SOURCE_JDBC_URL: jdbc:postgresql://hospital-integration-source:5432/synthetic_source?connectTimeout=5&socketTimeout=15
+  HOSPITAL_SOURCE_JDBC_USER: hospital_source
+  HOSPITAL_TARGET_JDBC_URL: jdbc:postgresql://hospital-integration-ods:5432/synthetic_ods?connectTimeout=5&socketTimeout=15
+  HOSPITAL_TARGET_JDBC_USER: hospital_ods
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hospital-integration-database-init
+  labels:
+    app.kubernetes.io/part-of: hospital-integration
+data:
+  source.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    psql --no-psqlrc --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --set=app_password="$APP_PASSWORD" <<'SQL'
+    CREATE ROLE hospital_source LOGIN REPLICATION PASSWORD :'app_password';
+    GRANT CONNECT, CREATE ON DATABASE synthetic_source TO hospital_source;
+    GRANT USAGE ON SCHEMA public TO hospital_source;
+    CREATE TABLE public.visit_events (
+      visit_id BIGINT PRIMARY KEY,
+      department_code VARCHAR(32) NOT NULL,
+      visit_type VARCHAR(16) NOT NULL,
+      updated_at TIMESTAMP(6) NOT NULL
+    );
+    ALTER TABLE public.visit_events OWNER TO hospital_source;
+    ALTER TABLE public.visit_events REPLICA IDENTITY FULL;
+    COMMENT ON TABLE public.visit_events IS '隔离合成就诊事件；不含患者信息';
+    COMMENT ON COLUMN public.visit_events.visit_id IS '合成事件主键';
+    COMMENT ON COLUMN public.visit_events.department_code IS '合成科室编码';
+    COMMENT ON COLUMN public.visit_events.visit_type IS '合成事件类型';
+    COMMENT ON COLUMN public.visit_events.updated_at IS '合成更新时间';
+    INSERT INTO public.visit_events
+    SELECT n, 'DEPT_' || (n % 5), 'SYNTHETIC', TIMESTAMP '2026-10-09 00:00:00'
+    FROM generate_series(1,100) n;
+    SQL
+  target.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    psql --no-psqlrc --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --set=app_password="$APP_PASSWORD" <<'SQL'
+    CREATE ROLE hospital_ods LOGIN PASSWORD :'app_password';
+    GRANT CONNECT ON DATABASE synthetic_ods TO hospital_ods;
+    GRANT USAGE ON SCHEMA public TO hospital_ods;
+    CREATE TABLE public.visit_events_full (
+      visit_id BIGINT PRIMARY KEY,
+      department_code VARCHAR(32) NOT NULL,
+      visit_type VARCHAR(16) NOT NULL,
+      updated_at TIMESTAMP(6) NOT NULL
+    );
+    CREATE TABLE public.visit_events_cdc (LIKE public.visit_events_full INCLUDING ALL);
+    CREATE TABLE public.visit_events_mapped (
+      event_id BIGINT PRIMARY KEY,
+      department VARCHAR(32) NOT NULL,
+      event_type VARCHAR(16) NOT NULL,
+      modified_at TIMESTAMP(6) NOT NULL
+    );
+    ALTER TABLE public.visit_events_full OWNER TO hospital_ods;
+    ALTER TABLE public.visit_events_cdc OWNER TO hospital_ods;
+    ALTER TABLE public.visit_events_mapped OWNER TO hospital_ods;
+    COMMENT ON TABLE public.visit_events_full IS '隔离合成 ODS 全量验证表';
+    COMMENT ON TABLE public.visit_events_cdc IS '隔离合成 ODS CDC 验证表';
+    COMMENT ON TABLE public.visit_events_mapped IS '隔离合成 ODS 字段映射验证表';
+    SQL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hospital-integration-source
+  labels:
+    app.kubernetes.io/part-of: hospital-integration
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: hospital-integration-source
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hospital-integration-source
+  labels:
+    app.kubernetes.io/part-of: hospital-integration
+spec:
+  serviceName: hospital-integration-source
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-integration-source
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hospital-integration-source
+        app.kubernetes.io/part-of: hospital-integration
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: harbor-cred
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: harbor.qcrmyy.local/coop/hospital-postgres:17.10-bookworm@sha256:6e5a6518f9d2ff9e9f4cba2a5a87d8f41b0f067f6f92ac847c344351a6c8d923
+          args: ["-c", "wal_level=logical", "-c", "max_replication_slots=20", "-c", "max_wal_senders=20", "-c", "max_slot_wal_keep_size=1GB"]
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: synthetic_admin
+            - name: POSTGRES_DB
+              value: synthetic_source
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hospital-integration-bootstrap
+                  key: SOURCE_ADMIN_PASSWORD
+            - name: APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hospital-integration-runtime
+                  key: HOSPITAL_SOURCE_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d/01-source.sh
+              subPath: source.sh
+              readOnly: true
+          startupProbe:
+            exec:
+              command: [pg_isready, -U, synthetic_admin, -d, synthetic_source]
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, synthetic_admin, -d, synthetic_source]
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: init
+          configMap:
+            name: hospital-integration-database-init
+            defaultMode: 0555
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/part-of: hospital-integration
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hospital-integration-ods
+  labels:
+    app.kubernetes.io/part-of: hospital-integration
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: hospital-integration-ods
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hospital-integration-ods
+  labels:
+    app.kubernetes.io/part-of: hospital-integration
+spec:
+  serviceName: hospital-integration-ods
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-integration-ods
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hospital-integration-ods
+        app.kubernetes.io/part-of: hospital-integration
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: harbor-cred
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: harbor.qcrmyy.local/coop/hospital-postgres:17.10-bookworm@sha256:6e5a6518f9d2ff9e9f4cba2a5a87d8f41b0f067f6f92ac847c344351a6c8d923
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: synthetic_admin
+            - name: POSTGRES_DB
+              value: synthetic_ods
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hospital-integration-bootstrap
+                  key: TARGET_ADMIN_PASSWORD
+            - name: APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hospital-integration-runtime
+                  key: HOSPITAL_TARGET_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d/01-target.sh
+              subPath: target.sh
+              readOnly: true
+          startupProbe:
+            exec:
+              command: [pg_isready, -U, synthetic_admin, -d, synthetic_ods]
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, synthetic_admin, -d, synthetic_ods]
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: init
+          configMap:
+            name: hospital-integration-database-init
+            defaultMode: 0555
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/part-of: hospital-integration
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hospital-integration-databases
+  labels:
+    app.kubernetes.io/part-of: hospital-integration
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [hospital-integration-source, hospital-integration-ods]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hospital-seatunnel
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hospital-openmetadata
+      ports:
+        - protocol: TCP
+          port: 5432

@@ -3,5 +3,6 @@ kind: Kustomization
 resources:
   - configmap.yaml
   - dependencies.yaml
+  - integration
   - openmetadata.yaml
   - integrate-backchannel-networkpolicy.yaml

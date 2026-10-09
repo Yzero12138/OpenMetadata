@@ -10,6 +10,7 @@ import WorkflowBuilder from '../../openmetadata-ui/src/main/resources/ui/src/pag
 import DomainTypeSelectForm from '../../openmetadata-ui/src/main/resources/ui/src/components/Domain/DomainTypeSelectForm/DomainTypeSelectForm.component';
 import { DomainTypeChip } from '../../openmetadata-ui/src/main/resources/ui/src/components/DomainListing/components/DomainTypeChip';
 import { DomainType } from '../../openmetadata-ui/src/main/resources/ui/src/generated/entity/domains/domain';
+import { HospitalIntegrationWorkspace } from '../../openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/HospitalIntegrationPage';
 import '../../openmetadata-ui/src/main/resources/ui/src/styles/index';
 import '../../openmetadata-ui/src/main/resources/ui/src/styles/hospital-theme.less';
 
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
       <Route path="/workflows" element={<WorkflowsPage />} />
       <Route path="/workflows/new" element={<WorkflowBuilder />} />
       <Route path="/workflows/:fqn/:tab" element={<WorkflowBuilder />} />
+      <Route path="/hospital/integration" element={<HospitalIntegrationWorkspace isAdmin={new URLSearchParams(location.search).get('role') !== 'employee'} />} />
       <Route path="/domains-preview" element={<div className="tw:p-6 tw:bg-primary">
         <h1>域类型 · 合成界面验证</h1>
         <DomainTypeSelectForm onCancel={() => undefined} onSubmit={() => undefined} />

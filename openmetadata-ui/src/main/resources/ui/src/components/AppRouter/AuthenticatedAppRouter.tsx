@@ -90,6 +90,12 @@ const MyDataPage = withPageSuspenseFallback(
   React.lazy(() => import('../../pages/MyDataPage/MyDataPage.component'))
 );
 
+const HospitalIntegrationPage = withPageSuspenseFallback(
+  React.lazy(
+    () => import('../../pages/HospitalIntegrationPage/HospitalIntegrationPage')
+  )
+);
+
 const TestSuiteIngestionPage = withPageSuspenseFallback(
   React.lazy(
     () => import('../../pages/TestSuiteIngestionPage/TestSuiteIngestionPage')
@@ -365,6 +371,10 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
         path={ROUTES.FORBIDDEN}
       />
       <Route element={<MyDataPage />} path={ROUTES.MY_DATA} />
+      <Route
+        element={<HospitalIntegrationPage />}
+        path={ROUTES.HOSPITAL_INTEGRATION}
+      />
       <Route element={<TourPageComponent />} path={ROUTES.TOUR} />
       <Route
         element={<ExplorePageV1 pageTitle={t('label.explore')} />}

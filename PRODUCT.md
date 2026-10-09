@@ -24,7 +24,8 @@ The existing Kubernetes test environment was inspected. Integrate is in `coop-de
 - Integrate remains the identity and session authority. OpenMetadata keeps responsibility for its own governance permissions.
 - Never expose the Integrate client secret or opaque session token to the browser.
 - Hospital source credentials and representative data have not been supplied. Validation data must be explicitly synthetic.
-- Future stages will add SeaTunnel and Doris; they are outside the implementation of this first stage.
+- The user approved the next integration phase: independent SeaTunnel 3.0.0, isolated synthetic PostgreSQL source and ODS, and Chinese task control in the existing workbench. Doris remains a later independent analytics-storage phase.
+- The user confirmed PC-only delivery for the complete service; mobile interfaces are outside the required delivery and acceptance scope.
 - Preserve upstream licenses and existing data catalog, lineage and incident workflows.
 
 ## Brand Commitments

@@ -49,7 +49,7 @@ const { chromium } = require('../../openmetadata-ui/src/main/resources/ui/node_m
   const browser = await chromium.launch({ headless: true,
     executablePath: process.env.HOSPITAL_QA_CHROMIUM || undefined });
   try {
-    for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+    for (const viewport of [{ width: 1440, height: 1000 }, { width: 1920, height: 1080 }]) {
       const context = await browser.newContext({ viewport, locale: 'zh-CN' });
       const page = await context.newPage();
       const errors = [];

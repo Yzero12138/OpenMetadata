@@ -1,5 +1,5 @@
 param(
-    [string]$Image = 'harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v4',
+    [string]$Image = 'harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v5',
     [switch]$Push
 )
 $ErrorActionPreference = 'Stop'
