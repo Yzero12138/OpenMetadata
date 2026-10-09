@@ -269,7 +269,9 @@ export const AuthProvider = ({
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const [timeoutId, setTimeoutId] = useState<number>();
+  const timeoutId = useRef<ReturnType<typeof setTimeout>>();
+  const integrateSsoEnabled = useRef(false);
+  const authProviderMounted = useRef(true);
   const [msalInstance, setMsalInstance] = useState<IPublicClientApplication>();
 
   const authenticatorRef = useRef<AuthenticatorRef>(null);
@@ -312,7 +314,9 @@ export const AuthProvider = ({
 
   // Handler to perform logout within application
   const onLogoutHandler = useCallback(async () => {
-    clearTimeout(timeoutId);
+    if (timeoutId.current !== undefined) {
+      clearTimeout(timeoutId.current);
+    }
 
     try {
       // Let SSO complete the logout process. Swallow failures so local
@@ -369,7 +373,7 @@ export const AuthProvider = ({
 
     // Upon logout, redirect to the login page
     navigate(ROUTES.SIGNIN);
-  }, [timeoutId]);
+  }, []);
 
   // handledVerifiedUser is memoized into handleSuccessfulLogin, so it needs a ref
   // to see the current page rather than the one the user logged out from.
@@ -405,7 +409,9 @@ export const AuthProvider = ({
     clearOidcToken();
     setIsAuthenticated(false);
     setApplicationLoading(false);
-    clearTimeout(timeoutId);
+    if (timeoutId.current !== undefined) {
+      clearTimeout(timeoutId.current);
+    }
     TokenService.getInstance().clearRefreshInProgress();
     if (forceLogout) {
       onLogoutHandler();
@@ -451,19 +457,26 @@ export const AuthProvider = ({
   };
 
   /**
-   * It will set an timer for 5 mins before Token will expire
-   * If time if less then 5 mins then it will try to SilentSignIn
-   * It will also ensure that we have time left for token expiry
-   * This method will be call upon successful signIn
+   * Renew before expiry using the native one-minute buffer. Integrate's
+   * fixed session deadline cannot be extended, so a token inside that
+   * buffer gets one timer at expiry instead of immediate cross-tab renewals.
    */
   const startTokenExpiryTimer = async () => {
+    if (!authProviderMounted.current) {
+      return;
+    }
     const oidcToken = await getOidcToken();
     // Extract expiry
-    const { isExpired, timeoutExpiry } = extractDetailsFromToken(oidcToken);
+    const { exp, isExpired, timeoutExpiry } =
+      extractDetailsFromToken(oidcToken);
     const refreshToken = await getRefreshToken();
+    if (!authProviderMounted.current) {
+      return;
+    }
 
     // Basic & LDAP renewToken depends on RefreshToken hence adding a check here for the same
     const shouldStartExpiry =
+      integrateSsoEnabled.current ||
       clientType === ClientType.Confidential ||
       refreshToken ||
       ![AuthProviderEnum.Basic, AuthProviderEnum.LDAP].includes(
@@ -471,15 +484,25 @@ export const AuthProvider = ({
       );
 
     if (!isExpired && isNumber(timeoutExpiry) && shouldStartExpiry) {
-      // Have 5m buffer before start trying for silent signIn
-      // If token is about to expire then start silentSignIn
-      // else just set timer to try for silentSignIn before token expires
-      clearTimeout(timeoutId);
+      let refreshDelay = timeoutExpiry;
 
-      const timerId = setTimeout(() => {
+      if (integrateSsoEnabled.current) {
+        if (!isNumber(exp) || !Number.isFinite(exp) || exp <= 0) {
+          return;
+        }
+        if (timeoutExpiry === 0) {
+          refreshDelay = Math.max(0, exp * 1000 - Date.now());
+        }
+      }
+      // Mount-only storage listeners must cancel the latest timer, even
+      // when their closure predates configuration loading or a renewal.
+      if (timeoutId.current !== undefined) {
+        clearTimeout(timeoutId.current);
+      }
+
+      timeoutId.current = setTimeout(() => {
         tokenService.current?.refreshToken();
-      }, timeoutExpiry);
-      setTimeoutId(Number(timerId));
+      }, refreshDelay);
     }
   };
 
@@ -511,7 +534,7 @@ export const AuthProvider = ({
         // Firing tokenService.refreshToken() here would still invoke the
         // renewer (e.g. OIDC signinSilent → hidden iframe to the IdP) on
         // every tab focus — pure IdP-side noise for a signed-out session.
-        if (!token) {
+        if (!token || !authProviderMounted.current) {
           return;
         }
         const { exp, isExpired, timeoutExpiry } =
@@ -537,6 +560,11 @@ export const AuthProvider = ({
           if (newToken && !useApplicationStore.getState().isAuthenticated) {
             await getLoggedInUserDetails();
           }
+
+          return;
+        }
+        if (integrateSsoEnabled.current) {
+          await startTokenExpiryTimer();
 
           return;
         }
@@ -570,8 +598,11 @@ export const AuthProvider = ({
    * Clean silentSignIn activities if going on
    */
   const cleanup = useCallback(() => {
-    clearTimeout(timeoutId);
-  }, [timeoutId]);
+    authProviderMounted.current = false;
+    if (timeoutId.current !== undefined) {
+      clearTimeout(timeoutId.current);
+    }
+  }, []);
 
   const handleFailedLogin = () => {
     setIsSigningUp(false);
@@ -849,6 +880,7 @@ export const AuthProvider = ({
         fetchAuthorizerConfig(),
       ]);
       const integrateConfig = await getIntegrateConfiguration();
+      integrateSsoEnabled.current = integrateConfig.enabled;
       if (integrateConfig.enabled && authConfig) {
         // Employee authentication belongs to Integrate. The existing confidential
         // authenticator only renews/revokes the server-side child session.
@@ -991,15 +1023,26 @@ export const AuthProvider = ({
   };
 
   useEffect(() => {
-    fetchAuthConfig();
-    startTokenExpiryTimer();
+    let cancelled = false;
+
+    authProviderMounted.current = true;
+    fetchAuthConfig().then(() => {
+      if (!cancelled) {
+        return startTokenExpiryTimer();
+      }
+
+      return undefined;
+    });
     initializeAxiosInterceptors();
     // Timer restart after a successful cross-tab refresh — the callback
     // itself lives in this component's closure, so we register it here
     // rather than from each authenticator.
     tokenService.current.updateRefreshSuccessCallback(startTokenExpiryTimer);
 
-    return cleanup;
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
   }, []);
 
   const contextValues = useMemo(() => {

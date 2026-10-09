@@ -10,12 +10,24 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { AxiosResponse } from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { act } from 'react-test-renderer';
-import { AuthProvider as AuthProviderProps } from '../../../generated/configuration/authenticationConfiguration';
+import {
+  AuthProvider as AuthProviderProps,
+  ClientType,
+} from '../../../generated/configuration/authenticationConfiguration';
+import { User } from '../../../generated/entity/teams/user';
+import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import axiosClient from '../../../rest';
+import { getIntegrateConfiguration } from '../../../rest/integrateAPI';
 import { getLoggedInUser } from '../../../rest/userAPI';
 import TokenService from '../../../utils/Auth/TokenService/TokenServiceUtil';
 import AuthProvider, { useAuthProvider } from './AuthProvider';
@@ -115,6 +127,7 @@ jest.mock('../../../utils/AuthProvider.util', () => {
 const mockRefreshToken = jest
   .fn()
   .mockImplementation(() => Promise.resolve('newToken'));
+const mockUpdateRefreshSuccessCallback = jest.fn<void, [() => Promise<void>]>();
 
 jest.mock('../../../utils/Auth/TokenService/TokenServiceUtil', () => {
   return {
@@ -129,7 +142,7 @@ jest.mock('../../../utils/Auth/TokenService/TokenServiceUtil', () => {
       refreshSuccessCallback: jest.fn(),
       handleTokenUpdate: jest.fn(),
       updateRenewToken: jest.fn(),
-      updateRefreshSuccessCallback: jest.fn(),
+      updateRefreshSuccessCallback: mockUpdateRefreshSuccessCallback,
       isTokenExpired: jest.fn(),
       getTokenExpiry: jest.fn(),
       fetchNewToken: jest.fn(),
@@ -962,5 +975,299 @@ describe('Sign-in routing', () => {
     });
 
     await waitFor(() => expect(useNavigate()).toHaveBeenCalledWith('/'));
+  });
+});
+
+describe('Integrate session expiry', () => {
+  const storeMock = useApplicationStore as unknown as jest.Mock<
+    ReturnType<typeof useApplicationStore.getState>,
+    []
+  >;
+  const integrateConfigurationMock =
+    getIntegrateConfiguration as jest.MockedFunction<
+      typeof getIntegrateConfiguration
+    >;
+  const loggedInUserMock = getLoggedInUser as jest.Mock<
+    Promise<User | undefined>,
+    Parameters<typeof getLoggedInUser>
+  >;
+  const defaultStoreImplementation = storeMock.getMockImplementation()!;
+  const defaultAuthConfig = defaultStoreImplementation().authConfig!;
+  const actualExtractDetailsFromToken = jest.requireActual<
+    typeof import('../../../utils/AuthProvider.util')
+  >('../../../utils/AuthProvider.util').extractDetailsFromToken;
+  const ConsumerComponent = () => <div>Hospital session</div>;
+  const renderTab = () => (
+    <AuthProvider childComponentType={ConsumerComponent}>
+      <ConsumerComponent />
+    </AuthProvider>
+  );
+  let originalNow: number;
+
+  const setRemainingSeconds = (seconds: number) => {
+    const exp = Math.floor(Date.now() / 1000) + seconds;
+    const payload = window.btoa(JSON.stringify({ exp }));
+    const token = `eyJhbGciOiJSUzI1NiJ9.${payload}.test`;
+
+    mockGetOidcToken.mockResolvedValue(token);
+
+    return token;
+  };
+
+  beforeEach(() => {
+    originalNow = Date.now();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-10-09T00:00:00Z'));
+    const stableStore = {
+      ...defaultStoreImplementation(),
+      authConfig: {
+        ...defaultAuthConfig,
+        provider: AuthProviderProps.Basic,
+        clientType: ClientType.Confidential,
+      },
+    };
+
+    storeMock.mockImplementation(() => stableStore);
+    integrateConfigurationMock.mockResolvedValue({
+      enabled: true,
+      issuer: 'https://integrate.test',
+      portalUrl: 'https://integrate.test/s/portal',
+    });
+    loggedInUserMock.mockResolvedValue({
+      id: 'hospital-user',
+      name: 'integrate_employee',
+      email: 'integrate_employee@integrate.invalid',
+    });
+    mockExtractDetailsFromToken.mockImplementation(
+      actualExtractDetailsFromToken
+    );
+    mockUpdateRefreshSuccessCallback.mockClear();
+    mockRefreshToken.mockReset();
+    mockRefreshToken.mockResolvedValue('renewed-token');
+    setRemainingSeconds(40);
+  });
+
+  afterEach(() => {
+    cleanup();
+    jest.clearAllTimers();
+    jest.setSystemTime(originalNow);
+    storeMock.mockImplementation(defaultStoreImplementation);
+    integrateConfigurationMock.mockResolvedValue({
+      enabled: false,
+      issuer: '',
+      portalUrl: '',
+    });
+    loggedInUserMock.mockResolvedValue(undefined);
+    mockGetOidcToken.mockResolvedValue('');
+    mockExtractDetailsFromToken.mockReturnValue({
+      exp: 0,
+      isExpired: true,
+      timeoutExpiry: 0,
+    });
+  });
+
+  it('waits for Integrate configuration before starting the initial expiry timer', async () => {
+    let releaseConfiguration!: (
+      config: Awaited<ReturnType<typeof getIntegrateConfiguration>>
+    ) => void;
+
+    integrateConfigurationMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        releaseConfiguration = resolve;
+      })
+    );
+    await act(async () => {
+      render(renderTab());
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(250);
+    });
+
+    expect(mockRefreshToken).not.toHaveBeenCalled();
+
+    await act(async () => {
+      releaseConfiguration({
+        enabled: true,
+        issuer: 'https://integrate.test',
+        portalUrl: 'https://integrate.test/s/portal',
+      });
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(39_750);
+    });
+
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the loaded Integrate mode in the mount-time cross-tab listener', async () => {
+    const stableStore = {
+      ...defaultStoreImplementation(),
+      authConfig: {
+        ...defaultAuthConfig,
+        provider: AuthProviderProps.Basic,
+        clientType: ClientType.Public,
+      },
+    };
+
+    storeMock.mockImplementation(() => stableStore);
+    await act(async () => {
+      render(renderTab());
+    });
+    const [callback] = mockUpdateRefreshSuccessCallback.mock.calls[0];
+
+    await act(async () => {
+      await callback();
+      jest.advanceTimersByTime(40_000);
+    });
+
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps one expiry timer per tab after repeated cross-tab refresh notices', async () => {
+    await act(async () => {
+      render(
+        <>
+          {renderTab()}
+          {renderTab()}
+        </>
+      );
+    });
+    const callbacks = mockUpdateRefreshSuccessCallback.mock.calls.map(
+      ([callback]) => callback
+    );
+
+    expect(callbacks).toHaveLength(2);
+
+    for (let notice = 0; notice < 3; notice++) {
+      await act(async () => {
+        await Promise.all(callbacks.map((callback) => callback()));
+      });
+    }
+    await act(async () => {
+      jest.advanceTimersByTime(250);
+    });
+
+    expect(mockRefreshToken).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(39_750);
+    });
+
+    expect(mockRefreshToken).toHaveBeenCalledTimes(2);
+  });
+
+  it('reschedules a valid near-expiry session when the tab becomes visible', async () => {
+    await act(async () => {
+      render(renderTab());
+    });
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+    await act(async () => {
+      fireEvent(document, new Event('visibilitychange'));
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(250);
+    });
+
+    expect(mockRefreshToken).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(39_750);
+    });
+
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('renews before expiry when more than the native refresh buffer remains', async () => {
+    setRemainingSeconds(100);
+    await act(async () => {
+      render(renderTab());
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(39_999);
+    });
+
+    expect(mockRefreshToken).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(1);
+    });
+
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows one refresh when the stored Integrate token has expired', async () => {
+    setRemainingSeconds(-1);
+    mockRefreshToken.mockResolvedValue(null);
+    await act(async () => {
+      render(renderTab());
+    });
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    });
+    await act(async () => {
+      fireEvent(document, new Event('visibilitychange'));
+    });
+
+    expect(mockRefreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not schedule immediate refresh for an Integrate token without exp', async () => {
+    mockGetOidcToken.mockResolvedValue('eyJhbGciOiJSUzI1NiJ9.e30.test');
+    await act(async () => {
+      render(renderTab());
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(250);
+    });
+
+    expect(mockRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it('does not create a timer when an in-flight token read finishes after unmount', async () => {
+    let view!: ReturnType<typeof render>;
+
+    await act(async () => {
+      view = render(renderTab());
+    });
+    const token = setRemainingSeconds(40);
+    let releaseToken!: (value: string) => void;
+
+    mockGetOidcToken.mockReturnValueOnce(
+      new Promise((resolve) => {
+        releaseToken = resolve;
+      })
+    );
+    const [callback] = mockUpdateRefreshSuccessCallback.mock.calls[0];
+    const pendingTimer = callback();
+
+    view.unmount();
+    await act(async () => {
+      releaseToken(token);
+      await pendingTimer;
+      jest.advanceTimersByTime(40_000);
+    });
+
+    expect(mockRefreshToken).not.toHaveBeenCalled();
+  });
+
+  it('ignores a captured cross-tab callback after the provider has unmounted', async () => {
+    let view!: ReturnType<typeof render>;
+
+    await act(async () => {
+      view = render(renderTab());
+    });
+    const [callback] = mockUpdateRefreshSuccessCallback.mock.calls[0];
+
+    view.unmount();
+    await act(async () => {
+      await callback();
+      jest.advanceTimersByTime(40_000);
+    });
+
+    expect(mockRefreshToken).not.toHaveBeenCalled();
   });
 });

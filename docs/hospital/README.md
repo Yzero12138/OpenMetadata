@@ -139,24 +139,31 @@ kubectl rollout status deployment/hospital-openmetadata -n datahub-open-test
 ConfigMap 更新后，使用 `kubectl rollout restart deployment/hospital-openmetadata -n datahub-open-test` 生效。
 本阶段不启用 Airflow；后续按实际采集需求配置采集机器人与管道服务。
 
-首个治理管理员需要由院内管理员明确指定并授予本地治理角色；首次登录的员工不会自动升为管理员。
+首个治理管理员已由用户明确指定，并根据已核对的 Integrate 稳定 subject 配置。
+`AUTHORIZER_ADMIN_PRINCIPALS` 通过现有 runtime Secret 注入，启动时使用原生管理员初始化机制；
+不在源码中保存真实人员映射。其他首次登录的员工默认不会升为管理员。
+部署到其他环境时，先核对人员工号对应的稳定 subject，再运行
+`./deploy/hospital/k8s/configure-initial-admin.ps1 -Subject '<verified-subject>'` 并滚动启动。
+这个脚本仅配置首个管理员；后续人员治理角色通过平台管理，撤权也应显式执行。
 完整工号登录验收必须在已获得院内设备授权的浏览器中进行；界面截图使用的是独立的合成元数据验证工具。
 本阶段没有连接真实 HIS/LIS、没有加载患者数据；后续采集配置应从测试数据源开始。
 
 ## 本轮验证记录（2026-10-09）
 
 测试部署已实际应用：三个服务 Pod 均为 `1/1 Running`，数据库迁移成功，治理平台 rollout 成功。
-运行镜像为 `harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v1`，摘要：
-`sha256:7ad56a7073a072c1ffbef2d6777627c23dd70fafba9202315c4552ca80a85a37`。
+运行镜像为 `harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v2`，摘要：
+`sha256:b67ee2f6500c25d0e823df80f1ef3130efa5f527f344ae67f4660104c3fb26c2`。
 
 | 验证范围 | 结果 |
 |---|---|
 | 服务端构建、Spotless apply/check | 通过 |
 | 身份协议、JWT、持久会话回归 | 79 项通过，无失败或跳过 |
-| 登录、握手、工作台、认证、路由及旧首页回归 | 7 个测试套件，60 项通过 |
+| 登录、握手、工作台、认证、路由及旧首页回归 | 7 个测试套件，69 项通过 |
+| Integrate 到期与组件卸载回归 | 新增 9 项（包含在上述 69 项中），先复现失败后通过；独立代码复核发现均已解决 |
 | UI 生产构建与服务/UI JAR 打包 | 通过 |
 | 完整 K8s 清单服务端校验 | 通过，Secret 不含在清单中 |
 | 真实部署验收 | 17 项通过，含桌面 1440px、移动 390px，浏览器运行异常为 0 |
+| 首个治理管理员 | 已核对指定人员的 Integrate subject、启用状态和门户权限；启动后只读查询确认对应本地身份 isAdmin=true、非机器人，内部邮箱匹配 |
 | 设计核验 | 10 张桌面/移动/明暗截图，检测器无发现；独立最终复核 verdict 为 ship |
 | 全量 TypeScript 检查 | 未通过：基线与本分支均为 550 条诊断，无新增文件/诊断类型；不能视为全库类型检查通过 |
 
@@ -164,6 +171,10 @@ ConfigMap 更新后，使用 `kubectl rollout restart deployment/hospital-openme
 以及原生 auth/login 返回 403；错误或缺失 Origin 拒绝，畸形票据返回 400。
 符合格式但不存在的票据经真实 Integrate 内网接口核验后返回 401。
 真实入口页面只显示门户链接，没有邮箱或密码输入，手机与桌面没有横向溢出。
+
+Integrate 会话最后 60 秒按 JWT 实际到期时间安排一次刷新，避免固定源会话到期时间
+触发多标签互相立即刷新。跨标签通知只保留一个计时器；组件卸载后，尚未完成的令牌读取
+及旧回调均不会重新创建计时器。仍保留超过缓冲期时的提前刷新及过期令牌的正常处理。
 
 复现部署验收：
 
@@ -173,4 +184,4 @@ node tools/hospital-ui-preview/verify-deployment.cjs
 ```
 
 合成界面预览与真实部署验收是不同范围。尚未完成授权设备上的真实员工登录、退出和权限撤回验收；
-也未指定首个本地治理管理员。以上结果不等同于完成这些人员流程或接入医院业务数据。
+首个本地治理管理员已经指定并配置。以上结果不等同于完成这些人员流程或接入医院业务数据。

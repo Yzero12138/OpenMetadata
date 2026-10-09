@@ -8,7 +8,7 @@ COPY openmetadata-ui-2.0.4.jar /opt/openmetadata/libs/openmetadata-ui-2.0.4.jar
 
 FROM eclipse-temurin:21-jre
 LABEL org.opencontainers.image.source="https://github.com/Yzero12138/OpenMetadata"
-LABEL org.opencontainers.image.version="2.0.4-integrate-v1"
+LABEL org.opencontainers.image.version="2.0.4-integrate-v2"
 COPY --from=distribution --chown=1000:1000 /opt/openmetadata /opt/openmetadata
 WORKDIR /opt/openmetadata
 USER 1000:1000
