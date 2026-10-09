@@ -17,7 +17,7 @@ The user reported a missing workflow creation action, untranslated domain types 
 - [x] Run scoped UI import organization, ESLint and Prettier in order; run relevant regression tests and the production build.
 - [x] Inspect desktop and mobile workflow/domain states in one batched visual pass; run the Impeccable detector and the required independent review.
 - [x] Build the next hospital image, deploy to the already authorized test Kubernetes environment and verify readiness, retained SSO protections and Chinese interface assets.
-- [ ] Push the verified changes to the existing fork branch and update its draft PR using only public code and source-test information.
+- [x] Push the verified changes to the existing fork branch and update its draft PR using only public code and source-test information.
 
 Technical acronyms, product names, API identifiers and user-entered asset metadata can remain in their original form. No employee session is fabricated for acceptance.
 
@@ -38,3 +38,7 @@ The initial batched visual review found clipped narrow-screen header controls, a
 The final UI JAR matches the verified entry, Chinese bundle, workflow bundles and responsive styles. Hospital image `2.0.4-integrate-v4` was built and pushed, and the application manifest was applied to the authorized test cluster. The migration container exited 0 and the deployment rolled out successfully. Its running image digest matches the pushed image.
 
 All 17 live portal/authentication-protection checks and all 7 read-only identity-preservation checks passed. The latter retain the mapped UUID, username, administrator flag, canonical email, roles, teams and relationships. Five deployed JS/CSS resources match the final local production build by SHA-256. The deployed HTML also matches the original server template after its documented base-path, per-request nonce and line-ending transformations. No employee login was synthesized and no hospital workflow or business metadata was written by these checks.
+
+## Source delivery
+
+Correction commit `699f047e91d302d14fb1d7cf9b44cde0cd372038` was pushed to the existing fork branch `feat/hospital-governance-integrate`. Existing draft PR #1 was updated and its source head and sanitized description verified. Its description includes code behavior and source-test results only; deployment addresses, staff mappings and credentials are excluded. The PR remains draft for the separately documented real-employee acceptance.
