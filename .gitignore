@@ -208,3 +208,11 @@ ingestion/.claude/agents
 test-results/
 
 docs/superpowers/*
+
+# Hospital development artifacts and local secrets
+.logs/
+.cache/
+**/.env.hospital.local
+.impeccable/review/
+.impeccable/build/
+.agents/skills/impeccable/scripts/bin/

@@ -8,6 +8,7 @@ import io.dropwizard.lifecycle.Managed;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
@@ -15,6 +16,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.entity.teams.User;
@@ -127,8 +129,23 @@ public class SessionService implements Managed {
       String provider,
       User user,
       String omRefreshToken) {
+    return createActiveSession(
+        request, response, provider, user, omRefreshToken, null, getSessionExpirySeconds());
+  }
+
+  public UserSession createActiveSession(
+      jakarta.servlet.http.HttpServletRequest request,
+      jakarta.servlet.http.HttpServletResponse response,
+      String provider,
+      User user,
+      String omRefreshToken,
+      String providerRefreshToken,
+      int maximumLifetimeSeconds) {
+    if (maximumLifetimeSeconds < 1) {
+      throw new IllegalArgumentException("Session lifetime must be positive");
+    }
     long now = System.currentTimeMillis();
-    int sessionExpirySeconds = getSessionExpirySeconds();
+    int sessionExpirySeconds = Math.min(getSessionExpirySeconds(), maximumLifetimeSeconds);
     long expiresAt = now + TimeUnit.SECONDS.toMillis(sessionExpirySeconds);
     UserSession session =
         UserSession.builder()
@@ -140,6 +157,7 @@ public class SessionService implements Managed {
             .username(user.getName())
             .email(user.getEmail())
             .omRefreshToken(encryptIfPresent(omRefreshToken))
+            .providerRefreshToken(encryptIfPresent(providerRefreshToken))
             .version(0L)
             .createdAt(now)
             .updatedAt(now)
@@ -499,7 +517,18 @@ public class SessionService implements Managed {
   }
 
   public Optional<UserSession> getFreshSessionById(String sessionId) {
-    return reloadSession(sessionId);
+    Optional<UserSession> session = reloadSession(sessionId);
+    if (session.isPresent() && !externalSessionValidator.test(session.get())) {
+      revokeSession(sessionId);
+      return Optional.empty();
+    }
+    return session;
+  }
+
+  private volatile Predicate<UserSession> externalSessionValidator = session -> true;
+
+  public void setExternalSessionValidator(Predicate<UserSession> validator) {
+    externalSessionValidator = Objects.requireNonNull(validator);
   }
 
   public Optional<UserSession> recordSessionAccess(UserSession session) {

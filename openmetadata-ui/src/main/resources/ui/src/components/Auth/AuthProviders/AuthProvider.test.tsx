@@ -34,6 +34,10 @@ Object.defineProperty(globalThis, 'localStorage', {
 
 const mockOnLogoutHandler = jest.fn();
 
+jest.mock('../../../rest/integrateAPI', () => ({
+  getIntegrateConfiguration: jest.fn().mockResolvedValue({ enabled: false }),
+}));
+
 jest.mock('../../../hooks/useCustomLocation/useCustomLocation', () => {
   return jest.fn().mockImplementation(() => ({ pathname: 'pathname' }));
 });

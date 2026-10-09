@@ -70,6 +70,8 @@ import org.openmetadata.service.monitoring.RequestLatencyContext;
 import org.openmetadata.service.security.auth.BotTokenCache;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 import org.openmetadata.service.security.auth.UserTokenCache;
+import org.openmetadata.service.security.integrate.IntegrateAuthServletHandler;
+import org.openmetadata.service.security.integrate.IntegrateIdentityClient;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.security.saml.JwtTokenCacheManager;
 import org.openmetadata.service.security.session.SessionService;
@@ -430,6 +432,10 @@ public class JwtFilter implements ContainerRequestFilter {
     Claim sessionClaim = claims.get(JWTTokenGenerator.SESSION_ID_CLAIM);
     String sessionId = sessionClaim == null ? null : sessionClaim.asString();
     if (nullOrEmpty(sessionId)) {
+      if (IntegrateAuthServletHandler.isEnabled() && !isBot(claims)) {
+        throw AuthenticationException.getInvalidTokenException(
+            "Sign in from the Integrate portal.");
+      }
       return;
     }
 
@@ -470,6 +476,13 @@ public class JwtFilter implements ContainerRequestFilter {
    */
   private void validateSessionProviderIsCurrent(UserSession session) {
     String sessionProvider = session.getProvider();
+    if (IntegrateAuthServletHandler.isEnabled()) {
+      if (!IntegrateIdentityClient.PROVIDER.equals(sessionProvider)) {
+        throw AuthenticationException.getInvalidTokenException(
+            "Sign in from the Integrate portal.");
+      }
+      return;
+    }
     if (nullOrEmpty(sessionProvider) || providerType == null) {
       return;
     }

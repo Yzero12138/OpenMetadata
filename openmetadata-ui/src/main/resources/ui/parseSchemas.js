@@ -92,7 +92,7 @@ async function traverseDirectory(
     if (fs.statSync(Absolute).isDirectory()) {
       await traverseDirectory(Absolute, playDir, destDir, shouldDereference);
     } else {
-      const name = Absolute.replace(playDir, destDir);
+      const name = path.join(destDir, path.relative(playDir, Absolute));
       await parseSchema(Absolute, name, shouldDereference);
     }
   }

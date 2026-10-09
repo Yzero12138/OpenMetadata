@@ -13,7 +13,9 @@
 
 import i18next, { InitOptions } from 'i18next';
 import { map, upperCase } from 'lodash';
+import { hospitalChinese, hospitalEnglish } from '../../locale/hospital';
 import enUS from '../../locale/languages/en-us.json';
+import zhCN from '../../locale/languages/zh-cn.json';
 import { SupportedLocales } from './LocalUtil.interface';
 
 export const languageSelectOptions = map(SupportedLocales, (value, key) => ({
@@ -26,11 +28,12 @@ export const getInitOptions = (): InitOptions => {
   return {
     supportedLngs: Object.values(SupportedLocales),
     resources: {
-      'en-US': { translation: enUS },
+      'en-US': { translation: enUS, hospital: hospitalEnglish },
+      'zh-CN': { translation: zhCN, hospital: hospitalChinese },
     },
-    fallbackLng: ['en-US'],
+    fallbackLng: ['zh-CN', 'en-US'],
     detection: {
-      order: ['querystring', 'cookie', 'navigator'],
+      order: ['querystring', 'cookie'],
       caches: ['cookie'], // cache user language on
     },
     interpolation: {

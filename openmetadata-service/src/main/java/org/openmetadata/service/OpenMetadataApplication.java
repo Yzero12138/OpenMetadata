@@ -175,6 +175,10 @@ import org.openmetadata.service.security.auth.NoopAuthenticator;
 import org.openmetadata.service.security.auth.SecurityConfigurationManager;
 import org.openmetadata.service.security.auth.UserActivityFilter;
 import org.openmetadata.service.security.auth.UserActivityTracker;
+import org.openmetadata.service.security.integrate.IntegrateAuthServlet;
+import org.openmetadata.service.security.integrate.IntegrateAuthServletHandler;
+import org.openmetadata.service.security.integrate.IntegratePasswordEndpointFilter;
+import org.openmetadata.service.security.integrate.IntegrateSsoConfig;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.security.policyevaluator.SubjectCache;
 import org.openmetadata.service.security.saml.OMMicrometerHttpFilter;
@@ -566,6 +570,11 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
     ServletHolder refreshHolder = new ServletHolder(new AuthRefreshServlet());
     refreshHolder.setName("auth_refresh");
     environment.getApplicationContext().addServlet(refreshHolder, "/api/v1/auth/refresh");
+
+    ServletHolder integrateHolder = new ServletHolder(new IntegrateAuthServlet());
+    integrateHolder.setName("integrate_auth");
+    contextHandler.addServlet(integrateHolder, "/api/v1/integrate/auth/*");
+    environment.jersey().register(new IntegratePasswordEndpointFilter());
   }
 
   private void registerUserMetricsServlet(Environment environment) {
@@ -963,6 +972,10 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
       MutableServletContextHandler contextHandler,
       AuthServeletHandler handler,
       SessionService sessionService) {
+    IntegrateSsoConfig integrateConfig = IntegrateSsoConfig.fromEnvironment();
+    if (integrateConfig.enabled()) {
+      handler = new IntegrateAuthServletHandler(integrateConfig, sessionService);
+    }
     contextHandler.setAttribute(AuthServeletHandlerRegistry.AUTH_HANDLER_ATTRIBUTE, handler);
     contextHandler.setAttribute(
         AuthServeletHandlerRegistry.SESSION_SERVICE_ATTRIBUTE, sessionService);

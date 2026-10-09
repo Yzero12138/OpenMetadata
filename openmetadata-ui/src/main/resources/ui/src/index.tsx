@@ -14,8 +14,11 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import AppRoot from './AppRoot';
+import IntegrateLoginPage from './pages/LoginPage/IntegrateLoginPage';
+import './styles/hospital-theme.less';
 import './styles/index';
 import { getBasePath } from './utils/HistoryUtils';
+import { isIntegrateLaunch } from './utils/IntegrateSso';
 import { isSsoTestLoginPopup } from './utils/SsoTestLoginPopup';
 
 const recordPlaywrightAppBoot = () => {
@@ -51,6 +54,7 @@ if (!container) {
 }
 
 recordPlaywrightAppBoot();
+document.body.classList.add('hospital-ui');
 
 // The SSO "Test Login" popup returns to the configured callback URL. When this
 // document is that isolated popup, handle the OIDC handshake separately and
@@ -61,6 +65,19 @@ if (isSsoTestLoginPopup()) {
     .then((module) => module.runSsoTestCallback())
     // If the chunk fails to load, close the popup so the opener doesn't hang.
     .catch(() => globalThis.close());
+} else if (isIntegrateLaunch()) {
+  const root = createRoot(container);
+  const mountApplication = () => {
+    window.history.replaceState(null, '', `${getBasePath()}/`);
+    root.render(
+      <React.StrictMode>
+        <AppRoot />
+      </React.StrictMode>
+    );
+  };
+  // The one-use popup exchange precedes app boot, so an old employee's session
+  // cannot be restored while a different employee signs in from the portal.
+  root.render(<IntegrateLoginPage connect onConnected={mountApplication} />);
 } else {
   const root = createRoot(container);
 

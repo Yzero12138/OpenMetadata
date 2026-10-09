@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { isEmpty } from 'lodash';
 import { lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
@@ -58,27 +57,18 @@ const SamlCallback = withPageSuspenseFallback(
   lazy(() => import('../../pages/SamlCallback'))
 );
 
-const SignUpPage = withPageSuspenseFallback(
-  lazy(() => import('../../pages/SignUp/SignUpPage'))
-);
-
 const AppRouter = () => {
   const UnAuthenticatedAppRouter =
     applicationRoutesClass.getUnAuthenticatedRouteElements();
 
-  const {
-    currentUser,
-    isAuthenticated,
-    isApplicationLoading,
-    isAuthenticating,
-  } = useApplicationStore(
-    useShallow((state) => ({
-      currentUser: state.currentUser,
-      isAuthenticated: state.isAuthenticated,
-      isApplicationLoading: state.isApplicationLoading,
-      isAuthenticating: state.isAuthenticating,
-    }))
-  );
+  const { isAuthenticated, isApplicationLoading, isAuthenticating } =
+    useApplicationStore(
+      useShallow((state) => ({
+        isAuthenticated: state.isAuthenticated,
+        isApplicationLoading: state.isApplicationLoading,
+        isAuthenticating: state.isAuthenticating,
+      }))
+    );
 
   const appMode = useAppMode();
   const ModeRoutes = useAppRoutesRegistry((state) => state.routes[appMode]);
@@ -135,13 +125,7 @@ const AppRouter = () => {
         path={APP_ROUTER_ROUTES.UNAUTHORISED}
       />
       <Route
-        element={
-          isEmpty(currentUser) ? (
-            <SignUpPage />
-          ) : (
-            <Navigate replace to={APP_ROUTER_ROUTES.HOME} />
-          )
-        }
+        element={<Navigate replace to={APP_ROUTER_ROUTES.SIGNIN} />}
         path={APP_ROUTER_ROUTES.SIGNUP}
       />
       <Route

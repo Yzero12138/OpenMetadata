@@ -77,6 +77,7 @@ import { useExploreCache } from '../../../hooks/useExploreCache';
 import { queryClient } from '../../../queryClient';
 import axiosClient from '../../../rest';
 import { clearEtagCache } from '../../../rest/etagInterceptor';
+import { getIntegrateConfiguration } from '../../../rest/integrateAPI';
 import {
   fetchAuthenticationConfig,
   fetchAuthorizerConfig,
@@ -463,6 +464,7 @@ export const AuthProvider = ({
 
     // Basic & LDAP renewToken depends on RefreshToken hence adding a check here for the same
     const shouldStartExpiry =
+      clientType === ClientType.Confidential ||
       refreshToken ||
       ![AuthProviderEnum.Basic, AuthProviderEnum.LDAP].includes(
         authConfig?.provider as AuthProviderEnum
@@ -846,6 +848,15 @@ export const AuthProvider = ({
         fetchAuthenticationConfig(),
         fetchAuthorizerConfig(),
       ]);
+      const integrateConfig = await getIntegrateConfiguration();
+      if (integrateConfig.enabled && authConfig) {
+        // Employee authentication belongs to Integrate. The existing confidential
+        // authenticator only renews/revokes the server-side child session.
+        authConfig.provider = AuthProviderEnum.Basic;
+        authConfig.clientType = ClientType.Confidential;
+        authConfig.enableSelfSignup = false;
+        authConfig.enableAutoRedirect = false;
+      }
       if (!isNil(authConfig)) {
         const provider = authConfig.provider;
         // show an error toast if provider is null or not supported
