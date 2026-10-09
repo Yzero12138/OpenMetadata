@@ -93,7 +93,7 @@ public class JwtFilter implements ContainerRequestFilter {
   private static final Set<String> NATIVE_PASSWORD_PROVIDER_VALUES =
       Set.of(AuthProvider.BASIC.value(), AuthProvider.OPENMETADATA.value());
   @Getter private List<String> jwtPrincipalClaims;
-  @Getter private Map<String, String> jwtPrincipalClaimsMapping;
+  private Map<String, String> jwtPrincipalClaimsMapping;
   @Getter private String jwtTeamClaimMapping;
   private JwkProvider jwkProvider;
   private String principalDomain;
@@ -192,11 +192,10 @@ public class JwtFilter implements ContainerRequestFilter {
       DecodedJWT decodedJwt = decodeAndVerify(tokenFromHeader);
       String tokenKeyId = decodedJwt.getKeyId();
       Map<String, Claim> claims = extractClaims(decodedJwt);
-      String userName =
-          findUserNameFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims);
+      Map<String, String> claimsMapping = getJwtPrincipalClaimsMapping();
+      String userName = findUserNameFromClaims(claimsMapping, jwtPrincipalClaims, claims);
       String email =
-          findEmailFromClaims(
-              jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims, principalDomain);
+          findEmailFromClaims(claimsMapping, jwtPrincipalClaims, claims, principalDomain);
       boolean isBotUser = isBot(claims);
 
       String impersonateUser = requestContext.getHeaderString(IMPERSONATE_USER_HEADER);
@@ -515,9 +514,9 @@ public class JwtFilter implements ContainerRequestFilter {
 
   public CatalogSecurityContext getCatalogSecurityContext(String token) {
     Map<String, Claim> claims = validateJwtAndGetClaims(token);
-    String userName = findUserNameFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims);
-    String email =
-        findEmailFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims, principalDomain);
+    Map<String, String> claimsMapping = getJwtPrincipalClaimsMapping();
+    String userName = findUserNameFromClaims(claimsMapping, jwtPrincipalClaims, claims);
+    String email = findEmailFromClaims(claimsMapping, jwtPrincipalClaims, claims, principalDomain);
     CatalogPrincipal catalogPrincipal = new CatalogPrincipal(userName, email);
     boolean isBotUser = isBot(claims);
     return new CatalogSecurityContext(
@@ -526,6 +525,12 @@ public class JwtFilter implements ContainerRequestFilter {
         SecurityContext.DIGEST_AUTH,
         getUserRolesFromClaims(claims, isBotUser),
         isBotUser);
+  }
+
+  public Map<String, String> getJwtPrincipalClaimsMapping() {
+    return IntegrateAuthServletHandler.isEnabled()
+        ? Map.of(USERNAME_CLAIM_KEY, USERNAME_CLAIM_KEY, EMAIL_CLAIM_KEY, EMAIL_CLAIM_KEY)
+        : jwtPrincipalClaimsMapping;
   }
 
   private Algorithm createAlgorithmFromJwk(

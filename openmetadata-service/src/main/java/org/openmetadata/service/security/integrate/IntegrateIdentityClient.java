@@ -81,6 +81,14 @@ public final class IntegrateIdentityClient {
     }
   }
 
+  public static String email(String username, String domain) {
+    String localPart =
+        username.matches("integrate_[0-9a-f]{64}")
+            ? username.substring("integrate_".length())
+            : username;
+    return localPart + "@" + domain;
+  }
+
   private Identity request(String operation, Map<String, String> body, boolean needsToken) {
     try {
       String credentials =

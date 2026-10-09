@@ -14,6 +14,7 @@ The source baseline is OpenMetadata 2.0.4. Human sign-in happens in Integrate wi
 - [x] Deploy the adapted image, ConfigMap, Secret references and new database/search volumes to the test Kubernetes environment. Validate actual service readiness, password-endpoint rejection, UI entry and the real Integrate backchannel after the user-approved limited NetworkPolicy change.
 - [x] Fix fixed-deadline cross-tab renewal and asynchronous timer cleanup, with nine failing-then-passing regression tests and independent code review.
 - [x] Verify the user-appointed initial administrator's Integrate subject, active status and portal permission, and configure native governance admin initialization through the runtime Secret.
+- [x] Repair the reported post-login native email constraint failure without changing stable usernames, UUIDs or local roles; verify bootstrap compatibility, real native PATCH/PUT migration and REST/Socket principal mapping. Roll out the test image, check identity preservation and repeat verification after one cold restart.
 - [x] Commit and push the changes to the user's fork with a reviewable change description. Delivery branch: `feat/hospital-governance-integrate`; comparison base: `hospital/2.0.4-base` (the exact upstream 2.0.4 release).
 
 Acceptance remains for a hospital-authorized device: real employee portal login and logout/revocation. The appointed initial administrator has been verified and configured. The test cluster is running; no employee login or session was simulated for live acceptance.

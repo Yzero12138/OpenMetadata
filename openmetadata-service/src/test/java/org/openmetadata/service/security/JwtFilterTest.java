@@ -61,10 +61,13 @@ import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 import org.openmetadata.service.security.auth.UserTokenCache;
+import org.openmetadata.service.security.integrate.IntegrateAuthServletHandler;
+import org.openmetadata.service.security.integrate.IntegrateSsoConfig;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.security.session.SessionService;
 import org.openmetadata.service.security.session.SessionStatus;
 import org.openmetadata.service.security.session.UserSession;
+import org.openmetadata.service.socket.SocketAddressFilter;
 
 class JwtFilterTest {
 
@@ -684,5 +687,62 @@ class JwtFilterTest {
     field.setAccessible(true);
     field.setBoolean(filter, useRolesFromProvider);
     return filter;
+  }
+
+  @Test
+  void integrateSessionKeepsUsernameSeparateFromTheInternalEmail() {
+    String username = "integrate_" + "a".repeat(64);
+    String email = "a".repeat(64) + "@integrate.invalid";
+    var previousHandler = AuthServeletHandlerRegistry.getHandler();
+    var previousSessions = AuthServeletHandlerRegistry.getSessionService();
+    var sessions = sessionServiceReturning(activeSession("session-1", username, "integrate"));
+    AuthServeletHandlerRegistry.setHandler(
+        new IntegrateAuthServletHandler(integrateConfig(), sessions));
+    AuthServeletHandlerRegistry.setSessionService(null, sessions);
+    try {
+      JwtFilter filter =
+          new JwtFilter(
+              jwkProvider,
+              List.of("email", "preferred_username", "sub"),
+              "integrate.invalid",
+              false);
+      String jwt =
+          JWT.create()
+              .withExpiresAt(Date.from(Instant.now().plusSeconds(120)))
+              .withClaim("sub", username)
+              .withClaim("username", username)
+              .withClaim("email", email)
+              .withClaim(TOKEN_TYPE, ServiceTokenType.OM_USER.value())
+              .withClaim(JWTTokenGenerator.SESSION_ID_CLAIM, "session-1")
+              .sign(algorithm);
+      var request = createRequestContextWithJwt(jwt);
+
+      filter.filter(request);
+
+      var captured = ArgumentCaptor.forClass(SecurityContext.class);
+      verify(request).setSecurityContext(captured.capture());
+      var principal = (CatalogPrincipal) captured.getValue().getUserPrincipal();
+      assertEquals(username, principal.getName());
+      assertEquals(email, principal.getEmail());
+      var socketPrincipal = filter.getCatalogSecurityContext(jwt).getUserPrincipal();
+      assertEquals(username, socketPrincipal.getName());
+      assertEquals(email, ((CatalogPrincipal) socketPrincipal).getEmail());
+      var socketToken = SocketAddressFilter.validatePrefixedTokenRequest(filter, "Bearer " + jwt);
+      assertEquals(username, socketToken.userName());
+      assertEquals("session-1", socketToken.sessionId());
+    } finally {
+      AuthServeletHandlerRegistry.setHandler(previousHandler);
+      AuthServeletHandlerRegistry.setSessionService(null, previousSessions);
+    }
+  }
+
+  private static IntegrateSsoConfig integrateConfig() {
+    return IntegrateSsoConfig.fromEnvironment(
+        Map.of(
+            "INTEGRATE_SSO_ENABLED", "true",
+            "INTEGRATE_SSO_ISSUER", "https://integrate.example.hospital",
+            "INTEGRATE_SSO_TARGET_ORIGIN", "https://metadata.example.hospital",
+            "INTEGRATE_SSO_CLIENT_ID", "hospital-metadata",
+            "INTEGRATE_SSO_CLIENT_SECRET", "s".repeat(40)));
   }
 }

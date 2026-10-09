@@ -16,8 +16,11 @@ package org.openmetadata.service.security.integrate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mockStatic;
 
 import com.sun.net.httpserver.HttpServer;
+import jakarta.validation.Validation;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -27,6 +30,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openmetadata.service.security.AuthServeletHandlerRegistry;
+import org.openmetadata.service.security.NoopAuthServeletHandler;
+import org.openmetadata.service.util.UserUtil;
 
 class IntegrateIdentityClientTest {
   private HttpServer server;
@@ -179,5 +185,58 @@ class IntegrateIdentityClientTest {
                     "INTEGRATE_SSO_TARGET_ORIGIN", "https://metadata.example.hospital",
                     "INTEGRATE_SSO_BACKCHANNEL_ORIGIN", issuer,
                     "INTEGRATE_SSO_ALLOW_HTTP_TEST", "false")));
+  }
+
+  @Test
+  void mappedUserEmailPassesTheNativeUserProfileConstraint() {
+    var previousHandler = AuthServeletHandlerRegistry.getHandler();
+    var configuredSso = config(Map.of());
+    try (var environment = mockStatic(IntegrateSsoConfig.class, CALLS_REAL_METHODS);
+        var validators = Validation.buildDefaultValidatorFactory()) {
+      environment.when(IntegrateSsoConfig::fromEnvironment).thenReturn(configuredSso);
+      AuthServeletHandlerRegistry.setHandler(NoopAuthServeletHandler.getInstance());
+      var identity = new IntegrateIdentityClient.Identity("1087", "检验科测试用户", 120, "");
+      String username = client.username(identity);
+      var user = UserUtil.user(username, "integrate.invalid", "admin");
+
+      var violations = validators.getValidator().validateProperty(user, "email");
+      assertTrue(violations.isEmpty(), violations.toString());
+      assertEquals(username, user.getName());
+      assertEquals(64, user.getEmail().split("@")[0].length());
+    } finally {
+      AuthServeletHandlerRegistry.setHandler(previousHandler);
+    }
+  }
+
+  @Test
+  void keepsTheCompleteStableDigestInTheUsernameAndInternalEmail() {
+    var identity = new IntegrateIdentityClient.Identity("1087", "检验科测试用户", 120, "");
+    String username = client.username(identity);
+    assertTrue(username.matches("integrate_[0-9a-f]{64}"));
+    assertEquals(
+        username.substring("integrate_".length()) + "@integrate.invalid",
+        IntegrateIdentityClient.email(username, "integrate.invalid"));
+    assertEquals(
+        username, client.username(new IntegrateIdentityClient.Identity("1087", "更改显示名", 10, "")));
+    assertTrue(
+        !username.equals(
+            client.username(new IntegrateIdentityClient.Identity("1088", "检验科测试用户", 120, ""))));
+  }
+
+  @Test
+  void leavesNativeAccountEmailsUnchangedOutsideIntegrateMode() {
+    var previousHandler = AuthServeletHandlerRegistry.getHandler();
+    var disabledSso = IntegrateSsoConfig.fromEnvironment(Map.of());
+    try (var environment = mockStatic(IntegrateSsoConfig.class, CALLS_REAL_METHODS)) {
+      environment.when(IntegrateSsoConfig::fromEnvironment).thenReturn(disabledSso);
+      AuthServeletHandlerRegistry.setHandler(NoopAuthServeletHandler.getInstance());
+      String name = "integrate_" + "a".repeat(64);
+      assertEquals(
+          name + "@example.hospital", UserUtil.user(name, "example.hospital", "admin").getEmail());
+      assertEquals(
+          "alice@example.hospital", UserUtil.user("alice", "example.hospital", "admin").getEmail());
+    } finally {
+      AuthServeletHandlerRegistry.setHandler(previousHandler);
+    }
   }
 }

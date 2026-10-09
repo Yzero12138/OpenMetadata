@@ -46,12 +46,20 @@ OpenMetadata 通过后端认证地址访问 Integrate 的 exchange/introspect �
 2. 治理平台后端用 Basic 客户端凭据调用 Integrate 的 `/api/platform/portal/datahub/exchange`。
 3. 后端核验 active、issuer、audience、稳定 subject 和有效期，创建绑定 Integrate 的本地会话。
 4. 人员身份以 issuer + subject 的 SHA-256 映射，显示名来自 Integrate。
-   数据库要求的内部邮箱字段使用 `integrate_<hash>@integrate.invalid`；它不是员工登录凭据。
+   用户名保留 `integrate_<完整 SHA-256>`；数据库内部邮箱使用 `<完整 SHA-256>@integrate.invalid`，
+   `@` 前固定为 64 个字符。JWT 独立读取 username 和 email，保持账号标识与会话关联。
+   内部邮箱由服务端生成，员工仍通过 Integrate 的工号和密码登录。
 5. 新员工默认非管理员。已有员工的本地角色不会因登录被覆盖；治理管理员分配数据权限和角色。
 6. 每次人员 API 访问、刷新及 WebSocket 会话检查，后端都向 Integrate 核验会话。
    门户退出、用户禁用、应用权限撤回或会话到期后，旧会话拒绝访问。
    身份服务不可用时采用拒绝访问策略；恢复后从门户重新进入。
 7. 治理平台“退出”撤销治理平台会话；不擅自退出门户中的其他应用。
+
+升级会修复早期版本生成的内部邮箱：原用户名的 `integrate_` 前缀使邮箱本地部分达到 74 字符，
+超过原生 `@Email` 校验允许的 64 字符。服务启动、票据交换和刷新使用一致的邮箱映射。
+迁移仅允许启用 Integrate 时，将同一 UUID、同一稳定用户名的精确旧邮箱转换为正确内部邮箱；
+机器人、已删除账号、自定义邮箱和非管理员执行的更新不适用。用户名、UUID、管理员权限及角色关系保留。
+升级后应从 Integrate 门户重新进入，让新的访问令牌携带修正后的邮箱。
 
 浏览器只保留原生服务生成的访问令牌；共享密钥与 Integrate session_token 不进入前端、URL 或浏览器存储。
 Integrate session_token 通过 OpenMetadata 现有 Fernet 机制加密后保存。
@@ -101,7 +109,7 @@ mvn -f tools/hospital-contract-tests/pom.xml clean test
 
 ```sh
 mvn -pl openmetadata-service -am test -DonlyBackend \
-  -Dtest=IntegrateIdentityClientTest,SessionServiceTest,JwtFilterTest \
+  -Dtest=IntegrateIdentityClientTest,SessionServiceTest,JwtFilterTest,UserUtilTest,SocketAddressFilterTest,UserRepositoryUnitTest \
   -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
@@ -151,19 +159,21 @@ ConfigMap 更新后，使用 `kubectl rollout restart deployment/hospital-openme
 ## 本轮验证记录（2026-10-09）
 
 测试部署已实际应用：三个服务 Pod 均为 `1/1 Running`，数据库迁移成功，治理平台 rollout 成功。
-运行镜像为 `harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v2`，摘要：
-`sha256:b67ee2f6500c25d0e823df80f1ef3130efa5f527f344ae67f4660104c3fb26c2`。
+运行镜像为 `harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v3`，摘要：
+`sha256:ecd8dc5f426430db9ad8e10b39037360d8e16436477f7df66d5727bd2f4fd9bf`。
 
 | 验证范围 | 结果 |
 |---|---|
 | 服务端构建、Spotless apply/check | 通过 |
-| 身份协议、JWT、持久会话回归 | 79 项通过，无失败或跳过 |
+| 身份协议、JWT、持久会话、用户工具、Socket 与真实用户更新器回归 | 6 个测试套件，134 项通过，无失败或跳过 |
+| 邮箱修复与测试环境隔离 | 原生邮箱校验、JWT 身份解析、真实 PATCH/PUT 更新先复现失败再通过；最后补跑 11 项身份测试通过 |
 | 登录、握手、工作台、认证、路由及旧首页回归 | 7 个测试套件，69 项通过 |
 | Integrate 到期与组件卸载回归 | 新增 9 项（包含在上述 69 项中），先复现失败后通过；独立代码复核发现均已解决 |
 | UI 生产构建与服务/UI JAR 打包 | 通过 |
 | 完整 K8s 清单服务端校验 | 通过，Secret 不含在清单中 |
 | 真实部署验收 | 17 项通过，含桌面 1440px、移动 390px，浏览器运行异常为 0 |
 | 首个治理管理员 | 已核对指定人员的 Integrate subject、启用状态和门户权限；启动后只读查询确认对应本地身份 isAdmin=true、非机器人，内部邮箱匹配 |
+| 账号迁移与冷启动 | 升级后 7 项只读检查通过；再重启一次，7 项检查和 17 项真实部署检查仍全部通过，原身份、管理员权限及角色关系保留 |
 | 设计核验 | 10 张桌面/移动/明暗截图，检测器无发现；独立最终复核 verdict 为 ship |
 | 全量 TypeScript 检查 | 未通过：基线与本分支均为 550 条诊断，无新增文件/诊断类型；不能视为全库类型检查通过 |
 

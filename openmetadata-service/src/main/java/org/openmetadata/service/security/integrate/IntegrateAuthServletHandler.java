@@ -18,6 +18,7 @@ import static org.openmetadata.service.util.UserUtil.getRoleListFromUser;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.json.Json;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -126,6 +127,7 @@ public final class IntegrateAuthServletHandler implements AuthServeletHandler {
     } catch (EntityNotFoundException e) {
       User candidate =
           UserUtil.user(username, config.emailDomain(), Entity.ADMIN_USER_NAME)
+              .withEmail(IntegrateIdentityClient.email(username, config.emailDomain()))
               .withDisplayName(identity.name())
               .withIsAdmin(false)
               .withIsEmailVerified(true);
@@ -141,9 +143,41 @@ public final class IntegrateAuthServletHandler implements AuthServeletHandler {
         }
       }
     }
+    return normalizeUserEmail(users, username, user);
+  }
+
+  private User normalizeUserEmail(UserRepository users, String username, User user) {
+    if (!username.equals(user.getName())
+        || Boolean.TRUE.equals(user.getDeleted())
+        || Boolean.TRUE.equals(user.getIsBot())
+        || !username.matches("integrate_[0-9a-f]{64}")) {
+      throw new IntegrateIdentityClient.InvalidIdentityException();
+    }
+    String expectedEmail = IntegrateIdentityClient.email(username, config.emailDomain());
+    if (expectedEmail.equals(user.getEmail())) {
+      return user;
+    }
+    String legacyEmail = username + "@" + config.emailDomain();
+    if (!legacyEmail.equals(user.getEmail())) {
+      throw new IntegrateIdentityClient.InvalidIdentityException();
+    }
+    var patch =
+        Json.createPatchBuilder()
+            .test("/email", legacyEmail)
+            .replace("/email", expectedEmail)
+            .build();
+    try {
+      users.patch(null, user.getId(), Entity.ADMIN_USER_NAME, patch);
+    } catch (RuntimeException migrationFailure) {
+      User refreshed = findUser(users, username);
+      if (!expectedEmail.equals(refreshed.getEmail())) {
+        throw migrationFailure;
+      }
+    }
+    user = findUser(users, username);
     if (Boolean.TRUE.equals(user.getDeleted())
         || Boolean.TRUE.equals(user.getIsBot())
-        || !(username + "@" + config.emailDomain()).equals(user.getEmail())) {
+        || !expectedEmail.equals(user.getEmail())) {
       throw new IntegrateIdentityClient.InvalidIdentityException();
     }
     return user;
@@ -201,9 +235,7 @@ public final class IntegrateAuthServletHandler implements AuthServeletHandler {
                   null,
                   UUID.fromString(session.getUserId()),
                   users.getFieldsWithUserAuth("id,name,email,roles,isAdmin"));
-          if (Boolean.TRUE.equals(user.getDeleted()) || Boolean.TRUE.equals(user.getIsBot())) {
-            throw new IntegrateIdentityClient.InvalidIdentityException();
-          }
+          user = normalizeUserEmail(users, session.getUsername(), user);
           writeJsonResponse(response, JSON.writeValueAsString(tokenResponse(user, session)));
         });
   }

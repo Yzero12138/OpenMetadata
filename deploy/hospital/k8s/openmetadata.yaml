@@ -45,7 +45,7 @@ spec:
         fsGroup: 1000
       initContainers:
         - name: migrate
-          image: harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v2
+          image: harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v3
           command: [/bin/bash, -ec]
           args:
             - ./bootstrap/openmetadata-ops.sh migrate
@@ -73,7 +73,7 @@ spec:
               memory: 3Gi
       containers:
         - name: openmetadata
-          image: harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v2
+          image: harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v3
           ports:
             - name: http
               containerPort: 8585
