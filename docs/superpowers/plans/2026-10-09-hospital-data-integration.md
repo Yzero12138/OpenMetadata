@@ -125,8 +125,12 @@ FROM generate_series(1,100) n;
 - [x] Run one scoped Impeccable detector, obtain fresh finish reviewer, fix and recapture only its material findings within the bounded review workflow, then obtain fresh documenter. Preserve global design files for this established-world extension.
 - [x] Build/push unique application image, server-side dry run/apply, wait for rollout, verify unauthenticated endpoints reject access, prior Integrate verification remains passing, raw engine is internal-only, and deployed assets match the built artifacts.
 - [x] Record exact evidence in `docs/hospital/data-integration-verification.md` and operator instructions in `docs/hospital/data-integration-operations.md`, including rollback limited to new workloads and image/env changes. Preserve PVCs by default.
-- [ ] Stage only task files, inspect diff/secrets, commit, push the existing fork branch and update attached draft PR with public code/test facts. Report delivered URL, actual verification and any employee-login acceptance still required.
+- [x] Stage only task files, inspect diff/secrets, commit, push the existing fork branch and update attached draft PR with public code/test facts. Report delivered URL, actual verification and any employee-login acceptance still required.
 
 ## Plan self-review
 
 The runtime task covers fixed versions, synthetic isolation, full/CDC/recovery and restricted K8s access. The Java task covers persistence, credentials, native permission, ambiguity handling and retryable native catalog linkage. The UI task covers Chinese configuration and truthful operation states in the existing Integrate session. Final integration covers deployment, review, rollback and evidence. No real HIS/LIS compatibility or exactly-once guarantee is claimed by this synthetic phase.
+
+## Delivery record
+
+Implementation commit `2af91520845a396ef92efd5a12f50010bc3b4183` was pushed to the existing user fork branch. Attached draft PR: <https://github.com/Yzero12138/OpenMetadata/pull/1>; its title, public code/test description and exact implementation head were verified. Application v5 and the restricted current-release Integrate SSO restoration are deployed, with all 17 real portal protocol checks passing. Desktop-only acceptance, scoped test evidence, the separate local Integrate source branch, and remaining real-employee acceptance are recorded in `docs/hospital/data-integration-verification.md`.
