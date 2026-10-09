@@ -99,6 +99,7 @@ export const AutomatedTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
   data,
   selected,
 }) => {
+  const { t } = useTranslation();
   // Outline, not a ring: WebKit does not pixel-snap box-shadow. This ring had no
   // `ring-inset`, so it drew outward from the border box — outline-offset 0 (the default)
   // reproduces that exactly.
@@ -135,7 +136,7 @@ export const AutomatedTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
           className="tw:m-0 tw:text-sm tw:font-medium tw:text-primary"
           size="text-sm"
           weight="medium">
-          {getDisplayLabelFromSubType(data.subType)}
+          {getDisplayLabelFromSubType(data.subType, t)}
         </Typography>
       </div>
       <Divider orientation="horizontal" />
@@ -165,6 +166,7 @@ export const UserTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
   data,
   selected,
 }) => {
+  const { t } = useTranslation();
   // Outline, not a ring: WebKit does not pixel-snap box-shadow. This ring had no
   // `ring-inset`, so it drew outward from the border box — outline-offset 0 (the default)
   // reproduces that exactly.
@@ -200,7 +202,7 @@ export const UserTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
           className="tw:m-0  tw:text-primary"
           size="text-sm"
           weight="medium">
-          {getDisplayLabelFromSubType(data.subType)}
+          {getDisplayLabelFromSubType(data.subType, t)}
         </Typography>
       </div>
 

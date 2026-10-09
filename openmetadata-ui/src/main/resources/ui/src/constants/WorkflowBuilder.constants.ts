@@ -58,52 +58,62 @@ export const NODE_TYPE_MAPPINGS = {
   [NodeSubType.CheckEntityAttributesTask]: {
     type: NodeType.AutomatedTask,
     label: 'Check Condition',
+    labelKey: 'label.workflow-node-check-condition',
     displayLabel: 'Check',
   },
   [NodeSubType.CheckChangeDescriptionTask]: {
     type: NodeType.AutomatedTask,
     label: 'Detect Field Change',
+    labelKey: 'label.workflow-node-detect-field-change',
     displayLabel: 'Detect Field Change',
   },
   [NodeSubType.SetEntityAttributeTask]: {
     type: NodeType.AutomatedTask,
     label: 'Set Action',
+    labelKey: 'label.action',
     displayLabel: 'Action',
   },
   [NodeSubType.UserApprovalTask]: {
     type: NodeType.UserTask,
     label: 'Request Approval',
+    labelKey: 'label.workflow-node-request-approval',
     displayLabel: 'User Approval',
   },
   [NodeSubType.DataCompletenessTask]: {
     type: NodeType.AutomatedTask,
     label: 'Data Completeness',
+    labelKey: 'label.workflow-node-data-completeness',
     displayLabel: 'Data Completeness',
   },
   [NodeSubType.RollbackEntityTask]: {
     type: NodeType.AutomatedTask,
     label: 'Revert Changes',
+    labelKey: 'label.revert-changes',
     displayLabel: 'Revert Changes',
   },
   [NodeSubType.PolicyAgentTask]: {
     type: NodeType.AutomatedTask,
     label: 'Policy Enforcement',
+    labelKey: 'label.workflow-node-policy-enforcement',
     displayLabel: 'Policy Enforcement',
   },
   [NodeSubType.SinkTask]: {
     type: NodeType.AutomatedTask,
     category: 'sink',
     label: 'Git Sink',
+    labelKey: 'label.workflow-node-git-sink',
     displayLabel: 'Git Sink',
   },
   [NodeSubType.StartEvent]: {
     type: NodeType.StartEvent,
     label: 'Start',
+    labelKey: 'label.start',
     displayLabel: 'Start',
   },
   [NodeSubType.EndEvent]: {
     type: NodeType.EndEvent,
     label: 'End',
+    labelKey: 'label.end',
     displayLabel: 'End',
   },
 } as const;

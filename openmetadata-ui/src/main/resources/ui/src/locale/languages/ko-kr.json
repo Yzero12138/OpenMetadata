@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "AI 자산(AI 애플리케이션, LLM 모델 또는 MCP 서버)이 검토를 위해 제출되면 용어집 용어 승인 절차에 따라 위험 위원회 검토자에게 전달하여 승인을 받습니다.",
+      "displayName": "AI 자산 승인 워크플로"
+    },
+    "AutoPilotWorkflow": {
+      "description": "새 서비스가 생성될 때마다 관련 파이프라인이 자동으로 생성, 배포 및 실행됩니다.",
+      "displayName": "AutoPilot 워크플로"
+    },
+    "CustomTaskWorkflow": {
+      "description": "워크플로로 관리되는 사용자 지정 작업의 기본 수명 주기입니다.",
+      "displayName": "사용자 지정 작업 워크플로"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "워크플로로 관리되는 데이터 품질 검토 작업의 기본 수명 주기입니다.",
+      "displayName": "데이터 품질 검토 작업 워크플로"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "워크플로로 관리되는 설명 업데이트 작업의 기본 수명 주기입니다.",
+      "displayName": "설명 업데이트 작업 워크플로"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "워크플로로 관리되는 도메인 업데이트 작업의 기본 수명 주기입니다.",
+      "displayName": "도메인 업데이트 작업 워크플로"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "열림부터 닫힘까지 단계를 구성할 수 있는 인시던트 유형 작업의 워크플로 기반 기본 수명 주기입니다.",
+      "displayName": "일반 인시던트 작업 워크플로"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "승인 또는 거부로 전환되는 단일 검토 단계가 필요한 작업 양식의 워크플로 기반 기본 수명 주기입니다.",
+      "displayName": "일반 검토 작업 워크플로"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "용어집 용어가 생성되거나 업데이트되면 해당 용어의 승인을 위해 이 워크플로가 실행됩니다.",
+      "displayName": "용어집 승인 워크플로"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "인시던트 수명 주기 관리를 위한 기본 워크플로 정의입니다.",
+      "displayName": "인시던트 수명 주기 워크플로"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "인시던트 해결 작업의 워크플로 기반 기본 수명 주기입니다. 단계는 인시던트 관리자 흐름과 동일하며 신규, 확인됨, 할당됨으로 구성됩니다.",
+      "displayName": "인시던트 해결 작업 워크플로"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "워크플로로 관리되는 소유권 업데이트 작업의 기본 수명 주기입니다.",
+      "displayName": "소유권 업데이트 작업 워크플로"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "워크플로로 관리되는 파이프라인 검토 작업의 기본 수명 주기입니다.",
+      "displayName": "파이프라인 검토 작업 워크플로"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "자동 적용된 태그에 대한 피드백이 제출되면 태그에 검토자가 있는지 확인한 후 태그를 자동 적용하거나 승인 작업을 생성합니다.",
+      "displayName": "인식기 피드백 검토 워크플로"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "워크플로로 관리되는 승인 요청 작업의 기본 수명 주기입니다.",
+      "displayName": "승인 요청 작업 워크플로"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "워크플로로 관리되는 제안 작업의 기본 수명 주기입니다.",
+      "displayName": "제안 작업 워크플로"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "워크플로로 관리되는 태그 업데이트 작업의 기본 수명 주기입니다.",
+      "displayName": "태그 업데이트 작업 워크플로"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "테스트 케이스 해결 작업의 워크플로 기반 기본 수명 주기입니다. 단계는 인시던트 관리자 흐름과 동일하며 신규, 확인됨, 할당됨으로 구성됩니다.",
+      "displayName": "테스트 케이스 해결 작업 워크플로"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "워크플로로 관리되는 등급 업데이트 작업의 기본 수명 주기입니다.",
+      "displayName": "등급 업데이트 작업 워크플로"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 일",
@@ -2584,7 +2662,54 @@
     "target-column": "대상 열",
     "task": "작업",
     "task-entity": "작업 {{entity}}",
+    "task-form": "작업 양식",
+    "task-form-array": "배열",
+    "task-form-boolean": "불리언",
+    "task-form-builder": "양식 빌더",
+    "task-form-category-approval": "승인",
+    "task-form-category-data-access": "데이터 접근",
+    "task-form-category-metadata-update": "메타데이터 업데이트",
+    "task-form-category-review": "검토",
+    "task-form-create": "생성 양식",
+    "task-form-create-fields": "생성 양식 필드",
+    "task-form-create-schema": "생성 양식 스키마",
+    "task-form-create-ui-schema": "생성 양식 UI 스키마",
+    "task-form-default-stage-mappings": "기본 단계 매핑",
+    "task-form-design-visually": "작업 양식을 시각적으로 디자인",
+    "task-form-designer": "디자이너",
+    "task-form-general-configuration": "일반 구성",
+    "task-form-help-text": "도움말 텍스트",
+    "task-form-hidden": "숨김",
+    "task-form-input-type": "입력 유형: {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "JSON 구조",
+    "task-form-label": "레이블",
+    "task-form-load-template": "기본 제공 템플릿 불러오기",
+    "task-form-long-text": "긴 텍스트",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "객체",
+    "task-form-options": "옵션",
     "task-form-plural": "작업 양식",
+    "task-form-resolve": "해결 양식",
+    "task-form-resolve-fields": "해결 양식 필드",
+    "task-form-resolve-schema": "해결 양식 스키마",
+    "task-form-resolve-ui-schema": "해결 양식 UI 스키마",
+    "task-form-short-text": "짧은 텍스트",
+    "task-form-single-select": "단일 선택",
+    "task-form-stage-id": "단계 ID",
+    "task-form-stage-mapping": "단계 매핑",
+    "task-form-stage-status-mapping": "단계와 상태 매핑",
+    "task-form-status-expired": "만료됨",
+    "task-form-status-in-progress": "진행 중",
+    "task-form-status-manual-revoke": "수동 취소",
+    "task-form-status-pending": "대기 중",
+    "task-form-status-revoked": "취소됨",
+    "task-form-transition": "전환 양식",
+    "task-form-transition-fields": "전환 필드",
+    "task-form-transition-id": "전환 ID",
+    "task-form-transition-plural": "전환 양식",
+    "task-form-workflow-json": "워크플로 정의 JSON",
+    "task-form-workflow-stages": "워크플로 단계",
     "task-lowercase": "작업",
     "task-plural": "작업들",
     "task-title": "작업 #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "워크플로 이름",
     "workflow-name-is-required": "워크플로 이름은 필수입니다",
     "workflow-name-placeholder": "워크플로 이름 입력",
+    "workflow-node-check-condition": "조건 확인",
+    "workflow-node-data-completeness": "데이터 완전성",
+    "workflow-node-detect-field-change": "필드 변경 감지",
+    "workflow-node-git-sink": "Git에 동기화",
+    "workflow-node-policy-enforcement": "정책 적용",
+    "workflow-node-request-approval": "승인 요청",
     "workflow-plural": "워크플로우들",
     "worksheet": "워크시트",
     "worksheet-plural": "워크시트",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "새 태그를 추가하시겠습니까?",
     "tailor-experience-for-persona": "{{persona}} 페르소나에 맞게 경험을 맞춤 설정하고 시도해보세요!",
     "take-quick-product-tour": "시작하려면 제품 투어를 진행하세요!",
+    "task-form-create-description": "작업을 생성할 때 표시되는 필드입니다.",
+    "task-form-description": "하나의 작업 공간에서 작업 스키마, 양식 동작 및 워크플로 전환을 구성하세요.",
+    "task-form-designer-description": "빌더로 생성 양식, 해결 양식, 전환 양식 및 단계 매핑을 구성하세요. 원본 JSON 편집기는 고급 옵션에서 계속 사용할 수 있습니다.",
+    "task-form-help-placeholder": "이 필드의 용도를 설명하세요",
+    "task-form-invalid-json": "작업 양식 설정의 JSON이 유효하지 않습니다",
+    "task-form-no-fields": "아직 필드가 구성되지 않았습니다",
+    "task-form-no-schemas": "아직 작업 양식을 찾지 못했습니다.",
+    "task-form-no-stage-mappings": "아직 단계 매핑이 구성되지 않았습니다.",
+    "task-form-no-template": "이 작업 유형에 사용할 수 있는 기본 제공 템플릿이 없습니다",
+    "task-form-no-transitions": "아직 전환 양식이 구성되지 않았습니다.",
+    "task-form-preview-placeholder": "필드를 추가하여 이 양식을 미리 보세요.",
+    "task-form-resolve-description": "작업을 검토하거나 해결할 때 표시되는 필드입니다.",
+    "task-form-select-type-category": "템플릿을 불러오기 전에 작업 유형과 범주를 선택하세요",
+    "task-form-stage-mappings-description": "워크플로 단계 ID를 API 및 집계에서 사용하는 작업의 전체 상태에 매핑하세요.",
+    "task-form-transition-description": "이 전환에서만 표시되는 추가 필드입니다.",
+    "task-form-transitions-description": "승인, 거부 또는 재할당과 같은 특정 워크플로 전환에 대한 추가 필드를 구성하세요.",
+    "task-form-workflow-name-required": "워크플로 정의 JSON에 이름이 포함되어야 합니다",
     "team-distinct-user-description": "이 팀에 속한 고유 사용자의 총 수입니다.",
     "team-member-management-description": "{{brandName}}에서 사용자와 팀에 대한 접근을 간소화하세요.",
     "team-moved-success": "팀이 성공적으로 이동되었습니다!",

@@ -15,6 +15,7 @@ import { cloneDeep } from 'lodash';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Domain, DomainType } from '../../../generated/entity/domains/domain';
+import { getDomainTypeLabel } from '../../../utils/DomainTypeLabelUtils';
 import { domainTypeTooltipDataRender } from '../../../utils/DomainUtils';
 import {
   WidgetEditButton,
@@ -72,7 +73,7 @@ export const DomainTypeWidget = () => {
     <>
       {!editDomainType && (
         <Box data-testid="domain-type-label" gap={2} wrap="wrap">
-          {domain?.domainType}
+          {getDomainTypeLabel(domain.domainType, t)}
         </Box>
       )}
 

@@ -77,6 +77,7 @@ import { formatTeamsResponse } from '../../../utils/APIUtils';
 import { getRandomColor } from '../../../utils/ColorUtils';
 import { serializeExtensionValue } from '../../../utils/CustomProperty.utils';
 import domainClassBase from '../../../utils/Domain/DomainClassBase';
+import { getDomainTypeLabel } from '../../../utils/DomainTypeLabelUtils';
 import { getEntityName } from '../../../utils/EntityNameUtils';
 import { getEntityReferenceListFromEntities } from '../../../utils/EntityReferenceUtils';
 import { getIntakeFormFields } from '../../../utils/IntakeFormUtils';
@@ -451,7 +452,7 @@ const AddDomainForm = ({
     const domainTypeValue = DomainType[key as keyof typeof DomainType];
 
     return {
-      label: domainTypeValue,
+      label: getDomainTypeLabel(domainTypeValue, t),
       id: domainTypeValue,
       value: domainTypeValue,
     };

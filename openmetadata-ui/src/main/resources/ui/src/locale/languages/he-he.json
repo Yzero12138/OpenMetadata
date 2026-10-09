@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "כאשר נכס בינה מלאכותית (יישום בינה מלאכותית, מודל LLM או שרת MCP) נשלח לבדיקה, הוא מועבר לבודקים במועצת הסיכונים לצורך אישור, בדומה לתהליך אישור מונח במילון המונחים.",
+      "displayName": "תהליך עבודה לאישור נכסי בינה מלאכותית"
+    },
+    "AutoPilotWorkflow": {
+      "description": "בכל יצירה של שירות חדש, צינורות העיבוד הרלוונטיים נוצרים, נפרסים ומופעלים אוטומטית.",
+      "displayName": "תהליך עבודה של AutoPilot"
+    },
+    "CustomTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות מותאמות אישית, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות מותאמות אישית"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות בדיקת איכות נתונים, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות בדיקת איכות נתונים"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות עדכון תיאור, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות עדכון תיאור"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות עדכון תחום, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות עדכון תחום"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל למשימות מסוג אירוע, המנוהל באמצעות תהליך עבודה עם שלבים הניתנים להגדרה מפתוח ועד סגור.",
+      "displayName": "תהליך עבודה למשימות אירוע כלליות"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל לטופסי משימות הדורשים שלב בדיקה יחיד עם מעברים לאישור או לדחייה, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות בדיקה כלליות"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "בעת יצירה או עדכון של מונח במילון המונחים, תהליך עבודה זה מופעל לצורך אישור המונח.",
+      "displayName": "תהליך עבודה לאישור מילון מונחים"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "הגדרת תהליך העבודה המוגדרת כברירת מחדל לניהול מחזור חיי אירוע.",
+      "displayName": "תהליך עבודה למחזור חיי אירוע"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל למשימות פתרון אירועים, המנוהל באמצעות תהליך עבודה. השלבים תואמים לתהליך של מנהל האירועים: חדש, אושר קבלה, הוקצה.",
+      "displayName": "תהליך עבודה למשימות פתרון אירועים"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות עדכון בעלות, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות עדכון בעלות"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות בדיקת צינורות עיבוד, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות בדיקת צינורות עיבוד"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "כאשר נשלח משוב על תגיות שהוחלו אוטומטית, נבדק אם לתגית יש בודקים ולאחר מכן היא מוחלת אוטומטית או נוצרת משימת אישור.",
+      "displayName": "תהליך עבודה לבדיקת משוב על המזהה"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות בקשת אישור, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות בקשת אישור"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות הצעה, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות הצעה"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות עדכון תגיות, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות עדכון תגיות"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל למשימות פתרון מקרי בדיקה, המנוהל באמצעות תהליך עבודה. השלבים תואמים לתהליך של מנהל האירועים: חדש, אושר קבלה, הוקצה.",
+      "displayName": "תהליך עבודה למשימות פתרון מקרי בדיקה"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "מחזור החיים המוגדר כברירת מחדל עבור משימות עדכון דרגה, המנוהל באמצעות תהליך עבודה.",
+      "displayName": "תהליך עבודה למשימות עדכון דרגה"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 יום",
@@ -2584,7 +2662,54 @@
     "target-column": "עמודת יעד",
     "task": "משימה",
     "task-entity": "משימה {{entity}}",
+    "task-form": "טופס משימה",
+    "task-form-array": "מערך",
+    "task-form-boolean": "ערך בוליאני",
+    "task-form-builder": "בונה טפסים",
+    "task-form-category-approval": "אישור",
+    "task-form-category-data-access": "גישה לנתונים",
+    "task-form-category-metadata-update": "עדכון מטא־נתונים",
+    "task-form-category-review": "סקירה",
+    "task-form-create": "טופס יצירה",
+    "task-form-create-fields": "שדות טופס היצירה",
+    "task-form-create-schema": "סכמת טופס היצירה",
+    "task-form-create-ui-schema": "סכמת ממשק טופס היצירה",
+    "task-form-default-stage-mappings": "מיפויי שלבים כברירת מחדל",
+    "task-form-design-visually": "עיצוב חזותי של טופסי משימות",
+    "task-form-designer": "מעצב",
+    "task-form-general-configuration": "תצורה כללית",
+    "task-form-help-text": "טקסט עזרה",
+    "task-form-hidden": "מוסתר",
+    "task-form-input-type": "סוג קלט: {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "מבנה JSON",
+    "task-form-label": "תווית",
+    "task-form-load-template": "טעינת תבנית מובנית",
+    "task-form-long-text": "טקסט ארוך",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "אובייקט",
+    "task-form-options": "אפשרויות",
     "task-form-plural": "טפסי משימות",
+    "task-form-resolve": "טופס פתרון",
+    "task-form-resolve-fields": "שדות טופס הפתרון",
+    "task-form-resolve-schema": "סכמת טופס הפתרון",
+    "task-form-resolve-ui-schema": "סכמת ממשק טופס הפתרון",
+    "task-form-short-text": "טקסט קצר",
+    "task-form-single-select": "בחירה יחידה",
+    "task-form-stage-id": "מזהה שלב",
+    "task-form-stage-mapping": "מיפוי שלב",
+    "task-form-stage-status-mapping": "מיפוי שלבים לסטטוסים",
+    "task-form-status-expired": "פג תוקף",
+    "task-form-status-in-progress": "בתהליך",
+    "task-form-status-manual-revoke": "שלילה ידנית",
+    "task-form-status-pending": "בהמתנה",
+    "task-form-status-revoked": "נשלל",
+    "task-form-transition": "טופס מעבר",
+    "task-form-transition-fields": "שדות מעבר",
+    "task-form-transition-id": "מזהה מעבר",
+    "task-form-transition-plural": "טופסי מעבר",
+    "task-form-workflow-json": "הגדרת תהליך העבודה ב־JSON",
+    "task-form-workflow-stages": "שלבי תהליך העבודה",
     "task-lowercase": "משימה",
     "task-plural": "משימות",
     "task-title": "משימה #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "שם תהליך עבודה",
     "workflow-name-is-required": "שם תהליך העבודה הוא שדה חובה",
     "workflow-name-placeholder": "הזן שם תהליך עבודה",
+    "workflow-node-check-condition": "בדיקת תנאי",
+    "workflow-node-data-completeness": "שלמות הנתונים",
+    "workflow-node-detect-field-change": "זיהוי שינוי בשדה",
+    "workflow-node-git-sink": "סנכרון אל Git",
+    "workflow-node-policy-enforcement": "אכיפת מדיניות",
+    "workflow-node-request-approval": "בקשת אישור",
     "workflow-plural": "תהליכי עבודה",
     "worksheet": "גליון עבודה",
     "worksheet-plural": "גליונות עבודה",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "האם ברצונך להמשיך בעדכון התגים?",
     "tailor-experience-for-persona": "התאם את החוויה במיוחד עבור אישיות {{persona}}, נסה את זה!",
     "take-quick-product-tour": "התחל סיור במוצר כדי להתחיל!",
+    "task-form-create-description": "שדות המוצגים בעת יצירת משימה.",
+    "task-form-description": "הגדירו סכמות משימות, התנהגות טפסים ומעברים בתהליך העבודה בסביבת עבודה אחת.",
+    "task-form-designer-description": "השתמשו בבונה עבור טופסי יצירה, פתרון ומעבר ועבור מיפויי שלבים. עורכי ה־JSON עדיין זמינים באפשרויות המתקדמות.",
+    "task-form-help-placeholder": "הסבירו למה משמש שדה זה",
+    "task-form-invalid-json": "ה־JSON של הגדרות טופס המשימה אינו תקין",
+    "task-form-no-fields": "עדיין לא הוגדרו שדות",
+    "task-form-no-schemas": "עדיין לא נמצאו טופסי משימות.",
+    "task-form-no-stage-mappings": "עדיין לא הוגדרו מיפויי שלבים.",
+    "task-form-no-template": "אין תבנית מובנית זמינה לסוג משימה זה",
+    "task-form-no-transitions": "עדיין לא הוגדרו טופסי מעבר.",
+    "task-form-preview-placeholder": "הוסיפו שדות כדי להציג תצוגה מקדימה של הטופס.",
+    "task-form-resolve-description": "שדות המוצגים בעת סקירת המשימה או פתרונה.",
+    "task-form-select-type-category": "יש לבחור סוג משימה וקטגוריה לפני טעינת תבנית",
+    "task-form-stage-mappings-description": "מפו את מזהי השלבים בתהליך העבודה לסטטוס המשימה הכללי המשמש בממשקי API ובספירות.",
+    "task-form-transition-description": "שדות נוספים המוצגים רק עבור מעבר זה.",
+    "task-form-transitions-description": "הגדירו שדות נוספים למעברים מסוימים בתהליך העבודה, כגון אישור, דחייה או הקצאה מחדש.",
+    "task-form-workflow-name-required": "הגדרת תהליך העבודה ב־JSON חייבת לכלול שם",
     "team-distinct-user-description": "מספר המשתמשים הייחודיים הכולל השייכים לצוות זה.",
     "team-member-management-description": "ייעל גישה למשתמשים וצוותים ב-{{brandName}}.",
     "team-moved-success": "הקבוצה הועברה בהצלחה!",

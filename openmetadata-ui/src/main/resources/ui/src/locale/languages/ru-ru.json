@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "Когда актив ИИ (приложение ИИ, модель LLM или сервер MCP) отправляется на проверку, он направляется на согласование проверяющим совета по рискам, аналогично процессу согласования терминов глоссария.",
+      "displayName": "Процесс согласования активов ИИ"
+    },
+    "AutoPilotWorkflow": {
+      "description": "При создании нового сервиса соответствующие конвейеры автоматически создаются, развёртываются и запускаются.",
+      "displayName": "Процесс AutoPilot"
+    },
+    "CustomTaskWorkflow": {
+      "description": "Жизненный цикл пользовательских задач по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс пользовательских задач"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "Жизненный цикл задач проверки качества данных по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс задач проверки качества данных"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "Жизненный цикл задач обновления описания по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс задач обновления описания"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "Жизненный цикл задач обновления домена по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс задач обновления домена"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "Жизненный цикл задач типа инцидента по умолчанию, управляемый рабочим процессом, с настраиваемыми этапами от «Открыт» до «Закрыт».",
+      "displayName": "Процесс общих задач по инцидентам"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "Жизненный цикл по умолчанию, управляемый рабочим процессом, для форм задач, требующих одного этапа проверки с переходами к одобрению или отклонению.",
+      "displayName": "Процесс общих задач проверки"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "При создании или обновлении термина глоссария этот рабочий процесс запускается для согласования термина.",
+      "displayName": "Процесс согласования глоссария"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "Определение рабочего процесса по умолчанию для управления жизненным циклом инцидентов.",
+      "displayName": "Процесс жизненного цикла инцидентов"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "Жизненный цикл задач разрешения инцидентов по умолчанию, управляемый рабочим процессом. Этапы соответствуют процессу диспетчера инцидентов: «Новый», «Подтверждён», «Назначен».",
+      "displayName": "Процесс задач разрешения инцидентов"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "Жизненный цикл задач обновления владельца по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс задач обновления владельца"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "Жизненный цикл задач проверки конвейеров по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс задач проверки конвейеров"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "При получении отзыва об автоматически применённых тегах проверяется наличие проверяющих у тега, после чего тег применяется автоматически или создаётся задача согласования.",
+      "displayName": "Процесс проверки отзывов о распознавателе"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "Жизненный цикл задач запроса согласования по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс задач запроса согласования"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "Жизненный цикл задач по предложениям по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс задач по предложениям"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "Жизненный цикл задач обновления тегов по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс задач обновления тегов"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "Жизненный цикл задач разрешения тестовых случаев по умолчанию, управляемый рабочим процессом. Этапы соответствуют процессу диспетчера инцидентов: «Новый», «Подтверждён», «Назначен».",
+      "displayName": "Процесс задач разрешения тестовых случаев"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "Жизненный цикл задач обновления уровня по умолчанию, управляемый рабочим процессом.",
+      "displayName": "Процесс задач обновления уровня"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 день",
@@ -2584,7 +2662,54 @@
     "target-column": "Целевой столбец",
     "task": "Задача",
     "task-entity": "Задача объекта «{{entity}}»",
+    "task-form": "Форма задачи",
+    "task-form-array": "Массив",
+    "task-form-boolean": "Логическое значение",
+    "task-form-builder": "Конструктор форм",
+    "task-form-category-approval": "Утверждение",
+    "task-form-category-data-access": "Доступ к данным",
+    "task-form-category-metadata-update": "Обновление метаданных",
+    "task-form-category-review": "Проверка",
+    "task-form-create": "Форма создания",
+    "task-form-create-fields": "Поля формы создания",
+    "task-form-create-schema": "Схема формы создания",
+    "task-form-create-ui-schema": "Схема интерфейса формы создания",
+    "task-form-default-stage-mappings": "Сопоставления этапов по умолчанию",
+    "task-form-design-visually": "Визуальное создание форм задач",
+    "task-form-designer": "Дизайнер",
+    "task-form-general-configuration": "Общие настройки",
+    "task-form-help-text": "Текст подсказки",
+    "task-form-hidden": "Скрыто",
+    "task-form-input-type": "Тип ввода: {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "Структура JSON",
+    "task-form-label": "Подпись",
+    "task-form-load-template": "Загрузить встроенный шаблон",
+    "task-form-long-text": "Длинный текст",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "Объект",
+    "task-form-options": "Варианты",
     "task-form-plural": "Формы задач",
+    "task-form-resolve": "Форма решения",
+    "task-form-resolve-fields": "Поля формы решения",
+    "task-form-resolve-schema": "Схема формы решения",
+    "task-form-resolve-ui-schema": "Схема интерфейса формы решения",
+    "task-form-short-text": "Короткий текст",
+    "task-form-single-select": "Одиночный выбор",
+    "task-form-stage-id": "Идентификатор этапа",
+    "task-form-stage-mapping": "Сопоставление этапа",
+    "task-form-stage-status-mapping": "Сопоставление этапов и статусов",
+    "task-form-status-expired": "Срок истёк",
+    "task-form-status-in-progress": "В процессе",
+    "task-form-status-manual-revoke": "Ручной отзыв",
+    "task-form-status-pending": "В ожидании",
+    "task-form-status-revoked": "Отозвано",
+    "task-form-transition": "Форма перехода",
+    "task-form-transition-fields": "Поля перехода",
+    "task-form-transition-id": "Идентификатор перехода",
+    "task-form-transition-plural": "Формы переходов",
+    "task-form-workflow-json": "Определение рабочего процесса в JSON",
+    "task-form-workflow-stages": "Этапы рабочего процесса",
     "task-lowercase": "задача",
     "task-plural": "Задачи",
     "task-title": "Задача #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "Название рабочего процесса",
     "workflow-name-is-required": "Название рабочего процесса обязательно",
     "workflow-name-placeholder": "Введите название рабочего процесса",
+    "workflow-node-check-condition": "Проверить условие",
+    "workflow-node-data-completeness": "Полнота данных",
+    "workflow-node-detect-field-change": "Обнаружить изменение поля",
+    "workflow-node-git-sink": "Синхронизировать с Git",
+    "workflow-node-policy-enforcement": "Применить политику",
+    "workflow-node-request-approval": "Запросить согласование",
     "workflow-plural": "Рабочие процессы",
     "worksheet": "Рабочий лист",
     "worksheet-plural": "Рабочие листы",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "Продолжить добавление нового тега?",
     "tailor-experience-for-persona": "Настройте опыт специально для персонажа {{persona}}, попробуйте!",
     "take-quick-product-tour": "Ознакомьтесь с продуктом, чтобы начать работу!",
+    "task-form-create-description": "Поля, отображаемые при создании задачи.",
+    "task-form-description": "Настройте схемы задач, поведение форм и переходы рабочего процесса в одном рабочем пространстве.",
+    "task-form-designer-description": "Используйте конструктор для форм создания, решения и переходов, а также для сопоставлений этапов. Редакторы исходного JSON доступны в расширенных настройках.",
+    "task-form-help-placeholder": "Объясните назначение этого поля",
+    "task-form-invalid-json": "JSON настроек формы задачи некорректен",
+    "task-form-no-fields": "Поля пока не настроены",
+    "task-form-no-schemas": "Формы задач пока не найдены.",
+    "task-form-no-stage-mappings": "Сопоставления этапов пока не настроены.",
+    "task-form-no-template": "Для этого типа задачи нет встроенного шаблона",
+    "task-form-no-transitions": "Формы переходов пока не настроены.",
+    "task-form-preview-placeholder": "Добавьте поля для предварительного просмотра этой формы.",
+    "task-form-resolve-description": "Поля, отображаемые при проверке или решении задачи.",
+    "task-form-select-type-category": "Выберите тип и категорию задачи перед загрузкой шаблона",
+    "task-form-stage-mappings-description": "Сопоставьте идентификаторы этапов рабочего процесса с общим статусом задачи, используемым в API и подсчётах.",
+    "task-form-transition-description": "Дополнительные поля, отображаемые только для этого перехода.",
+    "task-form-transitions-description": "Настройте дополнительные поля для определённых переходов рабочего процесса, например утверждения, отклонения или переназначения.",
+    "task-form-workflow-name-required": "JSON определения рабочего процесса должен содержать имя",
     "team-distinct-user-description": "Общее количество уникальных пользователей, принадлежащих этой команде.",
     "team-member-management-description": "Упростите доступ к пользователям и командам в {{brandName}}.",
     "team-moved-success": "Команда перемещена!",

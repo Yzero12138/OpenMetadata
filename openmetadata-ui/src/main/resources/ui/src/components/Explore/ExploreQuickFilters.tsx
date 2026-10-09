@@ -22,6 +22,7 @@ import useCustomLocation from '../../hooks/useCustomLocation/useCustomLocation';
 import { useSearchStore } from '../../hooks/useSearchStore';
 import { QueryFilterInterface } from '../../pages/ExplorePage/ExplorePage.interface';
 import { getOptionsFromAggregationBucket } from '../../utils/AdvancedSearchPureUtils';
+import { getDomainTypeLabel } from '../../utils/DomainTypeLabelUtils';
 import { EntityIconSize } from '../../utils/EntityIconUtils';
 import { getEntityNameLabel } from '../../utils/EntityNameUtils';
 import {
@@ -33,7 +34,7 @@ import {
   getCanonicalEntityType,
   getExploreQueryFilterMust,
 } from '../../utils/ExploreUtils';
-import { translateWithNestedKeys } from '../../utils/i18next/LocalUtil';
+import { t, translateWithNestedKeys } from '../../utils/i18next/LocalUtil';
 import searchClassBase from '../../utils/SearchClassBase';
 import { showErrorToast } from '../../utils/ToastUtils';
 import SearchDropdown from '../SearchDropdown/SearchDropdown';
@@ -58,7 +59,9 @@ const getOptionLabelFormatter = (
   key: string,
   skipEntityTypeLabel = false
 ): ((value: string) => string) | undefined =>
-  ENTITY_TYPE_FILTER_KEYS.has(key) && !skipEntityTypeLabel
+  key === EntityFields.DOMAIN_TYPE
+    ? (value) => getDomainTypeLabel(value, t)
+    : ENTITY_TYPE_FILTER_KEYS.has(key) && !skipEntityTypeLabel
     ? formatEntityTypeLabel
     : undefined;
 

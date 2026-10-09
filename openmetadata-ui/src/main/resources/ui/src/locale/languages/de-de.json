@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "Wird ein KI-Asset (KI-Anwendung, LLM-Modell oder MCP-Server) zur Prüfung eingereicht, wird es nach dem Vorbild der Genehmigung von Glossarbegriffen an die Prüfenden des Risikorats zur Genehmigung weitergeleitet.",
+      "displayName": "Workflow zur Genehmigung von KI-Assets"
+    },
+    "AutoPilotWorkflow": {
+      "description": "Bei der Erstellung eines neuen Dienstes werden die zugehörigen Pipelines automatisch erstellt, bereitgestellt und ausgeführt.",
+      "displayName": "AutoPilot-Workflow"
+    },
+    "CustomTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für benutzerdefinierte Aufgaben.",
+      "displayName": "Workflow für benutzerdefinierte Aufgaben"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben zur Datenqualitätsprüfung.",
+      "displayName": "Workflow für Aufgaben zur Datenqualitätsprüfung"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben zur Beschreibungsaktualisierung.",
+      "displayName": "Workflow für Aufgaben zur Beschreibungsaktualisierung"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben zur Domänenaktualisierung.",
+      "displayName": "Workflow für Aufgaben zur Domänenaktualisierung"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für vorfallartige Aufgaben mit konfigurierbaren Phasen von Offen bis Geschlossen.",
+      "displayName": "Workflow für allgemeine Vorfallaufgaben"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgabenformulare, die eine einzelne Prüfphase mit Übergängen zu Genehmigt oder Abgelehnt erfordern.",
+      "displayName": "Workflow für allgemeine Prüfaufgaben"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "Beim Erstellen oder Aktualisieren eines Glossarbegriffs wird dieser Workflow zur Genehmigung des Begriffs ausgelöst.",
+      "displayName": "Workflow zur Glossargenehmigung"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "Standardmäßige Workflow-Definition zur Verwaltung des Vorfalllebenszyklus.",
+      "displayName": "Workflow für den Vorfalllebenszyklus"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben zur Vorfallbehebung. Die Phasen entsprechen dem Ablauf der Vorfallverwaltung: Neu, Bestätigt, Zugewiesen.",
+      "displayName": "Workflow für Aufgaben zur Vorfallbehebung"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben zur Eigentümeraktualisierung.",
+      "displayName": "Workflow für Aufgaben zur Eigentümeraktualisierung"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben zur Pipeline-Prüfung.",
+      "displayName": "Workflow für Aufgaben zur Pipeline-Prüfung"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "Wenn Feedback zu automatisch angewendeten Tags eingereicht wird, wird geprüft, ob das Tag Prüfende hat. Anschließend wird es automatisch angewendet oder eine Genehmigungsaufgabe erstellt.",
+      "displayName": "Workflow zur Prüfung von Erkennungsfeedback"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben für Genehmigungsanfragen.",
+      "displayName": "Workflow für Genehmigungsanfragen"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Vorschlagsaufgaben.",
+      "displayName": "Workflow für Vorschlagsaufgaben"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben zur Tag-Aktualisierung.",
+      "displayName": "Workflow für Aufgaben zur Tag-Aktualisierung"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben zur Testfallbehebung. Die Phasen entsprechen dem Ablauf der Vorfallverwaltung: Neu, Bestätigt, Zugewiesen.",
+      "displayName": "Workflow für Aufgaben zur Testfallbehebung"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "Standardmäßiger, durch einen Workflow gesteuerter Lebenszyklus für Aufgaben zur Stufenaktualisierung.",
+      "displayName": "Workflow für Aufgaben zur Stufenaktualisierung"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 Tag",
@@ -2584,7 +2662,54 @@
     "target-column": "Zielspalte",
     "task": "Aufgabe",
     "task-entity": "{{entity}}-Aufgabe",
+    "task-form": "Aufgabenformular",
+    "task-form-array": "Array",
+    "task-form-boolean": "Boolescher Wert",
+    "task-form-builder": "Formular-Editor",
+    "task-form-category-approval": "Genehmigung",
+    "task-form-category-data-access": "Datenzugriff",
+    "task-form-category-metadata-update": "Metadatenaktualisierung",
+    "task-form-category-review": "Überprüfung",
+    "task-form-create": "Erstellungsformular",
+    "task-form-create-fields": "Felder des Erstellungsformulars",
+    "task-form-create-schema": "Schema des Erstellungsformulars",
+    "task-form-create-ui-schema": "UI-Schema des Erstellungsformulars",
+    "task-form-default-stage-mappings": "Standard-Phasenzuordnungen",
+    "task-form-design-visually": "Aufgabenformulare visuell gestalten",
+    "task-form-designer": "Designer",
+    "task-form-general-configuration": "Allgemeine Konfiguration",
+    "task-form-help-text": "Hilfetext",
+    "task-form-hidden": "Ausgeblendet",
+    "task-form-input-type": "Eingabetyp: {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "JSON-Struktur",
+    "task-form-label": "Beschriftung",
+    "task-form-load-template": "Integrierte Vorlage laden",
+    "task-form-long-text": "Langer Text",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "Objekt",
+    "task-form-options": "Optionen",
     "task-form-plural": "Aufgabenformulare",
+    "task-form-resolve": "Bearbeitungsformular",
+    "task-form-resolve-fields": "Felder des Bearbeitungsformulars",
+    "task-form-resolve-schema": "Schema des Bearbeitungsformulars",
+    "task-form-resolve-ui-schema": "UI-Schema des Bearbeitungsformulars",
+    "task-form-short-text": "Kurzer Text",
+    "task-form-single-select": "Einfachauswahl",
+    "task-form-stage-id": "Phasen-ID",
+    "task-form-stage-mapping": "Phasenzuordnung",
+    "task-form-stage-status-mapping": "Zuordnung von Phase zu Status",
+    "task-form-status-expired": "Abgelaufen",
+    "task-form-status-in-progress": "In Bearbeitung",
+    "task-form-status-manual-revoke": "Manueller Entzug",
+    "task-form-status-pending": "Ausstehend",
+    "task-form-status-revoked": "Entzogen",
+    "task-form-transition": "Übergangsformular",
+    "task-form-transition-fields": "Übergangsfelder",
+    "task-form-transition-id": "Übergangs-ID",
+    "task-form-transition-plural": "Übergangsformulare",
+    "task-form-workflow-json": "Workflow-Definition als JSON",
+    "task-form-workflow-stages": "Workflow-Phasen",
     "task-lowercase": "Aufgabe",
     "task-plural": "Aufgaben",
     "task-title": "Aufgabe Nr.{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "Workflow-Name",
     "workflow-name-is-required": "Workflow-Name ist erforderlich",
     "workflow-name-placeholder": "Workflow-Namen eingeben",
+    "workflow-node-check-condition": "Bedingung prüfen",
+    "workflow-node-data-completeness": "Datenvollständigkeit",
+    "workflow-node-detect-field-change": "Feldänderung erkennen",
+    "workflow-node-git-sink": "Mit Git synchronisieren",
+    "workflow-node-policy-enforcement": "Richtlinie durchsetzen",
+    "workflow-node-request-approval": "Genehmigung anfordern",
     "workflow-plural": "Arbeitsabläufe",
     "worksheet": "Arbeitsblatt",
     "worksheet-plural": "Arbeitsblätter",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "Möchten Sie mit der Aktualisierung der Tags fortfahren?",
     "tailor-experience-for-persona": "Passen Sie die Erfahrung speziell für das {{persona}}-Persona an, probieren Sie es aus!",
     "take-quick-product-tour": "Machen Sie eine Produkttour, um loszulegen!",
+    "task-form-create-description": "Felder, die beim Erstellen einer Aufgabe angezeigt werden.",
+    "task-form-description": "Konfigurieren Sie Aufgabenschemas, Formularverhalten und Workflow-Übergänge in einem Arbeitsbereich.",
+    "task-form-designer-description": "Verwenden Sie den Editor für Erstellungs-, Bearbeitungs- und Übergangsformulare sowie Phasenzuordnungen. Die JSON-Editoren sind weiterhin unter „Erweitert“ verfügbar.",
+    "task-form-help-placeholder": "Erläutern Sie den Zweck dieses Feldes",
+    "task-form-invalid-json": "Das JSON der Aufgabenformulareinstellungen ist ungültig",
+    "task-form-no-fields": "Noch keine Felder konfiguriert",
+    "task-form-no-schemas": "Noch keine Aufgabenformulare gefunden.",
+    "task-form-no-stage-mappings": "Noch keine Phasenzuordnungen konfiguriert.",
+    "task-form-no-template": "Für diesen Aufgabentyp ist keine integrierte Vorlage verfügbar",
+    "task-form-no-transitions": "Noch keine Übergangsformulare konfiguriert.",
+    "task-form-preview-placeholder": "Fügen Sie Felder hinzu, um eine Vorschau dieses Formulars anzuzeigen.",
+    "task-form-resolve-description": "Felder, die beim Überprüfen oder Abschließen einer Aufgabe angezeigt werden.",
+    "task-form-select-type-category": "Wählen Sie einen Aufgabentyp und eine Kategorie aus, bevor Sie eine Vorlage laden",
+    "task-form-stage-mappings-description": "Ordnen Sie Workflow-Phasen-IDs dem übergeordneten Aufgabenstatus zu, der in APIs und Zählungen verwendet wird.",
+    "task-form-transition-description": "Zusätzliche Felder, die nur für diesen Übergang angezeigt werden.",
+    "task-form-transitions-description": "Konfigurieren Sie zusätzliche Felder für bestimmte Workflow-Übergänge wie Genehmigen, Ablehnen oder Neuzuweisen.",
+    "task-form-workflow-name-required": "Das JSON der Workflow-Definition muss einen Namen enthalten",
     "team-distinct-user-description": "Die Gesamtzahl der eindeutigen Benutzer, die zu diesem Team gehören.",
     "team-member-management-description": "Optimieren Sie den Zugriff auf Benutzer und Teams in {{brandName}}.",
     "team-moved-success": "Team erfolgreich verschoben!",

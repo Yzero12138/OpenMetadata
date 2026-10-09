@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "When an AI asset (AI Application, LLM Model, or MCP Server) is submitted for review, route it to the Risk Council reviewers for approval, mirroring the Glossary Term approval process.",
+      "displayName": "AI Asset Approval Workflow"
+    },
+    "AutoPilotWorkflow": {
+      "description": "Whenever a new Service is created, the relevant pipelines will automatically be created, deployed and run.",
+      "displayName": "AutoPilot Workflow"
+    },
+    "CustomTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for custom tasks.",
+      "displayName": "Custom Task Workflow"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for data quality review tasks.",
+      "displayName": "Data Quality Review Task Workflow"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for description update tasks.",
+      "displayName": "Description Update Task Workflow"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for domain update tasks.",
+      "displayName": "Domain Update Task Workflow"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for incident-style tasks with configurable stages from Open through Closed.",
+      "displayName": "Generic Incident Task Workflow"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for task forms that require a single review stage with approve or reject transitions.",
+      "displayName": "Generic Review Task Workflow"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "When a Glossary Term is Created or Updated, this Workflow will be triggered for the Term to be Approved.",
+      "displayName": "Glossary Approval Workflow"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "Default workflow definition for incident lifecycle management.",
+      "displayName": "Incident Lifecycle Workflow"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for incident resolution tasks. Stages mirror the incident manager flow: New, Acknowledged, Assigned.",
+      "displayName": "Incident Resolution Task Workflow"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for ownership update tasks.",
+      "displayName": "Ownership Update Task Workflow"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for pipeline review tasks.",
+      "displayName": "Pipeline Review Task Workflow"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "When feedback is submitted on auto-applied tags, check if tag has reviewers and either auto-apply or create approval task",
+      "displayName": "Recognizer Feedback Review Workflow"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for approval request tasks.",
+      "displayName": "Request Approval Task Workflow"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for suggestion tasks.",
+      "displayName": "Suggestion Task Workflow"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for tag update tasks.",
+      "displayName": "Tag Update Task Workflow"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for test case resolution tasks. Stages mirror the incident manager flow: New, Acknowledged, Assigned.",
+      "displayName": "Test Case Resolution Task Workflow"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "Default workflow-driven lifecycle for tier update tasks.",
+      "displayName": "Tier Update Task Workflow"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 day",
@@ -2584,7 +2662,54 @@
     "target-column": "Target Column",
     "task": "Task",
     "task-entity": "Task {{entity}}",
+    "task-form": "Task Form",
+    "task-form-array": "Array",
+    "task-form-boolean": "Boolean",
+    "task-form-builder": "Form Builder",
+    "task-form-category-approval": "Approval",
+    "task-form-category-data-access": "Data Access",
+    "task-form-category-metadata-update": "Metadata Update",
+    "task-form-category-review": "Review",
+    "task-form-create": "Create Form",
+    "task-form-create-fields": "Create Form Fields",
+    "task-form-create-schema": "Create Form Schema",
+    "task-form-create-ui-schema": "Create UI Schema",
+    "task-form-default-stage-mappings": "Default Stage Mappings",
+    "task-form-design-visually": "Design task forms visually",
+    "task-form-designer": "Designer",
+    "task-form-general-configuration": "General Configuration",
+    "task-form-help-text": "Help text",
+    "task-form-hidden": "Hidden",
+    "task-form-input-type": "Input type: {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "JSON shape",
+    "task-form-label": "Label",
+    "task-form-load-template": "Load built-in template",
+    "task-form-long-text": "Long text",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "Object",
+    "task-form-options": "Options",
     "task-form-plural": "Task Forms",
+    "task-form-resolve": "Resolve Form",
+    "task-form-resolve-fields": "Resolve Form Fields",
+    "task-form-resolve-schema": "Resolve Form Schema",
+    "task-form-resolve-ui-schema": "Resolve UI Schema",
+    "task-form-short-text": "Short text",
+    "task-form-single-select": "Single select",
+    "task-form-stage-id": "Stage ID",
+    "task-form-stage-mapping": "Stage Mapping",
+    "task-form-stage-status-mapping": "Stage to Status Mapping",
+    "task-form-status-expired": "Expired",
+    "task-form-status-in-progress": "In Progress",
+    "task-form-status-manual-revoke": "Manual Revoke",
+    "task-form-status-pending": "Pending",
+    "task-form-status-revoked": "Revoked",
+    "task-form-transition": "Transition Form",
+    "task-form-transition-fields": "Transition Fields",
+    "task-form-transition-id": "Transition ID",
+    "task-form-transition-plural": "Transition Forms",
+    "task-form-workflow-json": "Workflow Definition JSON",
+    "task-form-workflow-stages": "Workflow Stages",
     "task-lowercase": "task",
     "task-plural": "Tasks",
     "task-title": "Task #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "Workflow Name",
     "workflow-name-is-required": "Workflow name is required",
     "workflow-name-placeholder": "Enter workflow name",
+    "workflow-node-check-condition": "Check Condition",
+    "workflow-node-data-completeness": "Data Completeness",
+    "workflow-node-detect-field-change": "Detect Field Change",
+    "workflow-node-git-sink": "Git Sink",
+    "workflow-node-policy-enforcement": "Policy Enforcement",
+    "workflow-node-request-approval": "Request Approval",
     "workflow-plural": "Workflows",
     "worksheet": "Worksheet",
     "worksheet-plural": "Worksheets",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "Would you like to proceed with updating the tags?",
     "tailor-experience-for-persona": "Tailor the experience specifically for the {{persona}} persona, just give it a spin!",
     "take-quick-product-tour": "Take a product tour to get started!",
+    "task-form-create-description": "Fields shown when a task is created.",
+    "task-form-description": "Configure task schemas, form behavior, and workflow transitions in one workspace.",
+    "task-form-designer-description": "Use the builder for create forms, resolve forms, transition forms, and stage mappings. The raw JSON editors are still available under Advanced.",
+    "task-form-help-placeholder": "Explain what this field is used for",
+    "task-form-invalid-json": "Task form settings JSON is invalid",
+    "task-form-no-fields": "No fields configured yet",
+    "task-form-no-schemas": "No task forms found yet.",
+    "task-form-no-stage-mappings": "No stage mappings configured yet.",
+    "task-form-no-template": "No built-in template is available for this task type",
+    "task-form-no-transitions": "No transition forms configured yet.",
+    "task-form-preview-placeholder": "Add fields to preview this form.",
+    "task-form-resolve-description": "Fields shown when the task is reviewed or resolved.",
+    "task-form-select-type-category": "Select a task type and category before loading a template",
+    "task-form-stage-mappings-description": "Map workflow stage IDs to the coarse task status exposed in APIs and counts.",
+    "task-form-transition-description": "Extra fields shown only for this transition.",
+    "task-form-transitions-description": "Configure additional fields for specific workflow transitions like approve, reject, or reassign.",
+    "task-form-workflow-name-required": "Workflow definition JSON must include a name",
     "team-distinct-user-description": "The total number of distinct users belongs to this team.",
     "team-member-management-description": "Streamline access to users and teams in {{brandName}}.",
     "team-moved-success": "Team moved successfully!",

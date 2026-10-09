@@ -12,6 +12,7 @@
  */
 import { Form, FormProps, Input, Modal } from 'antd';
 import { FC } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface LinkData {
   href: string;
@@ -36,6 +37,7 @@ const LinkModal: FC<LinkModalProps> = ({
   onCancel,
   getContainer,
 }) => {
+  const { t } = useTranslation();
   const handleSubmit: FormProps<LinkData>['onFinish'] = (values) => {
     onSave(values);
   };
@@ -50,9 +52,11 @@ const LinkModal: FC<LinkModalProps> = ({
         id: 'link-form',
         form: 'link-form',
       }}
-      okText="Save"
+      okText={t('label.save')}
       open={isOpen}
-      title={data.href ? 'Edit link' : 'Add link'}
+      title={t(data.href ? 'label.edit-entity' : 'label.add-entity', {
+        entity: t('label.link'),
+      })}
       onCancel={onCancel}>
       <Form
         data-testid="link-form"
@@ -60,7 +64,7 @@ const LinkModal: FC<LinkModalProps> = ({
         initialValues={{ ...data }}
         layout="vertical"
         onFinish={handleSubmit}>
-        <Form.Item label="Link" name="href">
+        <Form.Item label={t('label.link')} name="href">
           <Input autoFocus />
         </Form.Item>
       </Form>

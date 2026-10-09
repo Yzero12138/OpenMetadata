@@ -170,7 +170,7 @@ const CuratedAssetsModal = ({
         layout="vertical"
         validateMessages={VALIDATION_MESSAGES}
         onFinish={handleSave}>
-        <Form.Item label="Widget's Title" name="title">
+        <Form.Item label={t('label.title')} name="title">
           <Input
             autoFocus
             data-testid="title-input"

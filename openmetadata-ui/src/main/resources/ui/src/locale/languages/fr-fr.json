@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "Lorsqu’un actif d’IA (application d’IA, modèle LLM ou serveur MCP) est soumis à révision, il est transmis aux réviseurs du conseil des risques pour approbation, selon le processus d’approbation des termes du glossaire.",
+      "displayName": "Workflow d’approbation des actifs d’IA"
+    },
+    "AutoPilotWorkflow": {
+      "description": "À chaque création d’un service, les pipelines correspondants sont automatiquement créés, déployés et exécutés.",
+      "displayName": "Workflow AutoPilot"
+    },
+    "CustomTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches personnalisées.",
+      "displayName": "Workflow des tâches personnalisées"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de révision de la qualité des données.",
+      "displayName": "Workflow des tâches de révision de la qualité des données"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de mise à jour des descriptions.",
+      "displayName": "Workflow des tâches de mise à jour des descriptions"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de mise à jour des domaines.",
+      "displayName": "Workflow des tâches de mise à jour des domaines"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de type incident, avec des étapes configurables d’Ouvert à Fermé.",
+      "displayName": "Workflow des tâches d’incident génériques"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les formulaires de tâches nécessitant une seule étape de révision avec des transitions d’approbation ou de rejet.",
+      "displayName": "Workflow des tâches de révision génériques"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "La création ou la mise à jour d’un terme du glossaire déclenche ce workflow pour faire approuver le terme.",
+      "displayName": "Workflow d’approbation du glossaire"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "Définition de workflow par défaut pour la gestion du cycle de vie des incidents.",
+      "displayName": "Workflow du cycle de vie des incidents"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de résolution des incidents. Les étapes suivent le processus du gestionnaire d’incidents : Nouveau, Pris en compte, Affecté.",
+      "displayName": "Workflow des tâches de résolution des incidents"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de mise à jour des propriétaires.",
+      "displayName": "Workflow des tâches de mise à jour des propriétaires"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de révision des pipelines.",
+      "displayName": "Workflow des tâches de révision des pipelines"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "Lorsqu’un retour est soumis sur des étiquettes appliquées automatiquement, le workflow vérifie si l’étiquette possède des réviseurs, puis l’applique automatiquement ou crée une tâche d’approbation.",
+      "displayName": "Workflow de révision des retours sur le reconnaisseur"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de demande d’approbation.",
+      "displayName": "Workflow des tâches de demande d’approbation"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de suggestion.",
+      "displayName": "Workflow des tâches de suggestion"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de mise à jour des étiquettes.",
+      "displayName": "Workflow des tâches de mise à jour des étiquettes"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de résolution des cas de test. Les étapes suivent le processus du gestionnaire d’incidents : Nouveau, Pris en compte, Affecté.",
+      "displayName": "Workflow des tâches de résolution des cas de test"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "Cycle de vie par défaut piloté par un workflow pour les tâches de mise à jour des niveaux.",
+      "displayName": "Workflow des tâches de mise à jour des niveaux"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 jour",
@@ -2584,7 +2662,54 @@
     "target-column": "Colonne Cible",
     "task": "Tâche",
     "task-entity": "Tâche {{entity}}",
+    "task-form": "Formulaire de tâche",
+    "task-form-array": "Tableau",
+    "task-form-boolean": "Booléen",
+    "task-form-builder": "Éditeur de formulaires",
+    "task-form-category-approval": "Approbation",
+    "task-form-category-data-access": "Accès aux données",
+    "task-form-category-metadata-update": "Mise à jour des métadonnées",
+    "task-form-category-review": "Révision",
+    "task-form-create": "Formulaire de création",
+    "task-form-create-fields": "Champs du formulaire de création",
+    "task-form-create-schema": "Schéma du formulaire de création",
+    "task-form-create-ui-schema": "Schéma d’interface de création",
+    "task-form-default-stage-mappings": "Correspondances d’étapes par défaut",
+    "task-form-design-visually": "Concevoir visuellement les formulaires de tâches",
+    "task-form-designer": "Concepteur",
+    "task-form-general-configuration": "Configuration générale",
+    "task-form-help-text": "Texte d’aide",
+    "task-form-hidden": "Masqué",
+    "task-form-input-type": "Type de saisie : {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "Structure JSON",
+    "task-form-label": "Libellé",
+    "task-form-load-template": "Charger un modèle intégré",
+    "task-form-long-text": "Texte long",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "Objet",
+    "task-form-options": "Options",
     "task-form-plural": "Formulaires de tâches",
+    "task-form-resolve": "Formulaire de résolution",
+    "task-form-resolve-fields": "Champs du formulaire de résolution",
+    "task-form-resolve-schema": "Schéma du formulaire de résolution",
+    "task-form-resolve-ui-schema": "Schéma d’interface de résolution",
+    "task-form-short-text": "Texte court",
+    "task-form-single-select": "Sélection unique",
+    "task-form-stage-id": "Identifiant d’étape",
+    "task-form-stage-mapping": "Correspondance d’étape",
+    "task-form-stage-status-mapping": "Correspondance entre étapes et statuts",
+    "task-form-status-expired": "Expiré",
+    "task-form-status-in-progress": "En cours",
+    "task-form-status-manual-revoke": "Révocation manuelle",
+    "task-form-status-pending": "En attente",
+    "task-form-status-revoked": "Révoqué",
+    "task-form-transition": "Formulaire de transition",
+    "task-form-transition-fields": "Champs de transition",
+    "task-form-transition-id": "Identifiant de transition",
+    "task-form-transition-plural": "Formulaires de transition",
+    "task-form-workflow-json": "Définition du workflow en JSON",
+    "task-form-workflow-stages": "Étapes du workflow",
     "task-lowercase": "tâche",
     "task-plural": "Tâches",
     "task-title": "Tâche n°{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "Nom du workflow",
     "workflow-name-is-required": "Le nom du workflow est requis",
     "workflow-name-placeholder": "Saisissez le nom du workflow",
+    "workflow-node-check-condition": "Vérifier la condition",
+    "workflow-node-data-completeness": "Complétude des données",
+    "workflow-node-detect-field-change": "Détecter un changement de champ",
+    "workflow-node-git-sink": "Synchroniser avec Git",
+    "workflow-node-policy-enforcement": "Appliquer la politique",
+    "workflow-node-request-approval": "Demander une approbation",
     "workflow-plural": "Flux de travail",
     "worksheet": "Feuille de travail",
     "worksheet-plural": "Feuilles de travail",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "Souhaitez-vous procéder à la mise à jour des étiquettes ?",
     "tailor-experience-for-persona": "Adaptez l'expérience spécifiquement pour le persona {{persona}}, essayez-le !",
     "take-quick-product-tour": "Faites une visite guidée pour vous lancer!",
+    "task-form-create-description": "Champs affichés lors de la création d’une tâche.",
+    "task-form-description": "Configurez les schémas de tâches, le comportement des formulaires et les transitions du workflow dans un même espace.",
+    "task-form-designer-description": "Utilisez l’éditeur pour les formulaires de création, de résolution et de transition, ainsi que pour les correspondances d’étapes. Les éditeurs JSON restent disponibles dans les options avancées.",
+    "task-form-help-placeholder": "Expliquez à quoi sert ce champ",
+    "task-form-invalid-json": "Le JSON des paramètres du formulaire de tâche n’est pas valide",
+    "task-form-no-fields": "Aucun champ configuré pour le moment",
+    "task-form-no-schemas": "Aucun formulaire de tâche trouvé pour le moment.",
+    "task-form-no-stage-mappings": "Aucune correspondance d’étape configurée pour le moment.",
+    "task-form-no-template": "Aucun modèle intégré n’est disponible pour ce type de tâche",
+    "task-form-no-transitions": "Aucun formulaire de transition configuré pour le moment.",
+    "task-form-preview-placeholder": "Ajoutez des champs pour prévisualiser ce formulaire.",
+    "task-form-resolve-description": "Champs affichés lors de la révision ou de la résolution de la tâche.",
+    "task-form-select-type-category": "Sélectionnez un type et une catégorie de tâche avant de charger un modèle",
+    "task-form-stage-mappings-description": "Associez les identifiants des étapes du workflow au statut général de la tâche utilisé dans les API et les décomptes.",
+    "task-form-transition-description": "Champs supplémentaires affichés uniquement pour cette transition.",
+    "task-form-transitions-description": "Configurez des champs supplémentaires pour certaines transitions du workflow, comme approuver, rejeter ou réaffecter.",
+    "task-form-workflow-name-required": "Le JSON de définition du workflow doit inclure un nom",
     "team-distinct-user-description": "Le nombre total d'utilisateurs distincts appartenant à cette équipe.",
     "team-member-management-description": "Gérez les accès des utilisateurs et équipes à {{brandName}}.",
     "team-moved-success": "L'équipe a été déplacée avec succès !",

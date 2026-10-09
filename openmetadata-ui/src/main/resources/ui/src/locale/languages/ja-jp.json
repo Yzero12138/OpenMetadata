@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "AI アセット（AI アプリケーション、LLM モデル、MCP サーバー）がレビューに提出されると、用語集の用語の承認プロセスに従い、リスク評議会のレビュー担当者に送られて承認を受けます。",
+      "displayName": "AI アセット承認ワークフロー"
+    },
+    "AutoPilotWorkflow": {
+      "description": "新しいサービスが作成されるたびに、関連するパイプラインが自動的に作成、デプロイ、実行されます。",
+      "displayName": "AutoPilot ワークフロー"
+    },
+    "CustomTaskWorkflow": {
+      "description": "ワークフローによって管理されるカスタムタスクの既定のライフサイクル。",
+      "displayName": "カスタムタスクワークフロー"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "ワークフローによって管理されるデータ品質レビュータスクの既定のライフサイクル。",
+      "displayName": "データ品質レビュータスクワークフロー"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "ワークフローによって管理される説明更新タスクの既定のライフサイクル。",
+      "displayName": "説明更新タスクワークフロー"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "ワークフローによって管理されるドメイン更新タスクの既定のライフサイクル。",
+      "displayName": "ドメイン更新タスクワークフロー"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "「オープン」から「クローズ」までの段階を設定できる、インシデント型タスク向けのワークフローで管理される既定のライフサイクル。",
+      "displayName": "汎用インシデントタスクワークフロー"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "承認または却下への遷移を伴う単一のレビュー段階が必要なタスクフォーム向けの、ワークフローで管理される既定のライフサイクル。",
+      "displayName": "汎用レビュータスクワークフロー"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "用語集の用語が作成または更新されると、このワークフローがトリガーされ、その用語の承認が行われます。",
+      "displayName": "用語集承認ワークフロー"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "インシデントのライフサイクルを管理するための既定のワークフロー定義。",
+      "displayName": "インシデントライフサイクルワークフロー"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "ワークフローで管理されるインシデント解決タスクの既定のライフサイクル。段階はインシデントマネージャーのフローと同じで、「新規」「確認済み」「割り当て済み」です。",
+      "displayName": "インシデント解決タスクワークフロー"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "ワークフローによって管理される所有者更新タスクの既定のライフサイクル。",
+      "displayName": "所有者更新タスクワークフロー"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "ワークフローによって管理されるパイプラインレビュータスクの既定のライフサイクル。",
+      "displayName": "パイプラインレビュータスクワークフロー"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "自動適用されたタグに対してフィードバックが送信されると、タグにレビュー担当者がいるかを確認し、タグを自動適用するか、承認タスクを作成します。",
+      "displayName": "認識器フィードバックレビューワークフロー"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "ワークフローによって管理される承認要求タスクの既定のライフサイクル。",
+      "displayName": "承認要求タスクワークフロー"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "ワークフローによって管理される提案タスクの既定のライフサイクル。",
+      "displayName": "提案タスクワークフロー"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "ワークフローによって管理されるタグ更新タスクの既定のライフサイクル。",
+      "displayName": "タグ更新タスクワークフロー"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "ワークフローで管理されるテストケース解決タスクの既定のライフサイクル。段階はインシデントマネージャーのフローと同じで、「新規」「確認済み」「割り当て済み」です。",
+      "displayName": "テストケース解決タスクワークフロー"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "ワークフローによって管理される階層更新タスクの既定のライフサイクル。",
+      "displayName": "階層更新タスクワークフロー"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 日",
@@ -2584,7 +2662,54 @@
     "target-column": "ターゲットカラム",
     "task": "タスク",
     "task-entity": "{{entity}} のタスク",
+    "task-form": "タスクフォーム",
+    "task-form-array": "配列",
+    "task-form-boolean": "真偽値",
+    "task-form-builder": "フォームビルダー",
+    "task-form-category-approval": "承認",
+    "task-form-category-data-access": "データアクセス",
+    "task-form-category-metadata-update": "メタデータ更新",
+    "task-form-category-review": "レビュー",
+    "task-form-create": "作成フォーム",
+    "task-form-create-fields": "作成フォームのフィールド",
+    "task-form-create-schema": "作成フォームのスキーマ",
+    "task-form-create-ui-schema": "作成フォームの UI スキーマ",
+    "task-form-default-stage-mappings": "既定のステージ対応付け",
+    "task-form-design-visually": "タスクフォームを視覚的に設計",
+    "task-form-designer": "デザイナー",
+    "task-form-general-configuration": "一般設定",
+    "task-form-help-text": "ヘルプテキスト",
+    "task-form-hidden": "非表示",
+    "task-form-input-type": "入力タイプ：{{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "JSON の構造",
+    "task-form-label": "ラベル",
+    "task-form-load-template": "組み込みテンプレートを読み込む",
+    "task-form-long-text": "長いテキスト",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "オブジェクト",
+    "task-form-options": "選択肢",
     "task-form-plural": "タスクフォーム",
+    "task-form-resolve": "解決フォーム",
+    "task-form-resolve-fields": "解決フォームのフィールド",
+    "task-form-resolve-schema": "解決フォームのスキーマ",
+    "task-form-resolve-ui-schema": "解決フォームの UI スキーマ",
+    "task-form-short-text": "短いテキスト",
+    "task-form-single-select": "単一選択",
+    "task-form-stage-id": "ステージ ID",
+    "task-form-stage-mapping": "ステージの対応付け",
+    "task-form-stage-status-mapping": "ステージとステータスの対応付け",
+    "task-form-status-expired": "期限切れ",
+    "task-form-status-in-progress": "進行中",
+    "task-form-status-manual-revoke": "手動取り消し",
+    "task-form-status-pending": "保留中",
+    "task-form-status-revoked": "取り消し済み",
+    "task-form-transition": "遷移フォーム",
+    "task-form-transition-fields": "遷移フィールド",
+    "task-form-transition-id": "遷移 ID",
+    "task-form-transition-plural": "遷移フォーム",
+    "task-form-workflow-json": "ワークフロー定義 JSON",
+    "task-form-workflow-stages": "ワークフローのステージ",
     "task-lowercase": "タスク",
     "task-plural": "タスク",
     "task-title": "タスク #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "ワークフロー名",
     "workflow-name-is-required": "ワークフロー名は必須です",
     "workflow-name-placeholder": "ワークフロー名を入力",
+    "workflow-node-check-condition": "条件を確認",
+    "workflow-node-data-completeness": "データの完全性",
+    "workflow-node-detect-field-change": "フィールドの変更を検出",
+    "workflow-node-git-sink": "Git に同期",
+    "workflow-node-policy-enforcement": "ポリシーを適用",
+    "workflow-node-request-approval": "承認を要求",
     "workflow-plural": "ワークフロー",
     "worksheet": "ワークシート",
     "worksheet-plural": "ワークシート",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "タグを更新しますか？",
     "tailor-experience-for-persona": "{{persona}}向けに最適化された体験をカスタマイズしてご利用ください！",
     "take-quick-product-tour": "クイックツアーで製品を体験しましょう！",
+    "task-form-create-description": "タスクの作成時に表示するフィールドです。",
+    "task-form-description": "タスクのスキーマ、フォームの動作、ワークフローの遷移を同じワークスペースで設定します。",
+    "task-form-designer-description": "ビルダーで作成フォーム、解決フォーム、遷移フォーム、ステージの対応付けを設定できます。元の JSON エディターは詳細設定で引き続き利用できます。",
+    "task-form-help-placeholder": "このフィールドの用途を説明してください",
+    "task-form-invalid-json": "タスクフォーム設定の JSON が無効です",
+    "task-form-no-fields": "フィールドはまだ設定されていません",
+    "task-form-no-schemas": "タスクフォームはまだ見つかりません。",
+    "task-form-no-stage-mappings": "ステージの対応付けはまだ設定されていません。",
+    "task-form-no-template": "このタスクの種類には組み込みテンプレートがありません",
+    "task-form-no-transitions": "遷移フォームはまだ設定されていません。",
+    "task-form-preview-placeholder": "フィールドを追加すると、このフォームをプレビューできます。",
+    "task-form-resolve-description": "タスクのレビューまたは解決時に表示するフィールドです。",
+    "task-form-select-type-category": "テンプレートを読み込む前に、タスクの種類とカテゴリを選択してください",
+    "task-form-stage-mappings-description": "ワークフローのステージ ID を、API と集計で使用するタスクの全体的なステータスに対応付けます。",
+    "task-form-transition-description": "この遷移でのみ表示する追加のフィールドです。",
+    "task-form-transitions-description": "承認、却下、再割り当てなど、特定のワークフロー遷移に追加のフィールドを設定します。",
+    "task-form-workflow-name-required": "ワークフロー定義の JSON には名前が必要です",
     "team-distinct-user-description": "このチームに属するユニークユーザーの合計数。",
     "team-member-management-description": "{{brandName}}内のユーザーとチームのアクセス管理を効率化します。",
     "team-moved-success": "チームの移動に成功しました！",

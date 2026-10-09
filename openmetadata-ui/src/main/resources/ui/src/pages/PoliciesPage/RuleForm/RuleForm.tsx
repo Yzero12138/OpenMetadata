@@ -332,7 +332,7 @@ const RuleForm: FC<RuleFormProps> = ({
           <AutoComplete
             data-testid="condition"
             options={conditionOptions}
-            placeholder="Condition"
+            placeholder={t('label.condition')}
             value={ruleData.condition}
             onChange={(value) => {
               setRuleData((prev: Rule) => ({ ...prev, condition: value }));

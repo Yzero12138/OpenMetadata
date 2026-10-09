@@ -12,6 +12,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Node } from 'reactflow';
 import { EntityType } from '../../../../enums/entity.enum';
 import { NodeSubType } from '../../../../generated/governance/workflows/elements/nodeSubType';
@@ -42,6 +43,7 @@ export const CheckConditionForm: React.FC<CheckConditionFormProps> = ({
   onDelete,
   onSave,
 }) => {
+  const { t } = useTranslation();
   const getInitialRules = () => {
     if (node?.data) {
       const nodeConfig = node.data.config || {};
@@ -113,7 +115,7 @@ export const CheckConditionForm: React.FC<CheckConditionFormProps> = ({
 
         <QueryBuilderSection
           entityTypes={entityTypes[0] || EntityType.ALL}
-          label="Rules to Check"
+          label={t('label.rule-plural')}
           outputType={SearchOutputType.JSONLogic}
           value={rules}
           onChange={handleRulesChange}

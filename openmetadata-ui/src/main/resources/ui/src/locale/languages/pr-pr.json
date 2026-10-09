@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "هنگامی که یک دارایی هوش مصنوعی (برنامه هوش مصنوعی، مدل LLM یا سرور MCP) برای بازبینی ارسال می‌شود، مانند فرایند تأیید اصطلاحات واژه‌نامه، برای تأیید به بازبینان شورای ریسک ارجاع داده می‌شود.",
+      "displayName": "گردش کار تأیید دارایی‌های هوش مصنوعی"
+    },
+    "AutoPilotWorkflow": {
+      "description": "با ایجاد هر سرویس جدید، خطوط لوله مرتبط به‌طور خودکار ایجاد، مستقر و اجرا می‌شوند.",
+      "displayName": "گردش کار AutoPilot"
+    },
+    "CustomTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف سفارشی که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف سفارشی"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف بازبینی کیفیت داده که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف بازبینی کیفیت داده"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف به‌روزرسانی توضیحات که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف به‌روزرسانی توضیحات"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف به‌روزرسانی دامنه که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف به‌روزرسانی دامنه"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض مبتنی بر گردش کار برای وظایف از نوع رخداد، با مراحل قابل تنظیم از باز تا بسته.",
+      "displayName": "گردش کار وظایف رخداد عمومی"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض مبتنی بر گردش کار برای فرم‌های وظیفه که به یک مرحله بازبینی با انتقال به تأیید یا رد نیاز دارند.",
+      "displayName": "گردش کار وظایف بازبینی عمومی"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "با ایجاد یا به‌روزرسانی یک اصطلاح در واژه‌نامه، این گردش کار برای تأیید آن اصطلاح آغاز می‌شود.",
+      "displayName": "گردش کار تأیید واژه‌نامه"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "تعریف گردش کار پیش‌فرض برای مدیریت چرخه عمر رخداد.",
+      "displayName": "گردش کار چرخه عمر رخداد"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف رفع رخداد که با گردش کار مدیریت می‌شود. مراحل مطابق فرایند مدیر رخداد هستند: جدید، تأیید دریافت، تخصیص‌یافته.",
+      "displayName": "گردش کار وظایف رفع رخداد"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف به‌روزرسانی مالکیت که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف به‌روزرسانی مالکیت"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف بازبینی خط لوله که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف بازبینی خط لوله"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "هنگامی که بازخوردی درباره برچسب‌های اعمال‌شده به‌صورت خودکار ارسال می‌شود، بررسی می‌شود که آیا برچسب بازبین دارد؛ سپس برچسب به‌طور خودکار اعمال می‌شود یا یک وظیفه تأیید ایجاد می‌شود.",
+      "displayName": "گردش کار بازبینی بازخورد شناسایی‌گر"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف درخواست تأیید که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف درخواست تأیید"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف پیشنهاد که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف پیشنهاد"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف به‌روزرسانی برچسب که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف به‌روزرسانی برچسب"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف رفع مورد آزمون که با گردش کار مدیریت می‌شود. مراحل مطابق فرایند مدیر رخداد هستند: جدید، تأیید دریافت، تخصیص‌یافته.",
+      "displayName": "گردش کار وظایف رفع مورد آزمون"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "چرخه عمر پیش‌فرض وظایف به‌روزرسانی سطح که با گردش کار مدیریت می‌شود.",
+      "displayName": "گردش کار وظایف به‌روزرسانی سطح"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 روز",
@@ -2584,7 +2662,54 @@
     "target-column": "ستون هدف",
     "task": "وظیفه",
     "task-entity": "وظیفه {{entity}}",
+    "task-form": "فرم وظیفه",
+    "task-form-array": "آرایه",
+    "task-form-boolean": "مقدار بولی",
+    "task-form-builder": "فرم‌ساز",
+    "task-form-category-approval": "تأیید",
+    "task-form-category-data-access": "دسترسی به داده",
+    "task-form-category-metadata-update": "به‌روزرسانی فراداده",
+    "task-form-category-review": "بازبینی",
+    "task-form-create": "فرم ایجاد",
+    "task-form-create-fields": "فیلدهای فرم ایجاد",
+    "task-form-create-schema": "طرحواره فرم ایجاد",
+    "task-form-create-ui-schema": "طرحواره رابط فرم ایجاد",
+    "task-form-default-stage-mappings": "نگاشت‌های پیش‌فرض مراحل",
+    "task-form-design-visually": "طراحی بصری فرم‌های وظیفه",
+    "task-form-designer": "طراح",
+    "task-form-general-configuration": "پیکربندی عمومی",
+    "task-form-help-text": "متن راهنما",
+    "task-form-hidden": "پنهان",
+    "task-form-input-type": "نوع ورودی: {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "ساختار JSON",
+    "task-form-label": "برچسب",
+    "task-form-load-template": "بارگیری الگوی داخلی",
+    "task-form-long-text": "متن بلند",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "شیء",
+    "task-form-options": "گزینه‌ها",
     "task-form-plural": "فرم‌های وظیفه",
+    "task-form-resolve": "فرم رسیدگی",
+    "task-form-resolve-fields": "فیلدهای فرم رسیدگی",
+    "task-form-resolve-schema": "طرحواره فرم رسیدگی",
+    "task-form-resolve-ui-schema": "طرحواره رابط فرم رسیدگی",
+    "task-form-short-text": "متن کوتاه",
+    "task-form-single-select": "انتخاب تکی",
+    "task-form-stage-id": "شناسه مرحله",
+    "task-form-stage-mapping": "نگاشت مرحله",
+    "task-form-stage-status-mapping": "نگاشت مرحله به وضعیت",
+    "task-form-status-expired": "منقضی‌شده",
+    "task-form-status-in-progress": "در حال انجام",
+    "task-form-status-manual-revoke": "لغو دستی",
+    "task-form-status-pending": "در انتظار",
+    "task-form-status-revoked": "لغوشده",
+    "task-form-transition": "فرم گذار",
+    "task-form-transition-fields": "فیلدهای گذار",
+    "task-form-transition-id": "شناسه گذار",
+    "task-form-transition-plural": "فرم‌های گذار",
+    "task-form-workflow-json": "تعریف گردش کار به صورت JSON",
+    "task-form-workflow-stages": "مراحل گردش کار",
     "task-lowercase": "وظیفه",
     "task-plural": "وظایف",
     "task-title": "وظیفه #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "نام جریان کاری",
     "workflow-name-is-required": "نام جریان کاری الزامی است",
     "workflow-name-placeholder": "نام جریان کاری را وارد کنید",
+    "workflow-node-check-condition": "بررسی شرط",
+    "workflow-node-data-completeness": "کامل بودن داده‌ها",
+    "workflow-node-detect-field-change": "تشخیص تغییر فیلد",
+    "workflow-node-git-sink": "همگام‌سازی با Git",
+    "workflow-node-policy-enforcement": "اجرای سیاست",
+    "workflow-node-request-approval": "درخواست تأیید",
     "workflow-plural": "جریان‌های کاری",
     "worksheet": "برگه کار",
     "worksheet-plural": "برگه‌های کار",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "آیا می‌خواهید به‌روزرسانی برچسب‌ها را ادامه دهید؟",
     "tailor-experience-for-persona": "تجربه را به‌طور خاص برای شخصیت {{persona}} تنظیم کنید، حتماً امتحانش کنید!",
     "take-quick-product-tour": "یک تور محصولی برای شروع بگذارید!",
+    "task-form-create-description": "فیلدهایی که هنگام ایجاد وظیفه نمایش داده می‌شوند.",
+    "task-form-description": "طرحواره‌های وظیفه، رفتار فرم‌ها و گذارهای گردش کار را در یک فضای کاری پیکربندی کنید.",
+    "task-form-designer-description": "از فرم‌ساز برای فرم‌های ایجاد، رسیدگی و گذار و نگاشت مراحل استفاده کنید. ویرایشگرهای JSON همچنان در گزینه‌های پیشرفته در دسترس هستند.",
+    "task-form-help-placeholder": "کاربرد این فیلد را توضیح دهید",
+    "task-form-invalid-json": "JSON تنظیمات فرم وظیفه نامعتبر است",
+    "task-form-no-fields": "هنوز هیچ فیلدی پیکربندی نشده است",
+    "task-form-no-schemas": "هنوز هیچ فرم وظیفه‌ای یافت نشده است.",
+    "task-form-no-stage-mappings": "هنوز هیچ نگاشت مرحله‌ای پیکربندی نشده است.",
+    "task-form-no-template": "هیچ الگوی داخلی برای این نوع وظیفه در دسترس نیست",
+    "task-form-no-transitions": "هنوز هیچ فرم گذاری پیکربندی نشده است.",
+    "task-form-preview-placeholder": "برای پیش‌نمایش این فرم، فیلد اضافه کنید.",
+    "task-form-resolve-description": "فیلدهایی که هنگام بازبینی یا رسیدگی به وظیفه نمایش داده می‌شوند.",
+    "task-form-select-type-category": "پیش از بارگیری الگو، نوع و دسته وظیفه را انتخاب کنید",
+    "task-form-stage-mappings-description": "شناسه‌های مراحل گردش کار را به وضعیت کلی وظیفه که در APIها و شمارش‌ها استفاده می‌شود، نگاشت کنید.",
+    "task-form-transition-description": "فیلدهای اضافی که فقط برای این گذار نمایش داده می‌شوند.",
+    "task-form-transitions-description": "فیلدهای اضافی را برای گذارهای مشخص گردش کار مانند تأیید، رد یا واگذاری مجدد پیکربندی کنید.",
+    "task-form-workflow-name-required": "JSON تعریف گردش کار باید شامل نام باشد",
     "team-distinct-user-description": "تعداد کل کاربران متمایز متعلق به این تیم.",
     "team-member-management-description": "دسترسی به کاربران و تیم‌ها را در {{brandName}} ساده‌سازی کنید.",
     "team-moved-success": "تیم با موفقیت منتقل شد!",

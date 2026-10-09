@@ -278,7 +278,7 @@ export const PersonaSelectableList = ({
                 label: getEntityName(persona),
                 value: persona.fullyQualifiedName,
               }))}
-              placeholder="Please select"
+              placeholder={t('label.select')}
               popupClassName="persona-custom-dropdown-class"
               ref={dropdownRef}
               style={{ width: '100%' }}

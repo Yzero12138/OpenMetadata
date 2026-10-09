@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "عند إرسال أصل ذكاء اصطناعي (تطبيق ذكاء اصطناعي أو نموذج LLM أو خادم MCP) للمراجعة، يُوجَّه إلى مراجعي مجلس المخاطر للموافقة عليه، وفقًا لعملية الموافقة على مصطلحات المسرد.",
+      "displayName": "سير عمل الموافقة على أصول الذكاء الاصطناعي"
+    },
+    "AutoPilotWorkflow": {
+      "description": "عند إنشاء خدمة جديدة، تُنشأ خطوط المعالجة ذات الصلة وتُنشر وتُشغَّل تلقائيًا.",
+      "displayName": "سير عمل AutoPilot"
+    },
+    "CustomTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل المهام المخصصة.",
+      "displayName": "سير عمل المهام المخصصة"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل مهام مراجعة جودة البيانات.",
+      "displayName": "سير عمل مهام مراجعة جودة البيانات"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل مهام تحديث الوصف.",
+      "displayName": "سير عمل مهام تحديث الوصف"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل مهام تحديث المجال.",
+      "displayName": "سير عمل مهام تحديث المجال"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل للمهام من نوع الحوادث، مع مراحل قابلة للتهيئة من مفتوح إلى مغلق.",
+      "displayName": "سير عمل مهام الحوادث العامة"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل لنماذج المهام التي تتطلب مرحلة مراجعة واحدة مع انتقالات للموافقة أو الرفض.",
+      "displayName": "سير عمل مهام المراجعة العامة"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "عند إنشاء مصطلح في المسرد أو تحديثه، يُشغَّل سير العمل هذا للموافقة على المصطلح.",
+      "displayName": "سير عمل الموافقة على المسرد"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "تعريف سير العمل الافتراضي لإدارة دورة حياة الحوادث.",
+      "displayName": "سير عمل دورة حياة الحوادث"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل لمهام حل الحوادث. تتبع المراحل مسار مدير الحوادث: جديد، تم الإقرار به، تم التعيين.",
+      "displayName": "سير عمل مهام حل الحوادث"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل مهام تحديث الملكية.",
+      "displayName": "سير عمل مهام تحديث الملكية"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل مهام مراجعة خطوط المعالجة.",
+      "displayName": "سير عمل مهام مراجعة خطوط المعالجة"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "عند إرسال ملاحظات على وسوم مطبقة تلقائيًا، يُتحقق مما إذا كان للوسم مراجعون، ثم يُطبَّق تلقائيًا أو تُنشأ مهمة موافقة.",
+      "displayName": "سير عمل مراجعة ملاحظات أداة التعرف"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل مهام طلب الموافقة.",
+      "displayName": "سير عمل مهام طلب الموافقة"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل مهام الاقتراحات.",
+      "displayName": "سير عمل مهام الاقتراحات"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل مهام تحديث الوسوم.",
+      "displayName": "سير عمل مهام تحديث الوسوم"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل لمهام حل حالات الاختبار. تتبع المراحل مسار مدير الحوادث: جديد، تم الإقرار به، تم التعيين.",
+      "displayName": "سير عمل مهام حل حالات الاختبار"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "دورة الحياة الافتراضية التي يديرها سير العمل من أجل مهام تحديث المستوى.",
+      "displayName": "سير عمل مهام تحديث المستوى"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "يوم واحد",
@@ -2584,7 +2662,54 @@
     "target-column": "عمود الهدف",
     "task": "مهمة",
     "task-entity": "مهمة {{entity}}",
+    "task-form": "نموذج المهمة",
+    "task-form-array": "مصفوفة",
+    "task-form-boolean": "قيمة منطقية",
+    "task-form-builder": "منشئ النماذج",
+    "task-form-category-approval": "الموافقة",
+    "task-form-category-data-access": "الوصول إلى البيانات",
+    "task-form-category-metadata-update": "تحديث البيانات الوصفية",
+    "task-form-category-review": "المراجعة",
+    "task-form-create": "نموذج الإنشاء",
+    "task-form-create-fields": "حقول نموذج الإنشاء",
+    "task-form-create-schema": "مخطط نموذج الإنشاء",
+    "task-form-create-ui-schema": "مخطط واجهة نموذج الإنشاء",
+    "task-form-default-stage-mappings": "روابط المراحل الافتراضية",
+    "task-form-design-visually": "تصميم نماذج المهام بصريًا",
+    "task-form-designer": "المصمم",
+    "task-form-general-configuration": "الإعدادات العامة",
+    "task-form-help-text": "نص المساعدة",
+    "task-form-hidden": "مخفي",
+    "task-form-input-type": "نوع الإدخال: {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "بنية JSON",
+    "task-form-label": "التسمية",
+    "task-form-load-template": "تحميل قالب مدمج",
+    "task-form-long-text": "نص طويل",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "كائن",
+    "task-form-options": "الخيارات",
     "task-form-plural": "نماذج المهام",
+    "task-form-resolve": "نموذج المعالجة",
+    "task-form-resolve-fields": "حقول نموذج المعالجة",
+    "task-form-resolve-schema": "مخطط نموذج المعالجة",
+    "task-form-resolve-ui-schema": "مخطط واجهة نموذج المعالجة",
+    "task-form-short-text": "نص قصير",
+    "task-form-single-select": "اختيار واحد",
+    "task-form-stage-id": "معرّف المرحلة",
+    "task-form-stage-mapping": "ربط المرحلة",
+    "task-form-stage-status-mapping": "ربط المراحل بالحالات",
+    "task-form-status-expired": "منتهي الصلاحية",
+    "task-form-status-in-progress": "قيد التنفيذ",
+    "task-form-status-manual-revoke": "إلغاء يدوي",
+    "task-form-status-pending": "قيد الانتظار",
+    "task-form-status-revoked": "ملغى",
+    "task-form-transition": "نموذج الانتقال",
+    "task-form-transition-fields": "حقول الانتقال",
+    "task-form-transition-id": "معرّف الانتقال",
+    "task-form-transition-plural": "نماذج الانتقال",
+    "task-form-workflow-json": "تعريف سير العمل بصيغة JSON",
+    "task-form-workflow-stages": "مراحل سير العمل",
     "task-lowercase": "مهمة",
     "task-plural": "مهام",
     "task-title": "المهمة #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "اسم سير العمل",
     "workflow-name-is-required": "اسم سير العمل مطلوب",
     "workflow-name-placeholder": "أدخل اسم سير العمل",
+    "workflow-node-check-condition": "التحقق من الشرط",
+    "workflow-node-data-completeness": "اكتمال البيانات",
+    "workflow-node-detect-field-change": "اكتشاف تغيير الحقل",
+    "workflow-node-git-sink": "المزامنة إلى Git",
+    "workflow-node-policy-enforcement": "إنفاذ السياسة",
+    "workflow-node-request-approval": "طلب الموافقة",
     "workflow-plural": "سير العمل",
     "worksheet": "ورقة عمل",
     "worksheet-plural": "أوراق عمل",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "هل ترغب في المتابعة بتحديث العلامات؟",
     "tailor-experience-for-persona": "صمم التجربة خصيصًا لشخصية {{persona}}، فقط جربها!",
     "take-quick-product-tour": "قم بجولة سريعة في المنتج لتبدأ!",
+    "task-form-create-description": "الحقول التي تظهر عند إنشاء مهمة.",
+    "task-form-description": "اضبط مخططات المهام وسلوك النماذج وانتقالات سير العمل في مساحة عمل واحدة.",
+    "task-form-designer-description": "استخدم المنشئ لنماذج الإنشاء والمعالجة والانتقال وروابط المراحل. لا تزال محررات JSON متاحة ضمن الخيارات المتقدمة.",
+    "task-form-help-placeholder": "اشرح الغرض من هذا الحقل",
+    "task-form-invalid-json": "صيغة JSON لإعدادات نموذج المهمة غير صالحة",
+    "task-form-no-fields": "لم يتم إعداد حقول بعد",
+    "task-form-no-schemas": "لم يتم العثور على نماذج مهام بعد.",
+    "task-form-no-stage-mappings": "لم يتم إعداد روابط المراحل بعد.",
+    "task-form-no-template": "لا يتوفر قالب مدمج لهذا النوع من المهام",
+    "task-form-no-transitions": "لم يتم إعداد نماذج انتقال بعد.",
+    "task-form-preview-placeholder": "أضف حقولًا لمعاينة هذا النموذج.",
+    "task-form-resolve-description": "الحقول التي تظهر عند مراجعة المهمة أو معالجتها.",
+    "task-form-select-type-category": "حدد نوع المهمة وفئتها قبل تحميل قالب",
+    "task-form-stage-mappings-description": "اربط معرّفات مراحل سير العمل بالحالة العامة للمهمة المستخدمة في واجهات API والإحصاءات.",
+    "task-form-transition-description": "حقول إضافية تظهر لهذا الانتقال فقط.",
+    "task-form-transitions-description": "اضبط حقولًا إضافية لانتقالات محددة في سير العمل مثل الموافقة أو الرفض أو إعادة الإسناد.",
+    "task-form-workflow-name-required": "يجب أن يتضمن تعريف سير العمل بصيغة JSON اسمًا",
     "team-distinct-user-description": "إجمالي عدد المستخدمين المميزين الذين ينتمون إلى هذا الفريق.",
     "team-member-management-description": "تبسيط الوصول إلى المستخدمين والفرق في {{brandName}}.",
     "team-moved-success": "تم نقل الفريق بنجاح!",

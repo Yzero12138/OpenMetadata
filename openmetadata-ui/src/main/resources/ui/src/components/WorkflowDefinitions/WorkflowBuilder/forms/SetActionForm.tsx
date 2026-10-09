@@ -283,7 +283,22 @@ export const SetActionForm: React.FC<SetActionFormProps> = ({
               updateFormData('fieldValue', '');
             }}>
             {FIELD_OPTIONS_DROPDOWN.map((opt) => (
-              <Select.Item id={opt.value} key={opt.value} label={opt.label} />
+              <Select.Item
+                id={opt.value}
+                key={opt.value}
+                label={t(
+                  {
+                    name: 'label.name',
+                    tags: 'label.tag-plural',
+                    description: 'label.description',
+                    displayName: 'label.display-name',
+                    glossaryTerms: 'label.glossary-term-plural',
+                    tier: 'label.tier',
+                    status: 'label.status',
+                    certification: 'label.certification',
+                  }[opt.value]
+                )}
+              />
             ))}
           </Select>
         </div>

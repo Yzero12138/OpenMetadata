@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "เมื่อส่งสินทรัพย์ AI (แอปพลิเคชัน AI โมเดล LLM หรือเซิร์ฟเวอร์ MCP) เพื่อตรวจสอบ ระบบจะส่งต่อไปยังผู้ตรวจสอบของคณะกรรมการความเสี่ยงเพื่ออนุมัติ โดยใช้กระบวนการเดียวกับการอนุมัติคำศัพท์ในอภิธานศัพท์",
+      "displayName": "เวิร์กโฟลว์อนุมัติสินทรัพย์ AI"
+    },
+    "AutoPilotWorkflow": {
+      "description": "ทุกครั้งที่สร้างบริการใหม่ ระบบจะสร้าง ปรับใช้ และเรียกใช้ไปป์ไลน์ที่เกี่ยวข้องโดยอัตโนมัติ",
+      "displayName": "เวิร์กโฟลว์ AutoPilot"
+    },
+    "CustomTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานแบบกำหนดเองที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานแบบกำหนดเอง"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานตรวจสอบคุณภาพข้อมูลที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานตรวจสอบคุณภาพข้อมูล"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานอัปเดตคำอธิบายที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานอัปเดตคำอธิบาย"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานอัปเดตโดเมนที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานอัปเดตโดเมน"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นที่ขับเคลื่อนด้วยเวิร์กโฟลว์สำหรับงานประเภทเหตุการณ์ โดยกำหนดค่าขั้นตอนได้ตั้งแต่เปิดจนถึงปิด",
+      "displayName": "เวิร์กโฟลว์งานเหตุการณ์ทั่วไป"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นที่ขับเคลื่อนด้วยเวิร์กโฟลว์สำหรับแบบฟอร์มงานที่ต้องมีขั้นตอนตรวจสอบเพียงหนึ่งขั้น พร้อมการเปลี่ยนสถานะเป็นอนุมัติหรือปฏิเสธ",
+      "displayName": "เวิร์กโฟลว์งานตรวจสอบทั่วไป"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "เมื่อสร้างหรืออัปเดตคำศัพท์ในอภิธานศัพท์ เวิร์กโฟลว์นี้จะเริ่มทำงานเพื่ออนุมัติคำศัพท์นั้น",
+      "displayName": "เวิร์กโฟลว์อนุมัติอภิธานศัพท์"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "คำจำกัดความเวิร์กโฟลว์เริ่มต้นสำหรับการจัดการวงจรชีวิตเหตุการณ์",
+      "displayName": "เวิร์กโฟลว์วงจรชีวิตเหตุการณ์"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นที่ขับเคลื่อนด้วยเวิร์กโฟลว์สำหรับงานแก้ไขเหตุการณ์ ขั้นตอนสอดคล้องกับกระบวนการของตัวจัดการเหตุการณ์ ได้แก่ ใหม่ รับทราบแล้ว และมอบหมายแล้ว",
+      "displayName": "เวิร์กโฟลว์งานแก้ไขเหตุการณ์"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานอัปเดตเจ้าของที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานอัปเดตเจ้าของ"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานตรวจสอบไปป์ไลน์ที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานตรวจสอบไปป์ไลน์"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "เมื่อมีการส่งข้อเสนอแนะเกี่ยวกับแท็กที่ใช้โดยอัตโนมัติ ระบบจะตรวจสอบว่าแท็กมีผู้ตรวจสอบหรือไม่ จากนั้นจะใช้แท็กโดยอัตโนมัติหรือสร้างงานอนุมัติ",
+      "displayName": "เวิร์กโฟลว์ตรวจสอบข้อเสนอแนะเกี่ยวกับตัวรู้จำ"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานขออนุมัติที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานขออนุมัติ"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานข้อเสนอแนะที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานข้อเสนอแนะ"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานอัปเดตแท็กที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานอัปเดตแท็ก"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นที่ขับเคลื่อนด้วยเวิร์กโฟลว์สำหรับงานแก้ไขกรณีทดสอบ ขั้นตอนสอดคล้องกับกระบวนการของตัวจัดการเหตุการณ์ ได้แก่ ใหม่ รับทราบแล้ว และมอบหมายแล้ว",
+      "displayName": "เวิร์กโฟลว์งานแก้ไขกรณีทดสอบ"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "วงจรชีวิตเริ่มต้นสำหรับงานอัปเดตระดับที่ขับเคลื่อนด้วยเวิร์กโฟลว์",
+      "displayName": "เวิร์กโฟลว์งานอัปเดตระดับ"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 วัน",
@@ -2584,7 +2662,54 @@
     "target-column": "คอลัมน์เป้าหมาย",
     "task": "งาน",
     "task-entity": "งาน {{entity}}",
+    "task-form": "แบบฟอร์มงาน",
+    "task-form-array": "อาร์เรย์",
+    "task-form-boolean": "บูลีน",
+    "task-form-builder": "เครื่องมือสร้างแบบฟอร์ม",
+    "task-form-category-approval": "การอนุมัติ",
+    "task-form-category-data-access": "การเข้าถึงข้อมูล",
+    "task-form-category-metadata-update": "การปรับปรุงเมทาดาทา",
+    "task-form-category-review": "การตรวจทาน",
+    "task-form-create": "แบบฟอร์มการสร้าง",
+    "task-form-create-fields": "ฟิลด์แบบฟอร์มการสร้าง",
+    "task-form-create-schema": "สคีมาแบบฟอร์มการสร้าง",
+    "task-form-create-ui-schema": "สคีมาส่วนติดต่อแบบฟอร์มการสร้าง",
+    "task-form-default-stage-mappings": "การจับคู่ขั้นตอนเริ่มต้น",
+    "task-form-design-visually": "ออกแบบแบบฟอร์มงานด้วยภาพ",
+    "task-form-designer": "เครื่องมือออกแบบ",
+    "task-form-general-configuration": "การกำหนดค่าทั่วไป",
+    "task-form-help-text": "ข้อความช่วยเหลือ",
+    "task-form-hidden": "ซ่อน",
+    "task-form-input-type": "ประเภทอินพุต: {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "โครงสร้าง JSON",
+    "task-form-label": "ป้ายกำกับ",
+    "task-form-load-template": "โหลดแม่แบบในตัว",
+    "task-form-long-text": "ข้อความยาว",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "ออบเจ็กต์",
+    "task-form-options": "ตัวเลือก",
     "task-form-plural": "แบบฟอร์มงาน",
+    "task-form-resolve": "แบบฟอร์มการแก้ไขงาน",
+    "task-form-resolve-fields": "ฟิลด์แบบฟอร์มการแก้ไขงาน",
+    "task-form-resolve-schema": "สคีมาแบบฟอร์มการแก้ไขงาน",
+    "task-form-resolve-ui-schema": "สคีมาส่วนติดต่อแบบฟอร์มการแก้ไขงาน",
+    "task-form-short-text": "ข้อความสั้น",
+    "task-form-single-select": "เลือกค่าเดียว",
+    "task-form-stage-id": "รหัสขั้นตอน",
+    "task-form-stage-mapping": "การจับคู่ขั้นตอน",
+    "task-form-stage-status-mapping": "การจับคู่ขั้นตอนกับสถานะ",
+    "task-form-status-expired": "หมดอายุ",
+    "task-form-status-in-progress": "กำลังดำเนินการ",
+    "task-form-status-manual-revoke": "เพิกถอนด้วยตนเอง",
+    "task-form-status-pending": "รอดำเนินการ",
+    "task-form-status-revoked": "เพิกถอนแล้ว",
+    "task-form-transition": "แบบฟอร์มการเปลี่ยนผ่าน",
+    "task-form-transition-fields": "ฟิลด์การเปลี่ยนผ่าน",
+    "task-form-transition-id": "รหัสการเปลี่ยนผ่าน",
+    "task-form-transition-plural": "แบบฟอร์มการเปลี่ยนผ่าน",
+    "task-form-workflow-json": "JSON นิยามเวิร์กโฟลว์",
+    "task-form-workflow-stages": "ขั้นตอนเวิร์กโฟลว์",
     "task-lowercase": "งาน",
     "task-plural": "งานหลายรายการ",
     "task-title": "งาน #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "ชื่อเวิร์กโฟลว์",
     "workflow-name-is-required": "ต้องระบุชื่อเวิร์กโฟลว์",
     "workflow-name-placeholder": "ใส่ชื่อเวิร์กโฟลว์",
+    "workflow-node-check-condition": "ตรวจสอบเงื่อนไข",
+    "workflow-node-data-completeness": "ความครบถ้วนของข้อมูล",
+    "workflow-node-detect-field-change": "ตรวจจับการเปลี่ยนแปลงฟิลด์",
+    "workflow-node-git-sink": "ซิงค์ไปยัง Git",
+    "workflow-node-policy-enforcement": "บังคับใช้นโยบาย",
+    "workflow-node-request-approval": "ขออนุมัติ",
     "workflow-plural": "กระบวนการทำงาน",
     "worksheet": "เวิร์กชีต",
     "worksheet-plural": "เวิร์กชีต",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "คุณต้องการดำเนินการอัปเดตแท็กหรือไม่?",
     "tailor-experience-for-persona": "ปรับแต่งประสบการณ์เฉพาะสำหรับบุคลิกภาพ {{persona}} ลองดูสิ!",
     "take-quick-product-tour": "เข้าร่วมทัวร์ผลิตภัณฑ์เพื่อเริ่มต้น!",
+    "task-form-create-description": "ฟิลด์ที่แสดงเมื่อสร้างงาน",
+    "task-form-description": "กำหนดค่าสคีมางาน พฤติกรรมแบบฟอร์ม และการเปลี่ยนผ่านเวิร์กโฟลว์ในพื้นที่ทำงานเดียวกัน",
+    "task-form-designer-description": "ใช้เครื่องมือสร้างสำหรับแบบฟอร์มการสร้าง การแก้ไขงาน การเปลี่ยนผ่าน และการจับคู่ขั้นตอน ยังสามารถใช้ตัวแก้ไข JSON ต้นฉบับได้ในตัวเลือกขั้นสูง",
+    "task-form-help-placeholder": "อธิบายวัตถุประสงค์ของฟิลด์นี้",
+    "task-form-invalid-json": "JSON การตั้งค่าแบบฟอร์มงานไม่ถูกต้อง",
+    "task-form-no-fields": "ยังไม่ได้กำหนดค่าฟิลด์",
+    "task-form-no-schemas": "ยังไม่พบแบบฟอร์มงาน",
+    "task-form-no-stage-mappings": "ยังไม่ได้กำหนดค่าการจับคู่ขั้นตอน",
+    "task-form-no-template": "ไม่มีแม่แบบในตัวสำหรับงานประเภทนี้",
+    "task-form-no-transitions": "ยังไม่ได้กำหนดค่าแบบฟอร์มการเปลี่ยนผ่าน",
+    "task-form-preview-placeholder": "เพิ่มฟิลด์เพื่อดูตัวอย่างแบบฟอร์มนี้",
+    "task-form-resolve-description": "ฟิลด์ที่แสดงเมื่อตรวจทานหรือแก้ไขงาน",
+    "task-form-select-type-category": "เลือกประเภทและหมวดหมู่งานก่อนโหลดแม่แบบ",
+    "task-form-stage-mappings-description": "จับคู่รหัสขั้นตอนเวิร์กโฟลว์กับสถานะงานโดยรวมที่ใช้ใน API และการนับจำนวน",
+    "task-form-transition-description": "ฟิลด์เพิ่มเติมที่แสดงเฉพาะในการเปลี่ยนผ่านนี้",
+    "task-form-transitions-description": "กำหนดค่าฟิลด์เพิ่มเติมสำหรับการเปลี่ยนผ่านเวิร์กโฟลว์เฉพาะ เช่น อนุมัติ ปฏิเสธ หรือมอบหมายใหม่",
+    "task-form-workflow-name-required": "JSON นิยามเวิร์กโฟลว์ต้องมีชื่อ",
     "team-distinct-user-description": "จำนวนผู้ใช้ที่ไม่ซ้ำกันทั้งหมดที่เป็นของทีมนี้",
     "team-member-management-description": "ปรับการเข้าถึงผู้ใช้และทีมใน {{brandName}} ให้ง่ายขึ้น",
     "team-moved-success": "ย้ายทีมสำเร็จ!",

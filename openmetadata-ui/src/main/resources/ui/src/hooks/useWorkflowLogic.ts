@@ -12,11 +12,13 @@
  */
 
 import { AxiosError } from 'axios';
+import { t } from 'i18next';
 import { useCallback, useEffect } from 'react';
 import type { Edge, Node, OnConnect } from 'reactflow';
 import { useEdgesState, useNodesState, useReactFlow } from 'reactflow';
 import { useWorkflowStore } from '../components/WorkflowDefinitions/Workflows/useWorkflowStore';
 import { NodeType } from '../generated/governance/workflows/elements/nodeType';
+import { WorkflowDefinition } from '../generated/governance/workflows/workflowDefinition';
 import { getWorkflowDefinitionByFQN } from '../rest/workflowDefinitionsAPI';
 import {
   createNodeData,
@@ -34,11 +36,13 @@ import { useWorkflowState } from './useWorkflowState';
 interface UseWorkflowLogicProps {
   fqn?: string;
   initialConfig?: Record<string, unknown>;
+  initialDraft?: WorkflowDefinition;
 }
 
 export const useWorkflowLogic = ({
   fqn,
   initialConfig,
+  initialDraft,
 }: UseWorkflowLogicProps = {}) => {
   const { screenToFlowPosition } = useReactFlow();
 
@@ -115,13 +119,17 @@ export const useWorkflowLogic = ({
   useEffect(() => {
     const fetchWorkflowDefinition = async () => {
       if (!fqn) {
-        if (!workflowClassBase.getCapabilities().allowCreateWorkflow) {
+        if (
+          !workflowClassBase.getCapabilities().allowCreateWorkflow ||
+          !initialDraft
+        ) {
           return;
         }
+        setWorkflowDefinition(initialDraft);
         setWorkflowMetadata({
-          name: '',
-          displayName: 'New Workflow',
-          description: '',
+          name: initialDraft.name,
+          displayName: initialDraft.displayName || t('label.new-workflow'),
+          description: initialDraft.description,
           isNewWorkflow: true,
         });
 
@@ -168,7 +176,7 @@ export const useWorkflowLogic = ({
     };
 
     fetchWorkflowDefinition();
-  }, [fqn]);
+  }, [fqn, initialDraft]);
 
   const isNodeDragEnabled = useCallback(
     (nodeType: NodeType) => {

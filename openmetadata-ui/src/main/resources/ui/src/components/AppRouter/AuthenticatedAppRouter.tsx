@@ -401,6 +401,14 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
       />
       <Route
         element={
+          <AdminProtectedRoute>
+            <WorkflowBuilderPage />
+          </AdminProtectedRoute>
+        }
+        path={ROUTES.WORKFLOW_NEW}
+      />
+      <Route
+        element={
           <EditConnectionFormPage
             pageTitle={t('label.edit-entity', {
               entity: t('label.connection'),

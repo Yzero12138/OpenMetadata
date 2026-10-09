@@ -133,14 +133,16 @@ describe('TaskFormSettingsPage', () => {
     ).toBeInTheDocument();
 
     await waitFor(() =>
-      expect(screen.getByLabelText('Name')).toHaveValue('DescriptionUpdate')
+      expect(screen.getByLabelText('label.name')).toHaveValue(
+        'DescriptionUpdate'
+      )
     );
 
     expect(screen.getByTestId('task-form-category-input')).toHaveTextContent(
-      'MetadataUpdate'
+      'label.task-form-category-metadata-update'
     );
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Advanced JSON' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'label.advanced-entity' }));
 
     await waitFor(() =>
       expect(screen.getAllByTestId('code-editor')).toHaveLength(7)
@@ -150,7 +152,7 @@ describe('TaskFormSettingsPage', () => {
   it('updates the selected schema', async () => {
     render(<TaskFormSettingsPage />);
 
-    const displayNameInput = await screen.findByLabelText('Display Name');
+    const displayNameInput = await screen.findByLabelText('label.display-name');
 
     fireEvent.change(displayNameInput, {
       target: { value: 'Description Update v2' },
@@ -185,7 +187,7 @@ describe('TaskFormSettingsPage', () => {
       workflowVersion: 1,
     });
     expect(mockShowSuccessToast).toHaveBeenCalledWith(
-      'Task form saved successfully'
+      'message.entity-saved-successfully'
     );
   });
 
@@ -193,13 +195,15 @@ describe('TaskFormSettingsPage', () => {
     render(<TaskFormSettingsPage />);
 
     await waitFor(() =>
-      expect(screen.getByLabelText('Name')).toHaveValue('DescriptionUpdate')
+      expect(screen.getByLabelText('label.name')).toHaveValue(
+        'DescriptionUpdate'
+      )
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'label.add' }));
 
-    const nameInput = screen.getByLabelText('Name');
-    const taskTypeInput = screen.getByLabelText('Task Type');
+    const nameInput = screen.getByLabelText('label.name');
+    const taskTypeInput = screen.getByLabelText('label.entity-type-plural');
 
     fireEvent.change(nameInput, { target: { value: 'CustomReview' } });
     fireEvent.change(taskTypeInput, { target: { value: 'Review' } });
@@ -232,10 +236,12 @@ describe('TaskFormSettingsPage', () => {
     render(<TaskFormSettingsPage />);
 
     await waitFor(() =>
-      expect(screen.getByLabelText('Name')).toHaveValue('DescriptionUpdate')
+      expect(screen.getByLabelText('label.name')).toHaveValue(
+        'DescriptionUpdate'
+      )
     );
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Advanced JSON' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'label.advanced-entity' }));
 
     fireEvent.change(screen.getAllByTestId('code-editor')[0], {
       target: { value: '{invalid-json' },
@@ -244,7 +250,7 @@ describe('TaskFormSettingsPage', () => {
 
     await waitFor(() =>
       expect(mockShowErrorToast).toHaveBeenCalledWith(
-        'Task form settings JSON is invalid'
+        'message.task-form-invalid-json'
       )
     );
 

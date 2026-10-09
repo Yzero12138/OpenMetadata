@@ -12,7 +12,6 @@
  */
 
 import WhatsNewAlert from '../Modals/WhatsNewModal/WhatsNewAlert/WhatsNewAlert.component';
-import GithubStarCard from '../MyData/GithubStarCard/GithubStarCard.component';
 
 class PopupAlertsCardsClassBase {
   public alertsCards() {
@@ -20,10 +19,6 @@ class PopupAlertsCardsClassBase {
       {
         key: 'whatNewAlertCard',
         component: WhatsNewAlert,
-      },
-      {
-        key: 'githubPopupAlertCard',
-        component: GithubStarCard,
       },
     ];
   }

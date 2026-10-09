@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "När en AI-tillgång (AI-applikation, LLM-modell eller MCP-server) skickas in för granskning dirigeras den till riskrådets granskare för godkännande, enligt samma process som för godkännande av ordlistetermer.",
+      "displayName": "Arbetsflöde för godkännande av AI-tillgångar"
+    },
+    "AutoPilotWorkflow": {
+      "description": "När en ny tjänst skapas skapas, distribueras och körs relevanta datapipelines automatiskt.",
+      "displayName": "AutoPilot-arbetsflöde"
+    },
+    "CustomTaskWorkflow": {
+      "description": "Standardlivscykel för anpassade uppgifter, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för anpassade uppgifter"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "Standardlivscykel för uppgifter för datakvalitetsgranskning, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för datakvalitetsgranskning"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "Standardlivscykel för uppgifter för beskrivningsuppdatering, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för beskrivningsuppdateringar"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "Standardlivscykel för uppgifter för domänuppdatering, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för domänuppdateringar"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "Standardlivscykel, styrd av ett arbetsflöde, för incidentliknande uppgifter med konfigurerbara steg från Öppen till Stängd.",
+      "displayName": "Arbetsflöde för allmänna incidentuppgifter"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "Standardlivscykel, styrd av ett arbetsflöde, för uppgiftsformulär som kräver ett enda granskningssteg med övergångar för godkännande eller avslag.",
+      "displayName": "Arbetsflöde för allmänna granskningsuppgifter"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "När en ordlisteterm skapas eller uppdateras utlöses detta arbetsflöde för att godkänna termen.",
+      "displayName": "Arbetsflöde för godkännande av ordlista"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "Standarddefinition av arbetsflöde för hantering av incidenters livscykel.",
+      "displayName": "Arbetsflöde för incidenters livscykel"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "Standardlivscykel för incidentlösningsuppgifter, styrd av ett arbetsflöde. Stegen följer incidenthanterarens process: Ny, Bekräftad, Tilldelad.",
+      "displayName": "Arbetsflöde för incidentlösning"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "Standardlivscykel för uppgifter för ägaruppdatering, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för ägaruppdateringar"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "Standardlivscykel för uppgifter för granskning av datapipelines, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för granskning av datapipelines"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "När återkoppling lämnas om automatiskt tillämpade etiketter kontrolleras om etiketten har granskare, varefter den tillämpas automatiskt eller en godkännandeuppgift skapas.",
+      "displayName": "Arbetsflöde för granskning av återkoppling om igenkännaren"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "Standardlivscykel för uppgifter för godkännandebegäran, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för godkännandebegäranden"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "Standardlivscykel för förslagsuppgifter, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för förslagsuppgifter"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "Standardlivscykel för uppgifter för etikettuppdatering, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för etikettuppdateringar"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "Standardlivscykel för uppgifter för lösning av testfall, styrd av ett arbetsflöde. Stegen följer incidenthanterarens process: Ny, Bekräftad, Tilldelad.",
+      "displayName": "Arbetsflöde för lösning av testfall"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "Standardlivscykel för uppgifter för nivåuppdatering, styrd av ett arbetsflöde.",
+      "displayName": "Arbetsflöde för nivåuppdateringar"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 dag",
@@ -2584,7 +2662,54 @@
     "target-column": "Målkolumn",
     "task": "Uppgift",
     "task-entity": "Uppgift {{entity}}",
+    "task-form": "Uppgiftsformulär",
+    "task-form-array": "Array",
+    "task-form-boolean": "Booleskt värde",
+    "task-form-builder": "Formulärbyggare",
+    "task-form-category-approval": "Godkännande",
+    "task-form-category-data-access": "Dataåtkomst",
+    "task-form-category-metadata-update": "Metadatauppdatering",
+    "task-form-category-review": "Granskning",
+    "task-form-create": "Formulär för skapande",
+    "task-form-create-fields": "Fält i formuläret för skapande",
+    "task-form-create-schema": "Schema för skapandeformulär",
+    "task-form-create-ui-schema": "Gränssnittsschema för skapandeformulär",
+    "task-form-default-stage-mappings": "Standardmappningar för steg",
+    "task-form-design-visually": "Utforma uppgiftsformulär visuellt",
+    "task-form-designer": "Designer",
+    "task-form-general-configuration": "Allmän konfiguration",
+    "task-form-help-text": "Hjälptext",
+    "task-form-hidden": "Dolt",
+    "task-form-input-type": "Inmatningstyp: {{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "JSON-struktur",
+    "task-form-label": "Etikett",
+    "task-form-load-template": "Läs in inbyggd mall",
+    "task-form-long-text": "Lång text",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "Objekt",
+    "task-form-options": "Alternativ",
     "task-form-plural": "Uppgiftsformulär",
+    "task-form-resolve": "Formulär för lösning",
+    "task-form-resolve-fields": "Fält i formuläret för lösning",
+    "task-form-resolve-schema": "Schema för lösningsformulär",
+    "task-form-resolve-ui-schema": "Gränssnittsschema för lösningsformulär",
+    "task-form-short-text": "Kort text",
+    "task-form-single-select": "Enkelt val",
+    "task-form-stage-id": "Steg-ID",
+    "task-form-stage-mapping": "Stegmappning",
+    "task-form-stage-status-mapping": "Mappning från steg till status",
+    "task-form-status-expired": "Utgånget",
+    "task-form-status-in-progress": "Pågår",
+    "task-form-status-manual-revoke": "Manuell återkallelse",
+    "task-form-status-pending": "Väntande",
+    "task-form-status-revoked": "Återkallat",
+    "task-form-transition": "Övergångsformulär",
+    "task-form-transition-fields": "Övergångsfält",
+    "task-form-transition-id": "Övergångs-ID",
+    "task-form-transition-plural": "Övergångsformulär",
+    "task-form-workflow-json": "Arbetsflödesdefinition i JSON",
+    "task-form-workflow-stages": "Arbetsflödets steg",
     "task-lowercase": "uppgift",
     "task-plural": "Uppgifter",
     "task-title": "Uppgift #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "Arbetsflödesnamn",
     "workflow-name-is-required": "Arbetsflödesnamn krävs",
     "workflow-name-placeholder": "Ange arbetsflödesnamn",
+    "workflow-node-check-condition": "Kontrollera villkor",
+    "workflow-node-data-completeness": "Datafullständighet",
+    "workflow-node-detect-field-change": "Identifiera fältändring",
+    "workflow-node-git-sink": "Synkronisera till Git",
+    "workflow-node-policy-enforcement": "Tillämpa policy",
+    "workflow-node-request-approval": "Begär godkännande",
     "workflow-plural": "Arbetsflöden",
     "worksheet": "Kalkylblad",
     "worksheet-plural": "Kalkylblad",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "Vill du fortsätta med att uppdatera taggarna?",
     "tailor-experience-for-persona": "Skräddarsy upplevelsen specifikt för personan {{persona}}, prova bara!",
     "take-quick-product-tour": "Ta en produktrundtur för att komma igång!",
+    "task-form-create-description": "Fält som visas när en uppgift skapas.",
+    "task-form-description": "Konfigurera uppgiftsscheman, formulärbeteende och arbetsflödesövergångar i samma arbetsyta.",
+    "task-form-designer-description": "Använd byggaren för formulär för skapande, lösning och övergångar samt för stegmappningar. Redigerarna för ursprunglig JSON finns fortfarande i de avancerade alternativen.",
+    "task-form-help-placeholder": "Förklara vad det här fältet används till",
+    "task-form-invalid-json": "JSON för uppgiftsformulärets inställningar är ogiltig",
+    "task-form-no-fields": "Inga fält har konfigurerats ännu",
+    "task-form-no-schemas": "Inga uppgiftsformulär hittades ännu.",
+    "task-form-no-stage-mappings": "Inga stegmappningar har konfigurerats ännu.",
+    "task-form-no-template": "Det finns ingen inbyggd mall för den här uppgiftstypen",
+    "task-form-no-transitions": "Inga övergångsformulär har konfigurerats ännu.",
+    "task-form-preview-placeholder": "Lägg till fält för att förhandsgranska det här formuläret.",
+    "task-form-resolve-description": "Fält som visas när uppgiften granskas eller löses.",
+    "task-form-select-type-category": "Välj en uppgiftstyp och kategori innan du läser in en mall",
+    "task-form-stage-mappings-description": "Mappa arbetsflödets steg-ID:n till den övergripande uppgiftsstatus som används i API:er och antal.",
+    "task-form-transition-description": "Extra fält som endast visas för den här övergången.",
+    "task-form-transitions-description": "Konfigurera ytterligare fält för specifika arbetsflödesövergångar, som godkännande, avslag eller omtilldelning.",
+    "task-form-workflow-name-required": "Arbetsflödesdefinitionens JSON måste innehålla ett namn",
     "team-distinct-user-description": "Det totala antalet distinkta användare som tillhör detta team.",
     "team-member-management-description": "Effektivisera åtkomsten till användare och team i {{brandName}}.",
     "team-moved-success": "Teamet flyttades!",

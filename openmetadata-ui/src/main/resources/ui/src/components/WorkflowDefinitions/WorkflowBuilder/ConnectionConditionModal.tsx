@@ -51,11 +51,29 @@ export const ConnectionConditionModal: React.FC<
     sourceNode?.data?.subType === NodeSubType.UserApprovalTask;
 
   const availableOptions = useMemo(() => {
+    const approvalOptions = AVAILABLE_OPTIONS.APPROVAL_CONDITION_VALUES.map(
+      (option) => ({
+        ...option,
+        label: t(
+          option.value === ConditionValue.APPROVE
+            ? 'label.approve'
+            : 'label.reject'
+        ),
+      })
+    );
+    const conditionOptions = AVAILABLE_OPTIONS.CONDITION_VALUES.map(
+      (option) => ({
+        ...option,
+        label: t(
+          option.value === ConditionValue.TRUE ? 'label.true' : 'label.false'
+        ),
+      })
+    );
     if (isApprovalTaskNode) {
-      return AVAILABLE_OPTIONS.APPROVAL_CONDITION_VALUES;
+      return approvalOptions;
     }
     if (!isDataCompletenessNode) {
-      return AVAILABLE_OPTIONS.CONDITION_VALUES;
+      return conditionOptions;
     }
     const nodeQualityBands =
       sourceNode?.data?.qualityBands ||
@@ -77,8 +95,8 @@ export const ConnectionConditionModal: React.FC<
       return options;
     }
 
-    return AVAILABLE_OPTIONS.CONDITION_VALUES;
-  }, [isApprovalTaskNode, isDataCompletenessNode, sourceNode?.data]);
+    return conditionOptions;
+  }, [isApprovalTaskNode, isDataCompletenessNode, sourceNode?.data, t]);
 
   const defaultValue = useMemo(() => {
     if (isApprovalTaskNode) {

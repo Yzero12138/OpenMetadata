@@ -145,7 +145,8 @@ export const useWorkflowMode = (
     const isNoOpTrigger = triggerType === Type.NoOp;
     const caps = workflowClassBase.getCapabilities();
     const structural = caps.allowStructuralGraphEdits;
-    const showWorkflowNodePalette = caps.showWorkflowNodePalette;
+    const showWorkflowNodePalette =
+      caps.showWorkflowNodePalette && !isNoOpTrigger;
     const allowFullStartNodeConfiguration =
       caps.allowFullStartNodeConfiguration;
     const allowStartNodeFilterScheduleAndBatchEdit =
@@ -161,9 +162,9 @@ export const useWorkflowMode = (
       canEdit: isEditMode && !isNoOpTrigger,
       canSave: isEditMode && !isNoOpTrigger,
       canDelete: isViewMode && !isNoOpTrigger && caps.allowDeleteWorkflow,
-      canDragNodes: isEditMode && structural,
+      canDragNodes: isEditMode && structural && !isNoOpTrigger,
       canDragNodesInViewMode: isViewMode && caps.allowViewModeDrag,
-      canAccessSidebar: isEditMode,
+      canAccessSidebar: isEditMode && !isNoOpTrigger,
       allowStructuralGraphEdits: structural && isEditMode && !isNoOpTrigger,
       showWorkflowNodePalette,
       allowFullStartNodeConfiguration,
@@ -179,9 +180,9 @@ export const useWorkflowMode = (
       showRunButton:
         isViewMode && !!workflowFqn && shouldShowRunButton(workflowDefinition),
 
-      isFormDisabled: isViewMode,
-      isInputDisabled: isViewMode,
-      isDropdownDisabled: isViewMode,
+      isFormDisabled: isViewMode || isNoOpTrigger,
+      isInputDisabled: isViewMode || isNoOpTrigger,
+      isDropdownDisabled: isViewMode || isNoOpTrigger,
     };
   }, [internalMode, workflowFqn, workflowDefinition]);
 

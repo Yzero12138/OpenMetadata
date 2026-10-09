@@ -526,7 +526,7 @@ export const CustomizeTabWidget = () => {
         <Modal
           maskClosable
           open={!isNil(editableItem)}
-          title="Rename tab"
+          title={t('label.rename-entity', { entity: t('label.tab') })}
           onCancel={() => setEditableItem(null)}
           onOk={handleRenameSave}>
           <Input

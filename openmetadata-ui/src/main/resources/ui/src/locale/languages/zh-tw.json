@@ -1,4 +1,82 @@
 {
+  "builtinWorkflow": {
+    "AIAssetApprovalWorkflow": {
+      "description": "提交 AI 資產（AI 應用程式、LLM 模型或 MCP 伺服器）進行審查時，依照詞彙審批流程，將其轉交風險委員會審查人員進行審批。",
+      "displayName": "AI 資產審批工作流程"
+    },
+    "AutoPilotWorkflow": {
+      "description": "每當建立新服務時，都會自動建立、部署並執行相關管線。",
+      "displayName": "AutoPilot 工作流程"
+    },
+    "CustomTaskWorkflow": {
+      "description": "由工作流程驅動的自訂任務預設生命週期。",
+      "displayName": "自訂任務工作流程"
+    },
+    "DataQualityReviewTaskWorkflow": {
+      "description": "由工作流程驅動的資料品質審查任務預設生命週期。",
+      "displayName": "資料品質審查任務工作流程"
+    },
+    "DescriptionUpdateTaskWorkflow": {
+      "description": "由工作流程驅動的描述更新任務預設生命週期。",
+      "displayName": "描述更新任務工作流程"
+    },
+    "DomainUpdateTaskWorkflow": {
+      "description": "由工作流程驅動的資料網域更新任務預設生命週期。",
+      "displayName": "資料網域更新任務工作流程"
+    },
+    "GenericIncidentTaskWorkflow": {
+      "description": "由工作流程驅動的事件類任務預設生命週期，可設定從「待處理」到「已關閉」的各個階段。",
+      "displayName": "通用事件任務工作流程"
+    },
+    "GenericReviewTaskWorkflow": {
+      "description": "由工作流程驅動的任務表單預設生命週期，適用於僅需一個審查階段、可轉為核准或拒絕狀態的任務表單。",
+      "displayName": "通用審查任務工作流程"
+    },
+    "GlossaryTermApprovalWorkflow": {
+      "description": "建立或更新詞彙時，將觸發此工作流程，對該詞彙進行審批。",
+      "displayName": "詞彙審批工作流程"
+    },
+    "IncidentLifecycleWorkflow": {
+      "description": "用於事件生命週期管理的預設工作流程定義。",
+      "displayName": "事件生命週期工作流程"
+    },
+    "IncidentResolutionTaskWorkflow": {
+      "description": "由工作流程驅動的事件解決任務預設生命週期。階段與事件管理員流程一致：新增、已確認、已指派。",
+      "displayName": "事件解決任務工作流程"
+    },
+    "OwnershipUpdateTaskWorkflow": {
+      "description": "由工作流程驅動的擁有權更新任務預設生命週期。",
+      "displayName": "擁有權更新任務工作流程"
+    },
+    "PipelineReviewTaskWorkflow": {
+      "description": "由工作流程驅動的管線審查任務預設生命週期。",
+      "displayName": "管線審查任務工作流程"
+    },
+    "RecognizerFeedbackReviewWorkflow": {
+      "description": "收到關於自動套用標籤的回饋時，檢查該標籤是否設有審查人員，然後自動套用該標籤或建立審批任務。",
+      "displayName": "辨識器回饋審查工作流程"
+    },
+    "RequestApprovalTaskWorkflow": {
+      "description": "由工作流程驅動的審批請求任務預設生命週期。",
+      "displayName": "請求審批任務工作流程"
+    },
+    "SuggestionTaskWorkflow": {
+      "description": "由工作流程驅動的建議任務預設生命週期。",
+      "displayName": "建議任務工作流程"
+    },
+    "TagUpdateTaskWorkflow": {
+      "description": "由工作流程驅動的標籤更新任務預設生命週期。",
+      "displayName": "標籤更新任務工作流程"
+    },
+    "TestCaseResolutionTaskWorkflow": {
+      "description": "由工作流程驅動的測試案例解決任務預設生命週期。階段與事件管理員流程一致：新增、已確認、已指派。",
+      "displayName": "測試案例解決任務工作流程"
+    },
+    "TierUpdateTaskWorkflow": {
+      "description": "由工作流程驅動的層級更新任務預設生命週期。",
+      "displayName": "層級更新任務工作流程"
+    }
+  },
   "label": {
     "-with-colon": "{{text}}:",
     "1-day": "1 天",
@@ -2584,7 +2662,54 @@
     "target-column": "目標欄位",
     "task": "任務",
     "task-entity": "任務 {{entity}}",
+    "task-form": "任務表單",
+    "task-form-array": "陣列",
+    "task-form-boolean": "布林值",
+    "task-form-builder": "表單設計器",
+    "task-form-category-approval": "核准",
+    "task-form-category-data-access": "資料存取",
+    "task-form-category-metadata-update": "中繼資料更新",
+    "task-form-category-review": "審核",
+    "task-form-create": "建立表單",
+    "task-form-create-fields": "建立表單欄位",
+    "task-form-create-schema": "建立表單結構",
+    "task-form-create-ui-schema": "建立表單介面結構",
+    "task-form-default-stage-mappings": "預設階段對應",
+    "task-form-design-visually": "以視覺化方式設計任務表單",
+    "task-form-designer": "視覺化設計",
+    "task-form-general-configuration": "一般設定",
+    "task-form-help-text": "說明文字",
+    "task-form-hidden": "隱藏",
+    "task-form-input-type": "輸入類型：{{type}}",
+    "task-form-json": "JSON",
+    "task-form-json-shape": "JSON 結構類型",
+    "task-form-label": "顯示標籤",
+    "task-form-load-template": "載入內建範本",
+    "task-form-long-text": "多行文字",
+    "task-form-numbered-item": "{{entity}} {{number}}",
+    "task-form-object": "物件",
+    "task-form-options": "選項",
     "task-form-plural": "任務表單",
+    "task-form-resolve": "處理表單",
+    "task-form-resolve-fields": "處理表單欄位",
+    "task-form-resolve-schema": "處理表單結構",
+    "task-form-resolve-ui-schema": "處理表單介面結構",
+    "task-form-short-text": "單行文字",
+    "task-form-single-select": "單選",
+    "task-form-stage-id": "階段識別碼",
+    "task-form-stage-mapping": "階段對應",
+    "task-form-stage-status-mapping": "階段與狀態對應",
+    "task-form-status-expired": "已過期",
+    "task-form-status-in-progress": "進行中",
+    "task-form-status-manual-revoke": "手動撤銷",
+    "task-form-status-pending": "待處理",
+    "task-form-status-revoked": "已撤銷",
+    "task-form-transition": "轉換表單",
+    "task-form-transition-fields": "轉換欄位",
+    "task-form-transition-id": "轉換識別碼",
+    "task-form-transition-plural": "轉換表單",
+    "task-form-workflow-json": "工作流程定義 JSON",
+    "task-form-workflow-stages": "工作流程階段",
     "task-lowercase": "任務",
     "task-plural": "任務",
     "task-title": "任務 #{{title}}",
@@ -2910,6 +3035,12 @@
     "workflow-name": "工作流程名稱",
     "workflow-name-is-required": "工作流程名稱為必填",
     "workflow-name-placeholder": "輸入工作流程名稱",
+    "workflow-node-check-condition": "檢查條件",
+    "workflow-node-data-completeness": "資料完整性",
+    "workflow-node-detect-field-change": "偵測欄位變更",
+    "workflow-node-git-sink": "同步至 Git",
+    "workflow-node-policy-enforcement": "執行原則",
+    "workflow-node-request-approval": "請求審批",
     "workflow-plural": "工作流程",
     "worksheet": "工作表",
     "worksheet-plural": "工作表",
@@ -4267,6 +4398,23 @@
     "tag-update-confirmation": "您想繼續更新標籤嗎？",
     "tailor-experience-for-persona": "專為 {{persona}} 角色量身打造體驗，試試看吧！",
     "take-quick-product-tour": "進行產品導覽以開始！",
+    "task-form-create-description": "建立任務時顯示的欄位。",
+    "task-form-description": "在同一工作區設定任務結構、表單行為和工作流程轉換。",
+    "task-form-designer-description": "使用設計器設定建立表單、處理表單、轉換表單和階段對應。進階選項中仍可編輯原始 JSON。",
+    "task-form-help-placeholder": "說明此欄位的用途",
+    "task-form-invalid-json": "任務表單設定中的 JSON 格式無效",
+    "task-form-no-fields": "尚未設定欄位",
+    "task-form-no-schemas": "尚未找到任務表單。",
+    "task-form-no-stage-mappings": "尚未設定階段對應。",
+    "task-form-no-template": "此任務類型沒有可用的內建範本",
+    "task-form-no-transitions": "尚未設定轉換表單。",
+    "task-form-preview-placeholder": "新增欄位以預覽此表單。",
+    "task-form-resolve-description": "審核或處理任務時顯示的欄位。",
+    "task-form-select-type-category": "載入範本前，請先選擇任務類型和類別",
+    "task-form-stage-mappings-description": "將工作流程階段識別碼對應到介面和統計中使用的任務整體狀態。",
+    "task-form-transition-description": "僅在此轉換中顯示的額外欄位。",
+    "task-form-transitions-description": "為核准、拒絕或重新指派等特定工作流程轉換設定額外欄位。",
+    "task-form-workflow-name-required": "工作流程定義 JSON 必須包含名稱",
     "team-distinct-user-description": "屬於此團隊的相異使用者總數。",
     "team-member-management-description": "在 {{brandName}} 中簡化對使用者和團隊的存取。",
     "team-moved-success": "團隊移動成功！",

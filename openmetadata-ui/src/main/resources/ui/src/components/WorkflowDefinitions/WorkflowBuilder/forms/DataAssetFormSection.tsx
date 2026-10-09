@@ -12,13 +12,13 @@
  */
 
 import { Autocomplete, SelectItemType } from '@openmetadata/ui-core-components';
-import { upperFirst } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useListData } from 'react-stately';
 import { ALL_DATA_ASSETS_OPTION_VALUE } from '../../../../constants/WorkflowBuilder.constants';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
 import { DataAssetFormSectionProps } from '../../../../interface/workflow-builder-components.interface';
+import { getEntityNameLabel } from '../../../../utils/EntityNameUtils';
 
 export const DataAssetFormSection: React.FC<DataAssetFormSectionProps> = ({
   availableDataAssets,
@@ -51,7 +51,7 @@ export const DataAssetFormSection: React.FC<DataAssetFormSectionProps> = ({
     (option: string) =>
       option === ALL_DATA_ASSETS_OPTION_VALUE
         ? t('label.all')
-        : upperFirst(option),
+        : getEntityNameLabel(option),
     [t]
   );
 
