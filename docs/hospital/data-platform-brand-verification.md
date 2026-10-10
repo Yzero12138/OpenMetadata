@@ -21,4 +21,19 @@
 
 ## 生产构建与发布
 
-生产 Vite 构建通过，退出码 0（built in 5m 35s）。新镜像使用独立标签 `hospital-openmetadata:2.0.4-integrate-v8-brand`，打包路径继续固定继承已验证的服务端镜像，仅替换 UI JAR。固定摘要和测试环境升级确认将在完成后补充。
+生产 Vite 构建通过，退出码 0（built in 5m 35s）。新镜像使用独立标签 `hospital-openmetadata:2.0.4-integrate-v8-brand`，打包路径继续固定继承已验证的服务端镜像，仅替换 UI JAR。
+
+源码对应提交为 `be4c20934f012d3a2cfa15bd29167e07970aebb8`，已推送到用户 fork 的 `codex/hospital-pc-ui-phase1` 分支并包含在 [PR #2](https://github.com/Yzero12138/OpenMetadata/pull/2)。
+
+- 已上传并实际部署：`harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:38968329cc43724b19c2c79ad84e48b16e0316760f6d0e42fd2f429dd711750e`。
+- 资源标签：`harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v8-brand`；UI JAR SHA-256：`498e8b4001ae4c6f0fb31411b3bfdf369c4b59be0000ff4ccdba5a276cbc2a71`。本地归档、镜像文件和在线 Pod 文件一致。服务端 JAR 保持 `97c22e4d7729a6df5bb7901d0033b5414a5e849677fe47f41b3e4d7502acfdcb`。
+- `datahub-open-test/hospital-openmetadata` rollout 成功，可用副本为 1。首页及 SPA 路径按既有服务端路径/nonce/换行规则精确匹配，138 个静态资源通过 HTTP 逐字节校验。
+- Integrate 认证配置及系统版本返回 200，连接、任务和引擎状态接口在未登录时均返回 401。部署 UID、环境变量名称及引用、挂载保持一致；SeaTunnel UID/镜像与 10 个 PVC 的 UID/绑定卷/状态相同。
+
+从 [Integrate 门户](https://integrate-dev.qcrmyy.local/s/portal)进入应用后，刷新已打开页面可加载新标识。本次发布没有使用合成身份访问线上接口。
+
+发布证据包括 image-manifest.json、image-verification.json、release-image.json、release-verification.json、deployment-http.json、deployment-before/after.json、image-jar-sha256.txt、live-jar-sha256.txt、engine-before/after.txt、volumes-before/after.txt 及 harbor-push.txt。
+
+## 回退
+
+本次品牌发布的回退点是此前 PC 工作区版本：`harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:839e43e99a74c7e475cd5b4daab708f9720080dec2c73d4951ef72bfe9c3b4db`。只恢复同一部署的 openmetadata 容器镜像并等待 rollout，保留现有身份、Secret、数据库、数据卷、引擎及检查点。
