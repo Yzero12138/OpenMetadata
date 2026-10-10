@@ -59,6 +59,8 @@ SeaTunnel REST 仅为 ClusterIP；网络策略只允许医院应用访问 8080�
 
 Integrate 后续发布必须保留 `datahub` 的一次性票据控制器、精确 POST Basic 认证边界及门户握手。若票据交换返回 503，先从应用 Pod 核对真实内网响应；通用 Bearer 过滤器的 401 不等同于无效票据，不应在治理平台把它改成成功或放宽登录校验。本次配套恢复源保存在 `F:/datacenter/Integrate-sso` 的 `codex/datahub-sso-test-20261009` 分支，源提交 `60940c2f`；尚未推送到 Integrate 的 Gitee 仓库。后续构建须纳入该提交，详见[验证记录](data-integration-verification.md)。
 
+如果门户跳转到 `?integrate_connect=1` 却提示从门户打开，先从当前 HTML 入口检查实际引用的 PortalPage 模块，并在真实浏览器验证 opener 与票据请求。仅在静态目录搜索握手字符串会误命中为旧会话保留的孤立资源。更新前端后，刷新 Integrate 门户再点击数据治理；刷新治理页本身不会重新建立已断开的登录连接。
+
 ## 回退
 
 回退应用镜像至此前已验证的 `2.0.4-integrate-v4`，同时回退 `migrate` 和 `openmetadata` 两个容器的镜像。旧镜像不读取集成配置，原有元数据数据库、治理界面及 Integrate 登录保持原来的版本。
