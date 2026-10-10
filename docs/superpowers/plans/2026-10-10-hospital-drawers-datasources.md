@@ -76,7 +76,7 @@
 - [x] Build final service/UI JARs and app/engine images. Keep private build and rollout records in ignored local logs.
 - [x] Capture one PC batch at 1440 and 1920 covering task create/edit, source create/edit, long mapping scroll, connection failure, save conflict and pending submission. Inspect actual screenshots and keyboard behavior; fix the bounded batch of findings and allow at most one confirmation round.
 - [x] Run the Impeccable detector once at completion, then fresh finish/documentation handoffs and independent code review. Report the exact verified scope and unverified real Oracle/SQL Server connectivity.
-- [ ] Publish only scoped public-safe source changes to the already authorized fork/Draft PR. Roll out guarded exact images to the existing test deployment, verify readiness, static assets, unauthenticated rejection, identity preservation and retained synthetic tasks/engine state. Do not expose business database traffic before actual endpoints are configured.
+- [x] Publish only scoped public-safe source changes to the already authorized fork/Draft PR. Roll out guarded exact images to the existing test deployment, verify readiness, static assets, unauthenticated rejection, identity preservation and retained synthetic tasks/engine state. Do not expose business database traffic before actual endpoints are configured.
 
 ## Plan self-review
 
