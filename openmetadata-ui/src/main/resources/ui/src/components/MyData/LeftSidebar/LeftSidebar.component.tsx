@@ -11,12 +11,13 @@
  *  limitations under the License.
  */
 import Icon from '@ant-design/icons/lib/components/Icon';
+import { RefreshCw01 } from '@untitledui/icons';
 import { Button, Layout, Menu, MenuProps, Typography } from 'antd';
 import Modal from 'antd/lib/modal/Modal';
 import classNames from 'classnames';
 import { noop } from 'lodash';
 import { MenuInfo } from 'rc-menu/lib/interface';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -25,11 +26,13 @@ import {
 } from '../../../constants/LeftSidebar.constants';
 import { SidebarItem } from '../../../enums/sidebar.enum';
 import { useCurrentUserPreferences } from '../../../hooks/currentUserStore/useCurrentUserStore';
+import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
 import { useSidebarItems } from '../../../hooks/useSidebarItems';
 import leftSidebarClassBase from '../../../utils/LeftSidebarClassBase';
 import {
   getSidebarActiveKeys,
+  getSidebarParentKeys,
   getSidebarPathname,
 } from '../../../utils/LeftSidebarUtils';
 import { useAuthProvider } from '../../Auth/AuthProviders/AuthProvider';
@@ -42,6 +45,7 @@ const LeftSidebar = () => {
   const location = useCustomLocation();
   const { t } = useTranslation();
   const { onLogoutHandler } = useAuthProvider();
+  const { applicationConfig } = useApplicationStore();
   const [isConfirmLogoutModalOpen, setIsConfirmLogoutModalOpen] =
     useState(false);
   const {
@@ -58,10 +62,17 @@ const LeftSidebar = () => {
     () =>
       getSidebarActiveKeys(
         getSidebarPathname(location.pathname, location.state),
-        leftSidebarClassBase.getSidebarNestedKeys()
+        leftSidebarClassBase.getSidebarNestedKeys(),
+        undefined,
+        sideBarItems
       ),
-    [location.pathname, location.state]
+    [location.pathname, location.state, sideBarItems]
   );
+  const activeParentKey = getSidebarParentKeys(selectedKeys, sideBarItems)[0];
+
+  useEffect(() => {
+    setOpenKeys(activeParentKey ? [activeParentKey] : []);
+  }, [location.pathname, activeParentKey]);
 
   const handleLogoutClick = useCallback(() => {
     setIsConfirmLogoutModalOpen(true);
@@ -75,27 +86,41 @@ const LeftSidebar = () => {
     () =>
       [SETTING_ITEM, LOGOUT_ITEM].map((item) => ({
         key: item.key,
-        icon: <Icon component={item.icon} />,
+        'aria-label': t(item.title),
+        icon: <Icon aria-hidden="true" component={item.icon} />,
         onClick: item.key === SidebarItem.LOGOUT ? handleLogoutClick : noop,
         label: <LeftSidebarItem data={item} />,
       })),
-    [handleLogoutClick]
+    [handleLogoutClick, t]
   );
 
   const menuItems = useMemo(() => {
     return sideBarItems.map((item) => ({
       key: item.key,
-      icon: <Icon component={item.icon} />,
+      'aria-label': t(item.title),
+      icon: (
+        <Icon
+          aria-hidden={!isSidebarCollapsed || !item.children?.length}
+          aria-label={
+            isSidebarCollapsed && item.children?.length
+              ? t(item.title)
+              : undefined
+          }
+          component={item.icon}
+        />
+      ),
       label: <LeftSidebarItem data={item} />,
+      popupClassName: 'hospital-workspace__submenu',
       'data-testid': `side-bar-${item.dataTestId}`,
       children: item.children?.map((child) => ({
         key: child.key,
-        icon: <Icon component={child.icon} />,
+        'aria-label': t(child.title),
+        icon: <Icon aria-hidden="true" component={child.icon} />,
         label: <LeftSidebarItem data={child} />,
-        'data-testid': `side-bar-${item.dataTestId}`,
+        'data-testid': `side-bar-${child.dataTestId}`,
       })),
     }));
-  }, [sideBarItems]);
+  }, [sideBarItems, isSidebarCollapsed, t]);
 
   const handleMenuClick: MenuProps['onClick'] = useCallback(
     (info: MenuInfo) => {
@@ -110,6 +135,7 @@ const LeftSidebar = () => {
     <Sider
       collapsible
       className={classNames({
+        'hospital-workspace__sidebar': true,
         'left-sidebar-col-rtl': isDirectionRTL,
         'sidebar-open': !isSidebarCollapsed,
       })}
@@ -117,16 +143,33 @@ const LeftSidebar = () => {
       collapsedWidth={72}
       data-testid="left-sidebar"
       trigger={null}
-      width={228}>
+      width={240}>
       <div className="logo-container">
-        <Link className="flex-shrink-0" id="openmetadata_logo" to="/">
-          <BrandImage
-            className="vertical-middle h-full"
-            dataTestId="image"
-            height={40}
-            isMonoGram={isSidebarCollapsed}
-            width="auto"
-          />
+        <Link
+          aria-label={t('hospitalNavigation.workbench')}
+          className="hospital-workspace__brand"
+          id="openmetadata_logo"
+          to="/">
+          {applicationConfig?.customLogoConfig?.customLogoUrlPath ? (
+            <BrandImage
+              className="vertical-middle h-full"
+              dataTestId="image"
+              height={32}
+              isMonoGram={isSidebarCollapsed}
+              width="auto"
+            />
+          ) : (
+            <>
+              <span
+                className="hospital-workspace__brand-mark"
+                data-testid="image">
+                <RefreshCw01 aria-hidden="true" size={20} strokeWidth={1.7} />
+              </span>
+              {!isSidebarCollapsed && (
+                <span>{t('hospitalNavigation.brand')}</span>
+              )}
+            </>
+          )}
         </Link>
       </div>
 
@@ -134,29 +177,22 @@ const LeftSidebar = () => {
         <div className="menu-container">
           <div className="top-menu">
             <Menu
+              aria-label={t('hospitalNavigation.navigation')}
               inlineIndent={16}
               items={menuItems}
               mode="inline"
               openKeys={openKeys}
-              rootClassName="left-sidebar-menu"
+              rootClassName="left-sidebar-menu hospital-workspace__navigation"
               selectedKeys={selectedKeys}
               onClick={handleMenuClick}
-              onOpenChange={setOpenKeys}
+              onOpenChange={(keys) => setOpenKeys(keys.slice(-1))}
             />
           </div>
 
           <div className="bottom-menu">
             <Menu
               inlineIndent={16}
-              items={[
-                {
-                  type: 'divider',
-                  style: {
-                    margin: '8px 0',
-                  },
-                },
-                ...LOWER_SIDEBAR_TOP_SIDEBAR_MENU_ITEMS,
-              ]}
+              items={LOWER_SIDEBAR_TOP_SIDEBAR_MENU_ITEMS}
               mode="inline"
               rootClassName="left-sidebar-menu"
               selectedKeys={selectedKeys}

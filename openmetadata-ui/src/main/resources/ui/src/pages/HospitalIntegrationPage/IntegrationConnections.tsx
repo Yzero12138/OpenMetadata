@@ -32,7 +32,9 @@ import {
   validateIntegrationConnectionInput,
 } from './HospitalIntegrationUtils';
 import { IntegrationConnectionForm } from './IntegrationConnectionForm';
+import { IntegrationDiscardConfirmation } from './IntegrationDiscardConfirmation';
 import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
+import { useIntegrationNavigationGuard } from './useIntegrationNavigationGuard';
 
 type ConnectionTestState = {
   version: number;
@@ -42,6 +44,8 @@ type ConnectionTestState = {
 
 export const IntegrationConnections = ({
   connections,
+  visibleConnections = connections,
+  showHeading = true,
   loading,
   createRequest,
   onChange,
@@ -51,6 +55,8 @@ export const IntegrationConnections = ({
   const [editor, setEditor] = useState<IntegrationConnection | 'create'>();
   const [draft, setDraft] = useState(emptyIntegrationConnection);
   const [schemasText, setSchemasText] = useState('public');
+  const [discardRequested, setDiscardRequested] = useState(false);
+  const initialDraft = useRef('');
   const [errors, setErrors] = useState<string[]>([]);
   const [errorCode, setErrorCode] = useState<string>();
   const [pending, setPending] = useState<string>();
@@ -64,6 +70,13 @@ export const IntegrationConnections = ({
   const lastCreateRequest = useRef(createRequest);
   const editing = editor !== undefined && editor !== 'create';
   const busy = pending !== undefined;
+  const navigationGuard = useIntegrationNavigationGuard({
+    enabled:
+      editor !== undefined &&
+      (busy || JSON.stringify([draft, schemasText]) !== initialDraft.current),
+    locked: busy,
+  });
+  const confirmDiscard = discardRequested || navigationGuard.blocked;
 
   useEffect(() => {
     mounted.current = true;
@@ -80,34 +93,54 @@ export const IntegrationConnections = ({
     }
     lastCreateRequest.current = createRequest;
     epoch.current += 1;
+    const input = emptyIntegrationConnection();
+    initialDraft.current = JSON.stringify([input, 'public']);
+    setDiscardRequested(false);
     setEditor('create');
-    setDraft(emptyIntegrationConnection());
+    setDraft(input);
     setSchemasText('public');
     setErrors([]);
     setErrorCode(undefined);
     setDeleteId(undefined);
   }, [createRequest]);
 
-  const close = () => {
+  const resetEditor = () => {
     if (mutation.current) {
       return;
     }
     epoch.current += 1;
     reloadRequest.current?.abort();
+    setDiscardRequested(false);
+    initialDraft.current = '';
     setEditor(undefined);
     setDraft(emptyIntegrationConnection());
     setSchemasText('public');
     setErrors([]);
     setErrorCode(undefined);
   };
+  const close = () => {
+    if (mutation.current) {
+      return;
+    }
+    if (JSON.stringify([draft, schemasText]) !== initialDraft.current) {
+      setDiscardRequested(true);
+
+      return;
+    }
+    resetEditor();
+  };
   const open = (connection: IntegrationConnection) => {
     if (mutation.current || connection.managed) {
       return;
     }
     epoch.current += 1;
+    const input = toIntegrationConnectionInput(connection);
+    const schemas = connection.schemas.join(', ');
+    initialDraft.current = JSON.stringify([input, schemas]);
+    setDiscardRequested(false);
     setEditor(connection);
-    setDraft(toIntegrationConnectionInput(connection));
-    setSchemasText(connection.schemas.join(', '));
+    setDraft(input);
+    setSchemasText(schemas);
     setErrors([]);
     setErrorCode(undefined);
     setDeleteId(undefined);
@@ -130,7 +163,7 @@ export const IntegrationConnections = ({
     }
   };
   const save = async () => {
-    if (!editor || mutation.current) {
+    if (!editor || mutation.current || confirmDiscard) {
       return;
     }
     const { password, ...definition } = draft;
@@ -206,9 +239,13 @@ export const IntegrationConnections = ({
         ) {
           return;
         }
+        const input = toIntegrationConnectionInput(current);
+        const schemas = current.schemas.join(', ');
+        initialDraft.current = JSON.stringify([input, schemas]);
+        setDiscardRequested(false);
         setEditor(current);
-        setDraft(toIntegrationConnectionInput(current));
-        setSchemasText(current.schemas.join(', '));
+        setDraft(input);
+        setSchemasText(schemas);
         setErrors([]);
         setErrorCode(undefined);
         onChange(
@@ -289,7 +326,10 @@ export const IntegrationConnections = ({
       <section
         aria-busy={loading}
         aria-labelledby="integration-connections-title">
-        <div className="hospital-integration__section-heading">
+        <div
+          className={
+            showHeading ? 'hospital-integration__section-heading' : 'tw:sr-only'
+          }>
           <div>
             <h2 id="integration-connections-title">
               {t('hospitalIntegration.dataSources')}
@@ -299,10 +339,18 @@ export const IntegrationConnections = ({
         </div>
         {loading ? (
           <p role="status">{t('hospitalIntegration.loading')}</p>
-        ) : connections.length === 0 ? (
+        ) : visibleConnections.length === 0 ? (
           <div className="hospital-integration__empty">
-            <h3>{t('hospitalIntegration.noConnections')}</h3>
-            <p>{t('hospitalIntegration.noConnectionsHint')}</p>
+            <h3>
+              {t(
+                connections.length
+                  ? 'label.no-data-found'
+                  : 'hospitalIntegration.noConnections'
+              )}
+            </h3>
+            {connections.length === 0 && (
+              <p>{t('hospitalIntegration.noConnectionsHint')}</p>
+            )}
           </div>
         ) : (
           <div className="hospital-integration__table-scroll">
@@ -323,7 +371,7 @@ export const IntegrationConnections = ({
                 </tr>
               </thead>
               <tbody>
-                {connections.map((connection) => {
+                {visibleConnections.map((connection) => {
                   const result =
                     tests[connection.id]?.version === connection.version
                       ? tests[connection.id]
@@ -489,13 +537,18 @@ export const IntegrationConnections = ({
         data-testid="integration-connection-drawer"
         footer={
           <>
-            <Button color="secondary" isDisabled={busy} onClick={close}>
+            <Button
+              color="secondary"
+              isDisabled={busy || confirmDiscard}
+              onClick={close}>
               {t('label.cancel')}
             </Button>
             <Button
               form="integration-connection-form"
               isDisabled={
-                busy || (typeof editor === 'object' && editor.managed)
+                busy ||
+                confirmDiscard ||
+                (typeof editor === 'object' && editor.managed)
               }
               isLoading={pending === 'save'}
               type="submit">
@@ -512,7 +565,16 @@ export const IntegrationConnections = ({
         )}
         width={720}
         onClose={close}>
-        {errorCode && (
+        {confirmDiscard && (
+          <IntegrationDiscardConfirmation
+            onContinue={() => {
+              setDiscardRequested(false);
+              navigationGuard.stay();
+            }}
+            onDiscard={() => navigationGuard.proceed(resetEditor)}
+          />
+        )}
+        {errorCode && !confirmDiscard && (
           <IntegrationDrawerAlert focusKey={errorCode}>
             {errorCode !== 'VERSION_CONFLICT' && (
               <p>{t(integrationErrorKey(errorCode))}</p>
@@ -533,7 +595,7 @@ export const IntegrationConnections = ({
           </IntegrationDrawerAlert>
         )}
         <IntegrationConnectionForm
-          disabled={busy}
+          disabled={busy || confirmDiscard}
           editing={editing}
           errors={errors}
           schemasText={schemasText}

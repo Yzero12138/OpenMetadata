@@ -21,6 +21,7 @@ import {
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';
 import { Operation } from '../../generated/entity/policies/policy';
+import { HospitalIntegrationRedirect } from '../../pages/HospitalIntegrationPage/HospitalIntegrationRedirect';
 import { checkPermission, userPermissions } from '../../utils/PermissionsUtils';
 import { useApplicationsProvider } from '../Settings/Applications/ApplicationsProvider/ApplicationsProvider';
 import { RoutePosition } from '../Settings/Applications/plugins/AppPlugin';
@@ -93,6 +94,12 @@ const MyDataPage = withPageSuspenseFallback(
 const HospitalIntegrationPage = withPageSuspenseFallback(
   React.lazy(
     () => import('../../pages/HospitalIntegrationPage/HospitalIntegrationPage')
+  )
+);
+
+const HospitalDataSourcesPage = withPageSuspenseFallback(
+  React.lazy(
+    () => import('../../pages/HospitalIntegrationPage/HospitalDataSourcesPage')
   )
 );
 
@@ -372,8 +379,20 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
       />
       <Route element={<MyDataPage />} path={ROUTES.MY_DATA} />
       <Route
-        element={<HospitalIntegrationPage />}
+        element={<HospitalIntegrationRedirect />}
         path={ROUTES.HOSPITAL_INTEGRATION}
+      />
+      <Route
+        element={<HospitalDataSourcesPage />}
+        path={ROUTES.HOSPITAL_INTEGRATION_SOURCES}
+      />
+      <Route
+        element={<HospitalIntegrationPage />}
+        path={ROUTES.HOSPITAL_INTEGRATION_TASKS}
+      />
+      <Route
+        element={<HospitalIntegrationPage />}
+        path={ROUTES.HOSPITAL_INTEGRATION_TASK_DETAIL}
       />
       <Route element={<TourPageComponent />} path={ROUTES.TOUR} />
       <Route

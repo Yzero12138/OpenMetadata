@@ -515,6 +515,10 @@ const NavBar = () => {
                 isSidebarCollapsed ? t('label.expand') : t('label.collapse')
               }>
               <Button
+                aria-expanded={!isSidebarCollapsed}
+                aria-label={
+                  isSidebarCollapsed ? t('label.expand') : t('label.collapse')
+                }
                 className="w-6 h-6 p-0 flex-center"
                 data-testid="sidebar-toggle"
                 icon={

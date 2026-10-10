@@ -23,6 +23,7 @@ import {
 
 export const IntegrationTaskDetail = ({
   task,
+  showTitle = true,
   sourceConnectionName,
   targetConnectionName,
   busy,
@@ -58,8 +59,10 @@ export const IntegrationTaskDetail = ({
     <div className="hospital-integration__detail">
       <div className="hospital-integration__section-heading">
         <div>
-          <h2>{task.displayName || task.name}</h2>
-          <p>{task.name}</p>
+          <h2>
+            {showTitle ? task.displayName || task.name : t('label.overview')}
+          </h2>
+          {showTitle && <p>{task.name}</p>}
         </div>
         <div className="hospital-integration__actions">
           <Button

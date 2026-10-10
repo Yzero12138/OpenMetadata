@@ -10,56 +10,65 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Cube01, RefreshCw01 } from '@untitledui/icons';
-import { ReactComponent as GovernIcon } from '../assets/svg/bank.svg';
-import { ReactComponent as ClassificationIcon } from '../assets/svg/classification.svg';
-import { ReactComponent as MemoriesIcon } from '../assets/svg/common/memories.svg';
-import { ReactComponent as KnowledgeCenterIcon } from '../assets/svg/context-center.svg';
-import { ReactComponent as DataQualityRulesIcon } from '../assets/svg/data-observability/data-quality-rules.svg';
-import { ReactComponent as ColumnBulkIcon } from '../assets/svg/entity/column.svg';
-import { ReactComponent as ExploreIcon } from '../assets/svg/explore.svg';
-import { ReactComponent as GlossaryIcon } from '../assets/svg/glossary.svg';
-import { ReactComponent as AlertIcon } from '../assets/svg/ic-alert.svg';
-import { ReactComponent as DataQualityIcon } from '../assets/svg/ic-data-contract.svg';
-import { ReactComponent as MarketplaceIcon } from '../assets/svg/ic-data-marketplace.svg';
-import { ReactComponent as DomainsIcon } from '../assets/svg/ic-domain.svg';
-import { ReactComponent as HomeIcon } from '../assets/svg/ic-home.svg';
-import { ReactComponent as IncidentMangerIcon } from '../assets/svg/ic-incident-manager.svg';
-import { ReactComponent as LineageIcon } from '../assets/svg/ic-lineage.svg';
-import { ReactComponent as ObservabilityIcon } from '../assets/svg/ic-observability.svg';
-import { ReactComponent as OverviewIcon } from '../assets/svg/ic-overview.svg';
-import { ReactComponent as PlatformLineageIcon } from '../assets/svg/ic-platform-lineage.svg';
-import { ReactComponent as SettingsIcon } from '../assets/svg/ic-settings-v1.svg';
-import { ReactComponent as WorkflowsNavIcon } from '../assets/svg/ic-workflows.svg';
-import { ReactComponent as InsightsIcon } from '../assets/svg/lamp-charge.svg';
-import { ReactComponent as LogoutIcon } from '../assets/svg/logout.svg';
-import { ReactComponent as MetricIcon } from '../assets/svg/metric.svg';
-import { ReactComponent as ArchiveIcon } from '../assets/svg/sidebar-icons/archive.svg';
-import { ReactComponent as ArticlesIcon } from '../assets/svg/sidebar-icons/articles.svg';
-import { ReactComponent as DashboardIcon } from '../assets/svg/sidebar-icons/dashboard.svg';
-import { ReactComponent as DocumentsIcon } from '../assets/svg/sidebar-icons/documents.svg';
+import {
+  AlertTriangle,
+  Archive,
+  BarChart01,
+  Bell01,
+  BookOpen01,
+  CheckDone01,
+  Columns03,
+  CpuChip01,
+  Cube01,
+  Database01,
+  Dataflow03,
+  File06,
+  FileCheck02,
+  Folder,
+  GitBranch01,
+  Globe01,
+  Grid01,
+  Home02,
+  LayersThree01,
+  List,
+  LogOut01,
+  RefreshCw01,
+  SearchLg,
+  Settings01,
+  ShieldTick,
+  Tag01,
+} from '@untitledui/icons';
 import { LeftSidebarItem } from '../components/MyData/LeftSidebar/LeftSidebar.interface';
 import { SidebarItem } from '../enums/sidebar.enum';
 import { DataInsightTabs } from '../interface/data-insight.interface';
 import { createIconWithStroke } from '../utils/IconUtils';
 import { ENTITY_PATH, PLACEHOLDER_ROUTE_TAB, ROUTES } from './constants';
 
-type UntitledIconType = React.ComponentType<{
-  size?: number;
-  strokeWidth?: number;
-  style?: React.CSSProperties;
-}>;
+type UntitledIconType = (
+  ...props: Parameters<typeof Home02>
+) => ReturnType<typeof Home02>;
+const navigationIcon = (icon: UntitledIconType) =>
+  createIconWithStroke(icon, 1.7);
 
-const DataProductIcon = createIconWithStroke(Cube01 as UntitledIconType, 1.2);
-const IntegrationIcon = createIconWithStroke(
-  RefreshCw01 as UntitledIconType,
-  1.2
-);
-
-export const SIDEBAR_NESTED_KEYS = {
-  [ROUTES.OBSERVABILITY_ALERTS]: ROUTES.OBSERVABILITY_ALERTS,
-  [ROUTES.ONTOLOGY_EXPLORER]: ROUTES.ONTOLOGY_EXPLORER,
+export const SIDEBAR_NESTED_KEYS: Record<string, string> = {
+  [ROUTES.HOSPITAL_INTEGRATION_SOURCES]: ROUTES.HOSPITAL_INTEGRATION,
+  [ROUTES.HOSPITAL_INTEGRATION_TASKS]: ROUTES.HOSPITAL_INTEGRATION,
+  [ROUTES.DATA_MARKETPLACE]: ROUTES.DATA_MARKETPLACE_SECTION,
+  [ROUTES.EXPLORE]: ROUTES.DATA_MARKETPLACE_SECTION,
+  [ROUTES.DOMAIN]: ROUTES.DATA_MARKETPLACE_SECTION,
+  [ROUTES.DATA_PRODUCT]: ROUTES.DATA_MARKETPLACE_SECTION,
+  [ROUTES.PLATFORM_LINEAGE]: ROUTES.DATA_MARKETPLACE_SECTION,
+  [ROUTES.DATA_QUALITY]: ROUTES.OBSERVABILITY,
+  [ROUTES.INCIDENT_MANAGER]: ROUTES.OBSERVABILITY,
+  [ROUTES.TEST_LIBRARY]: ROUTES.OBSERVABILITY,
+  [ROUTES.OBSERVABILITY_ALERTS]: ROUTES.OBSERVABILITY,
+  [ROUTES.GLOSSARY]: 'governance',
+  [ROUTES.TAGS]: 'governance',
+  [ROUTES.METRICS]: 'governance',
+  [ROUTES.WORKFLOWS]: 'governance',
+  [ROUTES.DATA_INSIGHT]: 'governance',
+  [ROUTES.ONTOLOGY_EXPLORER]: 'governance',
+  [ROUTES.COLUMN_BULK_OPERATIONS]: 'governance',
   [ROUTES.CONTEXT_CENTER_OVERVIEW]: ROUTES.CONTEXT_CENTER,
   [ROUTES.CONTEXT_CENTER_ARTICLES]: ROUTES.CONTEXT_CENTER,
   [ROUTES.CONTEXT_CENTER_DOCUMENTS]: ROUTES.CONTEXT_CENTER,
@@ -69,225 +78,275 @@ export const SIDEBAR_NESTED_KEYS = {
 };
 
 export const SIDEBAR_ENTITY_PATH_ALIASES: Record<string, string> = {
-  [ROUTES.HOSPITAL_INTEGRATION]: ROUTES.HOSPITAL_INTEGRATION,
+  ...Object.fromEntries(
+    [
+      ENTITY_PATH.tables,
+      ENTITY_PATH.topics,
+      ENTITY_PATH.dashboards,
+      ENTITY_PATH.pipelines,
+      ENTITY_PATH.mlmodels,
+      ENTITY_PATH.containers,
+      ENTITY_PATH.searchIndexes,
+      ENTITY_PATH.storedProcedures,
+      ENTITY_PATH.databases,
+      ENTITY_PATH.databaseSchemas,
+      ENTITY_PATH.dashboardDataModels,
+      ENTITY_PATH.apiCollections,
+      ENTITY_PATH.apiEndpoints,
+      ENTITY_PATH.dataAssets,
+      ENTITY_PATH.query,
+      ENTITY_PATH.charts,
+      ENTITY_PATH.directories,
+      ENTITY_PATH.files,
+      ENTITY_PATH.spreadsheets,
+      ENTITY_PATH.worksheets,
+      ENTITY_PATH.column,
+      ENTITY_PATH.aiApplications,
+      ENTITY_PATH.llmModels,
+      ENTITY_PATH.mcpServers,
+      ENTITY_PATH.agentExecutions,
+      ENTITY_PATH.mcpExecutions,
+      ENTITY_PATH.promptTemplates,
+    ].map((path) => [`/${path}`, ROUTES.EXPLORE])
+  ),
+  [ROUTES.HOSPITAL_INTEGRATION]: ROUTES.HOSPITAL_INTEGRATION_TASKS,
   [`/${ENTITY_PATH.metrics}`]: ROUTES.METRICS,
   [`/${ENTITY_PATH.tags}`]: ROUTES.TAGS,
   '/glossary-term': ROUTES.GLOSSARY,
   '/observability/alert': ROUTES.OBSERVABILITY_ALERTS,
   '/test-case': ROUTES.INCIDENT_MANAGER,
+  '/test-suites': ROUTES.DATA_QUALITY,
 };
 
-export const SIDEBAR_LIST: Array<LeftSidebarItem> = [
+export const SIDEBAR_LIST: LeftSidebarItem[] = [
   {
     key: ROUTES.MY_DATA,
-    title: 'label.home',
+    title: 'hospitalNavigation.workbench',
     redirect_url: ROUTES.MY_DATA,
-    icon: HomeIcon,
+    icon: navigationIcon(Home02),
     dataTestId: `app-bar-item-${SidebarItem.HOME}`,
   },
   {
     key: ROUTES.HOSPITAL_INTEGRATION,
-    title: 'hospitalIntegration.title',
-    redirect_url: ROUTES.HOSPITAL_INTEGRATION,
-    icon: IntegrationIcon,
+    title: 'hospitalNavigation.integration',
+    icon: navigationIcon(RefreshCw01),
     dataTestId: `app-bar-item-${SidebarItem.HOSPITAL_INTEGRATION}`,
-  },
-  {
-    key: ROUTES.EXPLORE,
-    title: 'label.explore',
-    redirect_url: ROUTES.EXPLORE,
-    icon: ExploreIcon,
-    dataTestId: `app-bar-item-${SidebarItem.EXPLORE}`,
-  },
-  {
-    key: ROUTES.PLATFORM_LINEAGE,
-    title: 'label.lineage',
-    redirect_url: ROUTES.PLATFORM_LINEAGE,
-    icon: PlatformLineageIcon,
-    dataTestId: `app-bar-item-${SidebarItem.LINEAGE}`,
-  },
-  {
-    key: ROUTES.OBSERVABILITY,
-    title: 'label.observability',
-    icon: ObservabilityIcon,
-    dataTestId: SidebarItem.OBSERVABILITY,
     children: [
       {
-        key: ROUTES.DATA_QUALITY,
-        title: 'label.data-quality',
-        redirect_url: ROUTES.DATA_QUALITY,
-        icon: DataQualityIcon,
-        dataTestId: `app-bar-item-${SidebarItem.DATA_QUALITY}`,
+        key: ROUTES.HOSPITAL_INTEGRATION_SOURCES,
+        title: 'hospitalNavigation.sources',
+        redirect_url: ROUTES.HOSPITAL_INTEGRATION_SOURCES,
+        icon: navigationIcon(Database01),
+        dataTestId: 'app-bar-item-hospital-integration-sources',
       },
       {
-        key: ROUTES.INCIDENT_MANAGER,
-        title: 'label.incident-manager',
-        redirect_url: ROUTES.INCIDENT_MANAGER,
-        icon: IncidentMangerIcon,
-        dataTestId: `app-bar-item-${SidebarItem.INCIDENT_MANAGER}`,
-      },
-      {
-        key: ROUTES.OBSERVABILITY_ALERTS,
-        title: 'label.alert-plural',
-        redirect_url: ROUTES.OBSERVABILITY_ALERTS,
-        icon: AlertIcon,
-        dataTestId: `app-bar-item-${SidebarItem.OBSERVABILITY_ALERT}`,
-      },
-      {
-        key: ROUTES.TEST_LIBRARY,
-        title: 'label.test-library',
-        redirect_url: ROUTES.TEST_LIBRARY,
-        icon: DataQualityRulesIcon,
-        dataTestId: `app-bar-item-test-library`,
+        key: ROUTES.HOSPITAL_INTEGRATION_TASKS,
+        title: 'hospitalNavigation.tasks',
+        redirect_url: ROUTES.HOSPITAL_INTEGRATION_TASKS,
+        icon: navigationIcon(List),
+        dataTestId: 'app-bar-item-hospital-integration-tasks',
       },
     ],
   },
   {
-    key: ROUTES.DATA_INSIGHT,
-    title: 'label.insight-plural',
-    redirect_url: ROUTES.DATA_INSIGHT_WITH_TAB.replace(
-      PLACEHOLDER_ROUTE_TAB,
-      DataInsightTabs.DATA_ASSETS
-    ),
-    icon: InsightsIcon,
-    dataTestId: `app-bar-item-${SidebarItem.DATA_INSIGHT}`,
-  },
-  {
     key: ROUTES.DATA_MARKETPLACE_SECTION,
-    title: 'label.data-marketplace-section',
-    icon: MarketplaceIcon,
+    title: 'hospitalNavigation.assets',
+    icon: navigationIcon(LayersThree01),
     dataTestId: SidebarItem.DATA_MARKETPLACE_SECTION,
     children: [
       {
         key: ROUTES.DATA_MARKETPLACE,
-        title: 'label.overview',
-        icon: OverviewIcon,
+        title: 'hospitalNavigation.assetOverview',
         redirect_url: ROUTES.DATA_MARKETPLACE,
+        icon: navigationIcon(Grid01),
         dataTestId: `app-bar-item-${SidebarItem.DATA_MARKETPLACE}`,
       },
       {
+        key: ROUTES.EXPLORE,
+        title: 'hospitalNavigation.catalog',
+        redirect_url: ROUTES.EXPLORE,
+        icon: navigationIcon(SearchLg),
+        dataTestId: `app-bar-item-${SidebarItem.EXPLORE}`,
+      },
+      {
         key: ROUTES.DOMAIN,
-        title: 'label.domain-plural',
+        title: 'hospitalNavigation.domains',
         redirect_url: ROUTES.DOMAIN,
-        icon: DomainsIcon,
+        icon: navigationIcon(Globe01),
         dataTestId: `app-bar-item-${SidebarItem.DOMAIN}`,
       },
       {
         key: ROUTES.DATA_PRODUCT,
-        title: 'label.data-product-plural',
+        title: 'hospitalNavigation.products',
         redirect_url: ROUTES.DATA_PRODUCT,
-        icon: DataProductIcon,
+        icon: navigationIcon(Cube01),
         dataTestId: `app-bar-item-${SidebarItem.DATA_PRODUCT}`,
+      },
+      {
+        key: ROUTES.PLATFORM_LINEAGE,
+        title: 'hospitalNavigation.lineage',
+        redirect_url: ROUTES.PLATFORM_LINEAGE,
+        icon: navigationIcon(GitBranch01),
+        dataTestId: `app-bar-item-${SidebarItem.LINEAGE}`,
+      },
+    ],
+  },
+  {
+    key: ROUTES.OBSERVABILITY,
+    title: 'hospitalNavigation.quality',
+    icon: navigationIcon(CheckDone01),
+    dataTestId: SidebarItem.OBSERVABILITY,
+    children: [
+      {
+        key: ROUTES.DATA_QUALITY,
+        title: 'hospitalNavigation.checks',
+        redirect_url: ROUTES.DATA_QUALITY,
+        icon: navigationIcon(CheckDone01),
+        dataTestId: `app-bar-item-${SidebarItem.DATA_QUALITY}`,
+      },
+      {
+        key: ROUTES.INCIDENT_MANAGER,
+        title: 'hospitalNavigation.incidents',
+        redirect_url: ROUTES.INCIDENT_MANAGER,
+        icon: navigationIcon(AlertTriangle),
+        dataTestId: `app-bar-item-${SidebarItem.INCIDENT_MANAGER}`,
+      },
+      {
+        key: ROUTES.TEST_LIBRARY,
+        title: 'hospitalNavigation.templates',
+        redirect_url: ROUTES.TEST_LIBRARY,
+        icon: navigationIcon(FileCheck02),
+        dataTestId: 'app-bar-item-test-library',
+      },
+      {
+        key: ROUTES.OBSERVABILITY_ALERTS,
+        title: 'hospitalNavigation.alerts',
+        redirect_url: ROUTES.OBSERVABILITY_ALERTS,
+        icon: navigationIcon(Bell01),
+        dataTestId: `app-bar-item-${SidebarItem.OBSERVABILITY_ALERT}`,
       },
     ],
   },
   {
     key: 'governance',
-    title: 'label.govern',
-    icon: GovernIcon,
+    title: 'hospitalNavigation.governance',
+    icon: navigationIcon(ShieldTick),
     dataTestId: SidebarItem.GOVERNANCE,
     children: [
       {
         key: ROUTES.GLOSSARY,
-        title: 'label.glossary',
+        title: 'hospitalNavigation.glossary',
         redirect_url: ROUTES.GLOSSARY,
-        icon: GlossaryIcon,
+        icon: navigationIcon(BookOpen01),
         dataTestId: `app-bar-item-${SidebarItem.GLOSSARY}`,
+      },
+      {
+        key: ROUTES.TAGS,
+        title: 'hospitalNavigation.tags',
+        redirect_url: ROUTES.TAGS,
+        icon: navigationIcon(Tag01),
+        dataTestId: `app-bar-item-${SidebarItem.TAGS}`,
+      },
+      {
+        key: ROUTES.METRICS,
+        title: 'hospitalNavigation.metrics',
+        redirect_url: ROUTES.METRICS,
+        icon: navigationIcon(BarChart01),
+        dataTestId: `app-bar-item-${SidebarItem.METRICS}`,
+      },
+      {
+        key: ROUTES.WORKFLOWS,
+        title: 'hospitalNavigation.workflows',
+        redirect_url: ROUTES.WORKFLOWS,
+        icon: navigationIcon(Dataflow03),
+        dataTestId: `app-bar-item-${SidebarItem.WORKFLOWS}`,
+      },
+      {
+        key: ROUTES.DATA_INSIGHT,
+        title: 'hospitalNavigation.insights',
+        redirect_url: ROUTES.DATA_INSIGHT_WITH_TAB.replace(
+          PLACEHOLDER_ROUTE_TAB,
+          DataInsightTabs.DATA_ASSETS
+        ),
+        icon: navigationIcon(BarChart01),
+        dataTestId: `app-bar-item-${SidebarItem.DATA_INSIGHT}`,
       },
       {
         key: ROUTES.ONTOLOGY_EXPLORER,
         title: 'label.ontology-explorer',
         redirect_url: ROUTES.ONTOLOGY_EXPLORER,
-        icon: LineageIcon,
+        icon: navigationIcon(GitBranch01),
         dataTestId: `app-bar-item-${SidebarItem.ONTOLOGY_EXPLORER}`,
-      },
-      {
-        key: ROUTES.TAGS,
-        title: 'label.classification',
-        redirect_url: ROUTES.TAGS,
-        icon: ClassificationIcon,
-        dataTestId: `app-bar-item-${SidebarItem.TAGS}`,
-      },
-      {
-        key: ROUTES.METRICS,
-        title: 'label.metric-plural',
-        redirect_url: ROUTES.METRICS,
-        icon: MetricIcon,
-        dataTestId: `app-bar-item-${SidebarItem.METRICS}`,
+        isHiddenByDefault: true,
       },
       {
         key: ROUTES.COLUMN_BULK_OPERATIONS,
         title: 'label.column-bulk-operations',
         redirect_url: ROUTES.COLUMN_BULK_OPERATIONS,
-        icon: ColumnBulkIcon,
+        icon: navigationIcon(Columns03),
         dataTestId: `app-bar-item-${SidebarItem.COLUMN_BULK_OPERATIONS}`,
         isBeta: true,
-      },
-      {
-        key: ROUTES.WORKFLOWS,
-        title: 'label.workflow-plural',
-        redirect_url: ROUTES.WORKFLOWS,
-        icon: WorkflowsNavIcon,
-        dataTestId: `app-bar-item-${SidebarItem.WORKFLOWS}`,
+        isHiddenByDefault: true,
       },
     ],
   },
   {
     key: ROUTES.CONTEXT_CENTER,
-    title: 'label.context-center',
-    icon: KnowledgeCenterIcon,
+    title: 'hospitalNavigation.knowledge',
+    icon: navigationIcon(BookOpen01),
     dataTestId: SidebarItem.CONTEXT_CENTER,
     children: [
       {
         key: ROUTES.CONTEXT_CENTER_OVERVIEW,
-        title: 'label.overview',
+        title: 'hospitalNavigation.knowledgeOverview',
         redirect_url: ROUTES.CONTEXT_CENTER_OVERVIEW,
-        icon: DashboardIcon,
+        icon: navigationIcon(Grid01),
         dataTestId: `app-bar-item-${SidebarItem.OVERVIEW}`,
       },
       {
         key: ROUTES.CONTEXT_CENTER_ARTICLES,
-        title: 'label.article-plural',
+        title: 'hospitalNavigation.articles',
         redirect_url: ROUTES.CONTEXT_CENTER_ARTICLES,
-        icon: ArticlesIcon,
+        icon: navigationIcon(File06),
         dataTestId: `app-bar-item-${SidebarItem.ARTICLES}`,
       },
       {
         key: ROUTES.CONTEXT_CENTER_DOCUMENTS,
-        title: 'label.document-plural',
+        title: 'hospitalNavigation.documents',
         redirect_url: ROUTES.CONTEXT_CENTER_DOCUMENTS,
-        icon: DocumentsIcon,
+        icon: navigationIcon(Folder),
         dataTestId: `app-bar-item-${SidebarItem.DOCUMENTS}`,
-      },
-      {
-        key: ROUTES.CONTEXT_CENTER_MEMORIES,
-        title: 'label.memory-plural',
-        redirect_url: ROUTES.CONTEXT_CENTER_MEMORIES,
-        icon: MemoriesIcon,
-        dataTestId: `app-bar-item-${SidebarItem.MEMORIES}`,
       },
       {
         key: ROUTES.CONTEXT_CENTER_ARCHIVE,
         title: 'label.archive',
         redirect_url: ROUTES.CONTEXT_CENTER_ARCHIVE,
-        icon: ArchiveIcon,
-        dataTestId: `app-bar-item-context-center-archive`,
+        icon: navigationIcon(Archive),
+        dataTestId: 'app-bar-item-context-center-archive',
+      },
+      {
+        key: ROUTES.CONTEXT_CENTER_MEMORIES,
+        title: 'label.memory-plural',
+        redirect_url: ROUTES.CONTEXT_CENTER_MEMORIES,
+        icon: navigationIcon(CpuChip01),
+        dataTestId: `app-bar-item-${SidebarItem.MEMORIES}`,
+        isHiddenByDefault: true,
       },
     ],
   },
 ];
 
-export const SETTING_ITEM = {
+export const SETTING_ITEM: LeftSidebarItem = {
   key: ROUTES.SETTINGS,
-  title: 'label.setting-plural',
+  title: 'hospitalNavigation.settings',
   redirect_url: ROUTES.SETTINGS,
-  icon: SettingsIcon,
+  icon: navigationIcon(Settings01),
   dataTestId: `app-bar-item-${SidebarItem.SETTINGS}`,
 };
 
-export const LOGOUT_ITEM = {
+export const LOGOUT_ITEM: LeftSidebarItem = {
   key: SidebarItem.LOGOUT,
   title: 'label.logout',
-  icon: LogoutIcon,
+  icon: navigationIcon(LogOut01),
   dataTestId: `app-bar-item-${SidebarItem.LOGOUT}`,
 };

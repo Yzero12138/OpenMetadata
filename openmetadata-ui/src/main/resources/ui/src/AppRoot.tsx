@@ -22,6 +22,7 @@ import App from './App';
 import ErrorBoundary from './components/common/ErrorBoundary/ErrorBoundary';
 import AntDConfigProvider from './context/AntDConfigProvider/AntDConfigProvider';
 import { useApplicationStore } from './hooks/useApplicationStore';
+import { IntegrationNavigationGuardProvider } from './pages/HospitalIntegrationPage/IntegrationNavigationGuardProvider';
 import {
   getCustomUiThemePreference,
   getSystemConfig,
@@ -86,20 +87,22 @@ const AppRoot: FC = () => {
   return (
     <div className="main-container">
       <div className="content-wrapper" data-testid="content-wrapper">
-        <BrowserRouter
-          basename={getBasePath()}
-          useTransitions={!isPlaywrightEnv()}>
-          <I18nextProvider i18n={i18n}>
-            <AntDConfigProvider>
-              <HelmetProvider>
-                <ErrorBoundary>
-                  <App />
-                  <ToastProvider />
-                </ErrorBoundary>
-              </HelmetProvider>
-            </AntDConfigProvider>
-          </I18nextProvider>
-        </BrowserRouter>
+        <IntegrationNavigationGuardProvider>
+          <BrowserRouter
+            basename={getBasePath()}
+            useTransitions={!isPlaywrightEnv()}>
+            <I18nextProvider i18n={i18n}>
+              <AntDConfigProvider>
+                <HelmetProvider>
+                  <ErrorBoundary>
+                    <App />
+                    <ToastProvider />
+                  </ErrorBoundary>
+                </HelmetProvider>
+              </AntDConfigProvider>
+            </I18nextProvider>
+          </BrowserRouter>
+        </IntegrationNavigationGuardProvider>
       </div>
     </div>
   );

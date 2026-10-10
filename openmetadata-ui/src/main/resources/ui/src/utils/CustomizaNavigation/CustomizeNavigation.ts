@@ -19,6 +19,7 @@ import {
 } from '../../components/Settings/Applications/plugins/AppPlugin';
 import { NavigationItem } from '../../generated/system/ui/uiCustomization';
 import leftSidebarClassBase from '../LeftSidebarClassBase';
+import { migrateHospitalNavigation } from './HospitalNavigationMigration';
 
 const getBaseSidebarItems = (): LeftSidebarItem[] =>
   leftSidebarClassBase.getSidebarItems();
@@ -77,7 +78,9 @@ export const mergePluginSidebarItems = (
   sortedPluginItems.forEach((item) => {
     const navData = navigationItems?.find((i) => i.id === item.key);
 
-    !navData?.isHidden && insertPluginItem(mergedItems, item);
+    !navData?.isHidden &&
+      !createSidebarMap(mergedItems).has(item.key) &&
+      insertPluginItem(mergedItems, item);
   });
 
   return mergedItems;
@@ -234,6 +237,8 @@ export const getTreeDataForNavigationItems = (
   plugins?: AppPlugin[]
 ): TreeDataNode[] => {
   const sidebarItemsWithPlugins = getSidebarItemsWithPlugins(plugins);
+  navigationItems =
+    migrateHospitalNavigation(navigationItems, sidebarItemsWithPlugins) ?? null;
 
   if (navigationItems === null || isEmpty(navigationItems)) {
     return sidebarItemsWithPlugins.map(convertSidebarItemToTreeNode);
@@ -278,6 +283,8 @@ export const getHiddenKeysFromNavigationItems = (
   plugins?: AppPlugin[]
 ): string[] => {
   const sidebarItemsWithPlugins = getSidebarItemsWithPlugins(plugins);
+  navigationItems =
+    migrateHospitalNavigation(navigationItems, sidebarItemsWithPlugins) ?? null;
 
   if (!navigationItems || isEmpty(navigationItems)) {
     return [];
@@ -317,6 +324,19 @@ export const filterHiddenNavigationItems = (
   navigationItems?: NavigationItem[] | null,
   plugins?: AppPlugin[]
 ): LeftSidebarItem[] => {
+  const sidebarItemsWithPlugins = getSidebarItemsWithPlugins(plugins);
+  const migratedNavigation = migrateHospitalNavigation(
+    navigationItems,
+    sidebarItemsWithPlugins
+  );
+  if (migratedNavigation !== navigationItems) {
+    const sidebarMap = createSidebarMap(sidebarItemsWithPlugins);
+
+    return (migratedNavigation ?? [])
+      .map((item) => enhanceNavigationItem(item, sidebarMap))
+      .filter((item): item is LeftSidebarItem => item !== null);
+  }
+
   if (!navigationItems || isEmpty(navigationItems)) {
     return getSidebarItemsWithPlugins(plugins);
   }

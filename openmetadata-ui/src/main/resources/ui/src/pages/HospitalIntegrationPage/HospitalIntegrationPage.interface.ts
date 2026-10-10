@@ -10,6 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import { ReactNode } from 'react';
 import {
   IntegrationConnection,
   IntegrationConnectionInput,
@@ -41,6 +42,7 @@ export interface IntegrationTaskFormProps {
 }
 
 export interface IntegrationTaskDetailProps {
+  showTitle?: boolean;
   task: IntegrationTask;
   sourceConnectionName?: string;
   targetConnectionName?: string;
@@ -56,6 +58,8 @@ export interface IntegrationTaskDetailProps {
 }
 
 export interface IntegrationConnectionsProps {
+  visibleConnections?: IntegrationConnection[];
+  showHeading?: boolean;
   connections: IntegrationConnection[];
   loading: boolean;
   createRequest: number;
@@ -72,4 +76,45 @@ export interface IntegrationConnectionFormProps {
   onChange: (value: IntegrationConnectionInput) => void;
   onSchemasChange: (value: string) => void;
   onSave: () => void;
+}
+
+export interface IntegrationDiscardConfirmationProps {
+  onContinue: () => void;
+  onDiscard: () => void;
+}
+
+export interface IntegrationPageHeaderProps {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  detail?: boolean;
+}
+
+export interface IntegrationFilter {
+  key: string;
+  label: string;
+  options: { id: string; label: string }[];
+}
+
+export interface IntegrationCollectionToolsProps {
+  filters: IntegrationFilter[];
+  params: URLSearchParams;
+  onChange: (key: string, value: string) => void;
+  onReset: () => void;
+}
+
+export interface IntegrationCollectionPaginationProps {
+  total: number;
+  page: number;
+  pageSize?: number;
+  onPageChange: (page: number) => void;
+}
+
+export interface IntegrationNavigationGuardOptions {
+  enabled: boolean;
+  locked: boolean;
+}
+
+export interface IntegrationNavigationGuardProviderProps {
+  children: ReactNode;
 }
