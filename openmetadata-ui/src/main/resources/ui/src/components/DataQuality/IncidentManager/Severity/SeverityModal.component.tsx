@@ -10,13 +10,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Form, Modal, Select } from 'antd';
+import { Form, Select } from 'antd';
 import { FormProps, useForm } from 'antd/lib/form/Form';
 import { keys, startCase } from 'lodash';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Severities } from '../../../../generated/tests/testCaseResolutionStatus';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
 import { SeverityModalProps } from './Severity.interface';
 
 const SeverityModal = ({
@@ -37,12 +37,11 @@ const SeverityModal = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       open
       cancelText={t('label.cancel')}
-      closable={false}
       confirmLoading={isLoading}
+      isSubmitting={isLoading}
       maskClosable={false}
       okText={t('label.save')}
       title={`${t('label.edit-entity', {

@@ -13,6 +13,7 @@
 
 import { Button, Modal, Typography } from 'antd';
 import classNames from 'classnames';
+import FormDrawerModal from '../../common/atoms/drawer/LegacyFormDrawer';
 
 import { clone } from 'lodash';
 import { FC, lazy, useEffect, useState } from 'react';
@@ -39,13 +40,14 @@ const SchemaModal: FC<SchemaModalProp> = ({
   isFooterVisible = false,
 }) => {
   const [schemaText, setSchemaText] = useState(data);
+  const SchemaDialog = isFooterVisible ? FormDrawerModal : Modal;
   const { t } = useTranslation();
   useEffect(() => {
     setSchemaText(clone(data));
   }, [data, visible]);
 
   return (
-    <Modal
+    <SchemaDialog
       centered
       destroyOnClose
       className={classNames('schema-modal', className)}
@@ -96,7 +98,7 @@ const SchemaModal: FC<SchemaModalProp> = ({
           />
         </div>
       </KeyDownStopPropagationWrapper>
-    </Modal>
+    </SchemaDialog>
   );
 };
 

@@ -1,0 +1,76 @@
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+.hospital-ui {
+  --hospital-page: #eef3f1;
+  --color-brand-600: #12634b;
+  --color-brand-700: #087354;
+  --color-bg-brand-solid: #12634b;
+  --color-bg-brand-solid_hover: #087354;
+  --color-text-brand-primary: #12634b;
+  --color-text-brand-secondary: #12634b;
+  --color-fg-brand-primary: #12634b;
+  --color-border-brand: #12634b;
+  --color-text-primary: #182f29;
+  --color-text-secondary: #53675f;
+  --color-border-secondary: #dce6e0;
+  --tw-color-brand-600: var(--color-brand-600);
+  --tw-color-brand-700: var(--color-brand-700);
+  --tw-color-bg-brand-solid: var(--color-bg-brand-solid);
+  --tw-color-bg-brand-solid_hover: var(--color-bg-brand-solid_hover);
+  --tw-background-color-brand-solid: var(--color-bg-brand-solid);
+  --tw-background-color-brand-solid_hover: var(--color-bg-brand-solid_hover);
+  --tw-text-color-brand-primary: var(--color-text-brand-primary);
+  --tw-text-color-brand-secondary: var(--color-text-brand-secondary);
+  --tw-text-color-brand-secondary_hover: var(--color-text-brand-secondary);
+  --tw-color-fg-brand-primary: var(--color-fg-brand-primary);
+  --tw-border-color-brand: var(--color-border-brand);
+  --tw-ring-color-brand: var(--color-border-brand);
+  --tw-outline-color-brand: var(--color-border-brand);
+  --tw-text-color-button-primary-icon: #c4ead6;
+  --tw-text-color-button-primary-icon_hover: #e3f0e8;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC', system-ui,
+    sans-serif;
+  ::selection {
+    background: #e3f0e8;
+    color: #182f29;
+  }
+  input {
+    caret-color: var(--color-text-brand-primary);
+  }
+  scrollbar-color: var(--color-border-secondary) var(--hospital-page);
+  :focus-visible {
+    outline: 2px solid var(--color-border-brand);
+    outline-offset: 3px;
+  }
+}
+.dark-mode .hospital-ui,
+.hospital-ui.dark-mode,
+.hospital-ui .dark-mode {
+  --hospital-page: #121c18;
+  --color-bg-brand-solid: #12634b;
+  --color-bg-brand-solid_hover: #087354;
+  --color-text-brand-primary: #68cf99;
+  --color-text-brand-secondary: #68cf99;
+  --color-fg-brand-primary: #68cf99;
+  --color-border-brand: #68cf99;
+  --color-text-primary: #e8f1ec;
+  --color-text-secondary: #b0c4b8;
+  --color-border-secondary: #354a3d;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hospital-ui .hospital-login *,
+  .hospital-ui .hospital-workbench * {
+    transition: none;
+    animation: none;
+  }
+}

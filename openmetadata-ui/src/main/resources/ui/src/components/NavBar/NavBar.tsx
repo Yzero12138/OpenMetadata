@@ -671,9 +671,9 @@ const NavBar = () => {
             </Button>
           }
           className="refresh-alert slide-in-top"
-          description="For a seamless experience recommend you to refresh the page"
+          description={t('message.please-refresh-the-page')}
           icon={<RefreshIcon />}
-          message="A new version is available"
+          message={t('label.brand-updated', { brandName: 'OpenMetadata' })}
           type="info"
         />
       )}

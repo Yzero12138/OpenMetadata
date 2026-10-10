@@ -10,11 +10,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Form, FormProps, Input, Modal } from 'antd';
+import { Form, FormProps, Input } from 'antd';
 import { isUndefined, omit } from 'lodash';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { HEX_COLOR_CODE_REGEX } from '../../../constants/regex.constants';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import ColorPicker from '../../common/ColorPicker/ColorPicker.component';
 import FormItemLabel from '../../common/Form/FormItemLabel';
 import { StyleModalProps, StyleWithInput } from './StyleModal.interface';
@@ -36,6 +37,7 @@ const StyleModal = ({ open, onCancel, onSubmit, style }: StyleModalProps) => {
   return (
     <Modal
       cancelText={t('label.cancel')}
+      isSubmitting={saving}
       okButtonProps={{
         form: 'style-modal',
         htmlType: 'submit',

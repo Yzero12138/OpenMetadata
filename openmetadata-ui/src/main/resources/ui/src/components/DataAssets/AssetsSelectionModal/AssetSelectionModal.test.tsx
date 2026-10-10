@@ -47,6 +47,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
   );
 
   return {
+    ...jest.requireActual('@openmetadata/ui-core-components'),
     Dialog: MockDialog,
     Modal: ({ children }: { children: React.ReactNode }) => (
       <div data-testid="modal">{children}</div>
@@ -139,7 +140,7 @@ describe('AssetSelectionModal', () => {
       />
     );
 
-    expect(screen.queryByTestId('modal-overlay')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('should render the modal overlay and dialog when open is true', () => {
@@ -151,7 +152,7 @@ describe('AssetSelectionModal', () => {
       />
     );
 
-    expect(screen.getByTestId('modal-overlay')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByTestId('asset-selection-modal')).toBeInTheDocument();
   });
 
@@ -214,9 +215,7 @@ describe('AssetSelectionModal', () => {
       />
     );
 
-    expect(screen.getByTestId('dialog-title')).toHaveTextContent(
-      'label.add-entity'
-    );
+    expect(screen.getByRole('heading')).toHaveTextContent('label.add-entity');
   });
 
   it('should call onCancel when the dialog close button is clicked', () => {
@@ -228,12 +227,12 @@ describe('AssetSelectionModal', () => {
       />
     );
 
-    fireEvent.click(screen.getByTestId('dialog-close'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.close' }));
 
     expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('should call onCancel when the overlay requests close via onOpenChange', () => {
+  it('should call onCancel when Escape requests close', () => {
     render(
       <AssetSelectionModal
         open
@@ -242,7 +241,7 @@ describe('AssetSelectionModal', () => {
       />
     );
 
-    fireEvent.click(screen.getByTestId('modal-backdrop'));
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
 
     expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });

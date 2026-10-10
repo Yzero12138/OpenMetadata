@@ -43,6 +43,7 @@ import {
 import i18n, { t } from '../../utils/i18next/LocalUtil';
 import jsonLogicSearchClassBase from '../../utils/JSONLogicSearchClassBase';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
+import FormDrawerModal from '../common/atoms/drawer/LegacyFormDrawer';
 import QueryBuilderWidget from '../common/Form/JSONSchema/JsonSchemaWidgets/QueryBuilderWidget/QueryBuilderWidget';
 import RichTextEditorPreviewerNew from '../common/RichTextEditor/RichTextEditorPreviewNew';
 import { SearchOutputType } from '../Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
@@ -221,7 +222,7 @@ export const AddEditSemanticsRuleModal: React.FC<{
   };
 
   return (
-    <Modal
+    <FormDrawerModal
       open
       okButtonProps={{ loading: isSaveLoading }}
       okText={t('label.save')}
@@ -238,7 +239,7 @@ export const AddEditSemanticsRuleModal: React.FC<{
         otherSemanticsRules={otherSemanticsRules}
         semanticsRule={semanticsRule}
       />
-    </Modal>
+    </FormDrawerModal>
   );
 };
 

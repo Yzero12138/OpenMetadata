@@ -10,8 +10,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Form, FormProps, Input, Modal } from 'antd';
+import { Form, FormProps, Input } from 'antd';
 import { FC } from 'react';
+import { useTranslation } from 'react-i18next';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 
 export interface LinkData {
   href: string;
@@ -36,6 +38,7 @@ const LinkModal: FC<LinkModalProps> = ({
   onCancel,
   getContainer,
 }) => {
+  const { t } = useTranslation();
   const handleSubmit: FormProps<LinkData>['onFinish'] = (values) => {
     onSave(values);
   };
@@ -50,9 +53,11 @@ const LinkModal: FC<LinkModalProps> = ({
         id: 'link-form',
         form: 'link-form',
       }}
-      okText="Save"
+      okText={t('label.save')}
       open={isOpen}
-      title={data.href ? 'Edit link' : 'Add link'}
+      title={t(data.href ? 'label.edit-entity' : 'label.add-entity', {
+        entity: t('label.link'),
+      })}
       onCancel={onCancel}>
       <Form
         data-testid="link-form"
@@ -60,7 +65,7 @@ const LinkModal: FC<LinkModalProps> = ({
         initialValues={{ ...data }}
         layout="vertical"
         onFinish={handleSubmit}>
-        <Form.Item label="Link" name="href">
+        <Form.Item label={t('label.link')} name="href">
           <Input autoFocus />
         </Form.Item>
       </Form>

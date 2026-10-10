@@ -19,10 +19,7 @@ import {
   Button,
   ButtonUtility,
   Card,
-  Dialog,
   FileUploadDropZone,
-  Modal,
-  ModalOverlay,
   RadioButton,
   RadioGroup,
   Select,
@@ -58,6 +55,7 @@ import {
   validateODCSYaml,
 } from '../../../rest/contractAPI';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import { CoreFormDrawer as Dialog } from '../../common/atoms/drawer/CoreFormDrawer';
 import Loader from '../../common/Loader/Loader';
 import {
   ContractImportModalProps,
@@ -1099,122 +1097,118 @@ const ContractImportModal: React.FC<ContractImportModalProps> = ({
     (hasMultipleObjects && !selectedObjectName);
 
   return (
-    <ModalOverlay
+    <Dialog
+      data-testid="import-contract-modal"
       isDismissable={!isLoading}
       isOpen={visible}
+      isSubmitting={isLoading || isValidating}
+      width={yamlContent ? 900 : 680}
+      onClose={handleReset}
       onOpenChange={(open) => !open && handleReset()}>
-      <Modal>
-        <Dialog
-          data-testid="import-contract-modal"
-          showCloseButton={!isLoading}
-          width={yamlContent ? 900 : 680}
-          onClose={handleReset}>
-          <Dialog.Header>
-            <Typography
-              as="p"
-              data-testid="import-contract-modal-title"
-              size="text-sm"
-              weight="semibold">
-              {isODCSFormat
-                ? t('label.import-odcs-contract')
-                : t('label.import-contract')}
-            </Typography>
-            <Typography as="p" className="tw:text-secondary" size="text-sm">
-              {t('message.upload-file-description')}
-            </Typography>
-          </Dialog.Header>
+      <Dialog.Header>
+        <Typography
+          as="p"
+          data-testid="import-contract-modal-title"
+          size="text-sm"
+          weight="semibold">
+          {isODCSFormat
+            ? t('label.import-odcs-contract')
+            : t('label.import-contract')}
+        </Typography>
+        <Typography as="p" className="tw:text-secondary" size="text-sm">
+          {t('message.upload-file-description')}
+        </Typography>
+      </Dialog.Header>
 
-          <Dialog.Content>
-            <Box
-              gap={5}
-              style={{
-                minHeight: yamlContent ? '400px' : 'auto',
-              }}>
-              <div className="tw:flex-1">
-                {yamlContent ? (
-                  <>
-                    <Box
-                      align="center"
-                      className="tw:mb-4 tw:px-4 tw:py-3 tw:rounded tw:bg-gray-50"
-                      data-testid="file-info-card"
-                      justify="between">
-                      <Box align="center" gap={2}>
-                        <File06 className="tw:text-gray-500" size={24} />
-                        <div className="tw:max-w-70">
-                          <Typography
-                            ellipsis
-                            as="p"
-                            className="tw:text-gray-700"
-                            size="text-md"
-                            weight="medium">
-                            {fileName}
-                          </Typography>
-                        </div>
-                      </Box>
+      <Dialog.Content>
+        <Box
+          gap={5}
+          style={{
+            minHeight: yamlContent ? '400px' : 'auto',
+          }}>
+          <div className="tw:flex-1">
+            {yamlContent ? (
+              <>
+                <Box
+                  align="center"
+                  className="tw:mb-4 tw:px-4 tw:py-3 tw:rounded tw:bg-gray-50"
+                  data-testid="file-info-card"
+                  justify="between">
+                  <Box align="center" gap={2}>
+                    <File06 className="tw:text-gray-500" size={24} />
+                    <div className="tw:max-w-70">
+                      <Typography
+                        ellipsis
+                        as="p"
+                        className="tw:text-gray-700"
+                        size="text-md"
+                        weight="medium">
+                        {fileName}
+                      </Typography>
+                    </div>
+                  </Box>
 
-                      <ButtonUtility
-                        color="tertiary"
-                        data-testid="remove-file-button"
-                        icon={<Trash01 size={16} />}
-                        size="sm"
-                        title={t('label.delete-entity', {
-                          entity: t('label.file'),
-                        })}
-                        onClick={handleRemoveFile}
-                      />
-                    </Box>
-
-                    {renderObjectSelector()}
-                    {renderContractPreview()}
-                    {renderImportOptions()}
-                  </>
-                ) : (
-                  <FileUploadDropZone
-                    accept=".yaml,.yml,.json"
-                    className="tw:w-full"
-                    clickToUploadLabel={t('label.click-to-upload')}
-                    hint={t('label.supports-yaml-format')}
-                    input-data-testid="file-upload-input"
-                    orDragAndDropLabel={t('label.or-drag-and-drop')}
-                    onDropFiles={handleDropFiles}
+                  <ButtonUtility
+                    color="tertiary"
+                    data-testid="remove-file-button"
+                    icon={<Trash01 size={16} />}
+                    size="sm"
+                    title={t('label.delete-entity', {
+                      entity: t('label.file'),
+                    })}
+                    onClick={handleRemoveFile}
                   />
-                )}
-              </div>
+                </Box>
 
-              {yamlContent && (
-                <Card
-                  className={`tw:w-[320px] tw:shrink-0 tw:flex tw:flex-col tw:self-start tw:p-4 tw:overflow-auto ${
-                    parseError ? 'tw:bg-utility-error-50' : 'tw:bg-bg-secondary'
-                  }`}>
-                  {renderValidationPanel()}
-                </Card>
-              )}
-            </Box>
-          </Dialog.Content>
+                {renderObjectSelector()}
+                {renderContractPreview()}
+                {renderImportOptions()}
+              </>
+            ) : (
+              <FileUploadDropZone
+                accept=".yaml,.yml,.json"
+                className="tw:w-full"
+                clickToUploadLabel={t('label.click-to-upload')}
+                hint={t('label.supports-yaml-format')}
+                input-data-testid="file-upload-input"
+                orDragAndDropLabel={t('label.or-drag-and-drop')}
+                onDropFiles={handleDropFiles}
+              />
+            )}
+          </div>
 
-          <Dialog.Footer>
-            <Box className="tw:col-span-2" gap={3} justify="end">
-              <Button
-                color="secondary"
-                data-testid="cancel-button"
-                isDisabled={isLoading}
-                onClick={handleReset}>
-                {t('label.cancel')}
-              </Button>
-              <Button
-                showTextWhileLoading
-                color="primary"
-                data-testid="import-button"
-                isDisabled={isImportDisabled || isLoading}
-                isLoading={isLoading || isValidating}
-                onClick={handleImport}>
-                {t('label.import')}
-              </Button>
-            </Box>
-          </Dialog.Footer>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+          {yamlContent && (
+            <Card
+              className={`tw:w-[320px] tw:shrink-0 tw:flex tw:flex-col tw:self-start tw:p-4 tw:overflow-auto ${
+                parseError ? 'tw:bg-utility-error-50' : 'tw:bg-bg-secondary'
+              }`}>
+              {renderValidationPanel()}
+            </Card>
+          )}
+        </Box>
+      </Dialog.Content>
+
+      <Dialog.Footer>
+        <Box className="tw:col-span-2" gap={3} justify="end">
+          <Button
+            color="secondary"
+            data-testid="cancel-button"
+            isDisabled={isLoading}
+            onClick={handleReset}>
+            {t('label.cancel')}
+          </Button>
+          <Button
+            showTextWhileLoading
+            color="primary"
+            data-testid="import-button"
+            isDisabled={isImportDisabled || isLoading}
+            isLoading={isLoading || isValidating}
+            onClick={handleImport}>
+            {t('label.import')}
+          </Button>
+        </Box>
+      </Dialog.Footer>
+    </Dialog>
   );
 };
 

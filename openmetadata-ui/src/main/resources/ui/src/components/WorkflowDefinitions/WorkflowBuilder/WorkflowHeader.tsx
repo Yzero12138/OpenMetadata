@@ -10,15 +10,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 import {
   Badge,
   Button,
   Card,
-  Dialog,
   Input,
-  Modal,
-  ModalOverlay,
   Tooltip,
   TooltipTrigger,
   Typography,
@@ -31,6 +27,8 @@ import { ReactComponent as WorkflowIcon } from '../../../assets/svg/workflow.svg
 import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
 import { WorkflowHeaderProps } from '../../../interface/workflow-builder-components.interface';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { getWorkflowNameError } from '../../../utils/WorkflowValidationUtils';
+import { CoreFormDrawer as Dialog } from '../../common/atoms/drawer/CoreFormDrawer';
 import HeaderShell from '../../common/HeaderShell/HeaderShell.component';
 import { WorkflowControls } from './WorkflowControls';
 
@@ -39,6 +37,7 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
   isAiMode = false,
   title,
   workflowName,
+  isNewWorkflow = false,
   handleTestWorkflow,
   handleSaveWorkflow,
   handleDeleteWorkflow,
@@ -61,12 +60,17 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
   } = useWorkflowModeContext();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [displayNameInput, setDisplayNameInput] = useState(title ?? '');
+  const [nameInput, setNameInput] = useState(workflowName ?? '');
+  const [nameError, setNameError] = useState('');
+  const [isNameSaving, setIsNameSaving] = useState(false);
 
   useEffect(() => {
     if (isEditModalOpen) {
       setDisplayNameInput(title ?? '');
+      setNameInput(workflowName ?? '');
+      setNameError('');
     }
-  }, [isEditModalOpen, title]);
+  }, [isEditModalOpen, title, workflowName]);
 
   const handleSaveAndEnterViewMode = async () => {
     try {
@@ -84,9 +88,32 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
     setIsEditModalOpen(false);
   };
 
-  const handleSaveDisplayName = () => {
+  const handleSaveDisplayName = async () => {
+    const name = nameInput.trim();
+    if (isNewWorkflow) {
+      const error = getWorkflowNameError(name);
+      setNameError(error);
+      if (error) {
+        return;
+      }
+    }
     if (onUpdateDisplayName && displayNameInput.trim()) {
-      onUpdateDisplayName(displayNameInput.trim());
+      setIsNameSaving(true);
+      try {
+        const saved = await onUpdateDisplayName(
+          displayNameInput.trim(),
+          isNewWorkflow ? name : undefined
+        );
+        if (saved === false) {
+          return;
+        }
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+
+        return;
+      } finally {
+        setIsNameSaving(false);
+      }
     }
     setIsEditModalOpen(false);
   };
@@ -140,7 +167,7 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
   );
 
   const workflowIcon = (
-    <div className="tw:flex tw:items-center tw:justify-center tw:size-8 tw:rounded-md tw:bg-brand-solid">
+    <div className="tw:flex tw:items-center tw:justify-center tw:size-8 tw:shrink-0 tw:rounded-md tw:bg-brand-solid">
       <WorkflowIcon className="tw:size-4 tw:text-white" />
     </div>
   );
@@ -190,11 +217,13 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
           variant="gradient"
         />
       ) : (
-        <Card className="tw:px-6 tw:py-4" data-testid="workflow-header">
-          <div className="tw:flex tw:items-center tw:justify-between">
-            <div className="tw:flex tw:items-center tw:gap-3">
+        <Card
+          className="workflow-builder-header tw:px-6 tw:py-4"
+          data-testid="workflow-header">
+          <div className="workflow-builder-header-layout tw:flex tw:items-center tw:justify-between tw:gap-3">
+            <div className="tw:flex tw:items-center tw:gap-3 tw:min-w-0">
               {workflowIcon}
-              <div data-testid="workflow-title-section">
+              <div className="tw:min-w-0" data-testid="workflow-title-section">
                 <div className="tw:flex tw:items-center tw:gap-2">
                   <Typography
                     ellipsis
@@ -221,7 +250,7 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
               </div>
             </div>
 
-            <div className="tw:flex tw:gap-3 tw:items-center">
+            <div className="workflow-builder-header-actions tw:flex tw:gap-3 tw:items-center tw:shrink-0 tw:flex-wrap">
               {workflowControls}
               {editWorkflowButton}
             </div>
@@ -229,42 +258,56 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
         </Card>
       )}
 
-      <ModalOverlay isOpen={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <Modal>
-          <Dialog
-            showCloseButton
-            title={t('label.edit-entity', {
-              entity: t('label.display-name'),
-            })}
-            width={480}
-            onClose={handleCloseEditModal}>
-            <Dialog.Content>
-              <Input isDisabled label={t('label.name')} value={workflowName} />
-              <Input
-                label={t('label.display-name')}
-                placeholder={t('message.enter-display-name')}
-                value={displayNameInput}
-                onChange={setDisplayNameInput}
-              />
-            </Dialog.Content>
-            <Dialog.Footer>
-              <Button
-                color="secondary"
-                data-testid="cancel-button"
-                size="md"
-                onPress={handleCloseEditModal}>
-                {t('label.cancel')}
-              </Button>
-              <Button
-                data-testid="save-button"
-                size="md"
-                onPress={handleSaveDisplayName}>
-                {t('label.save')}
-              </Button>
-            </Dialog.Footer>
-          </Dialog>
-        </Modal>
-      </ModalOverlay>
+      <Dialog
+        isOpen={isEditModalOpen}
+        isSubmitting={isNameSaving}
+        title={t('label.edit-entity', {
+          entity: t('label.display-name'),
+        })}
+        width={480}
+        onClose={handleCloseEditModal}
+        onOpenChange={setIsEditModalOpen}>
+        <Dialog.Content>
+          <Input
+            data-testid="edit-workflow-name"
+            isDisabled={!isNewWorkflow}
+            isInvalid={!!nameError}
+            label={t('label.name')}
+            value={nameInput}
+            onChange={(value) => {
+              setNameInput(value);
+              setNameError('');
+            }}
+          />
+          {nameError && (
+            <Typography as="p" className="tw:text-error-primary" size="text-xs">
+              {nameError}
+            </Typography>
+          )}
+          <Input
+            label={t('label.display-name')}
+            placeholder={t('message.enter-display-name')}
+            value={displayNameInput}
+            onChange={setDisplayNameInput}
+          />
+        </Dialog.Content>
+        <Dialog.Footer>
+          <Button
+            color="secondary"
+            data-testid="cancel-button"
+            size="md"
+            onPress={handleCloseEditModal}>
+            {t('label.cancel')}
+          </Button>
+          <Button
+            data-testid="save-button"
+            isLoading={isNameSaving}
+            size="md"
+            onPress={handleSaveDisplayName}>
+            {t('label.save')}
+          </Button>
+        </Dialog.Footer>
+      </Dialog>
     </>
   );
 };

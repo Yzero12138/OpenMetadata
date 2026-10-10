@@ -12,7 +12,7 @@
  */
 
 import { CheckOutlined } from '@ant-design/icons';
-import { Modal, Space, Tabs, TabsProps } from 'antd';
+import { Space, Tabs, TabsProps } from 'antd';
 import { AxiosError } from 'axios';
 import { isEmpty, toString } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -27,6 +27,7 @@ import { Document } from '../../../../generated/entity/docStore/document';
 import { getAllKnowledgePanels } from '../../../../rest/DocStoreAPI';
 import { getWidgetWidthLabelFromKey } from '../../../../utils/CustomizableLandingPagePureUtils';
 import { showErrorToast } from '../../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
 import ErrorPlaceHolder from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../../common/Loader/Loader';
 import './add-widget-modal.less';
@@ -145,7 +146,6 @@ function AddWidgetModal({
 
   return (
     <Modal
-      centered
       className="add-widget-modal"
       data-testid="add-widget-modal"
       footer={null}

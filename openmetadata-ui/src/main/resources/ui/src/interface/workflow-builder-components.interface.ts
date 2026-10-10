@@ -293,6 +293,7 @@ export interface WorkflowHeaderProps {
   isAiMode?: boolean;
   title: string;
   workflowName?: string;
+  isNewWorkflow?: boolean;
   children?: React.ReactNode;
   handleTestWorkflow: () => void;
   handleSaveWorkflow: () => void;
@@ -301,7 +302,10 @@ export interface WorkflowHeaderProps {
   handleRunWorkflow?: () => void;
   isRunLoading?: boolean;
   focusedConnection?: { sourceId: string; targetId: string } | null;
-  onUpdateDisplayName?: (displayName: string) => void;
+  onUpdateDisplayName?: (
+    displayName: string,
+    name?: string
+  ) => Promise<boolean> | boolean | void;
 }
 
 export interface TaskItemProps {

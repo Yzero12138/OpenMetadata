@@ -166,7 +166,7 @@ export const SettingsNavigationPage = ({ onSave, persona }: Props) => {
             <Card
               bordered={false}
               className="custom-navigation-tree-container"
-              title="Navigation Menus">
+              title={t('label.navigation-menu-plural')}>
               <Tree
                 autoExpandParent
                 blockNode

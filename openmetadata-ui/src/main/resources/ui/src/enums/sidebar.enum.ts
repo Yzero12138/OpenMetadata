@@ -13,6 +13,7 @@
 
 export enum SidebarItem {
   HOME = 'my-data',
+  HOSPITAL_INTEGRATION = 'hospital-integration',
   EXPLORE = 'explore',
   OBSERVABILITY = 'observability',
   DATA_QUALITY = 'data-quality',

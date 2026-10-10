@@ -86,6 +86,30 @@ const CodeEditor = withSuspenseFallback(
   lazy(() => import('../../components/Database/SchemaEditor/CodeEditor'))
 );
 
+const TASK_CATEGORY_LABEL_KEYS: Record<TaskCategory, string> = {
+  [TaskCategory.Approval]: 'label.task-form-category-approval',
+  [TaskCategory.Custom]: 'label.custom',
+  [TaskCategory.DataAccess]: 'label.task-form-category-data-access',
+  [TaskCategory.Incident]: 'label.incident',
+  [TaskCategory.MetadataUpdate]: 'label.task-form-category-metadata-update',
+  [TaskCategory.Review]: 'label.task-form-category-review',
+};
+
+const TASK_STATUS_LABEL_KEYS: Record<TaskEntityStatus, string> = {
+  [TaskEntityStatus.Approved]: 'label.approved',
+  [TaskEntityStatus.Cancelled]: 'label.cancelled',
+  [TaskEntityStatus.Completed]: 'label.completed',
+  [TaskEntityStatus.Expired]: 'label.task-form-status-expired',
+  [TaskEntityStatus.Failed]: 'label.failed',
+  [TaskEntityStatus.Granted]: 'label.granted',
+  [TaskEntityStatus.InProgress]: 'label.task-form-status-in-progress',
+  [TaskEntityStatus.ManualRevoke]: 'label.task-form-status-manual-revoke',
+  [TaskEntityStatus.Open]: 'label.open',
+  [TaskEntityStatus.Pending]: 'label.task-form-status-pending',
+  [TaskEntityStatus.Rejected]: 'label.rejected',
+  [TaskEntityStatus.Revoked]: 'label.task-form-status-revoked',
+};
+
 const EMPTY_SCHEMA: TaskFormSchema = {
   name: '',
   displayName: '',
@@ -221,6 +245,11 @@ const TaskFormSettingsPage = () => {
   const watchedTaskType = Form.useWatch('taskType', form);
   const watchedTaskCategory = Form.useWatch('taskCategory', form);
 
+  const getTaskCategoryLabel = (category?: string) =>
+    category && Object.values(TaskCategory).includes(category as TaskCategory)
+      ? t(TASK_CATEGORY_LABEL_KEYS[category as TaskCategory])
+      : category;
+
   const breadcrumbs = useMemo(
     () =>
       getSettingPageEntityBreadCrumb(
@@ -314,9 +343,7 @@ const TaskFormSettingsPage = () => {
     const taskCategory = currentValues.taskCategory as TaskCategory | undefined;
 
     if (!taskType || !taskCategory) {
-      showErrorToast(
-        'Select a task type and category before loading a template'
-      );
+      showErrorToast(t('message.task-form-select-type-category'));
 
       return;
     }
@@ -324,7 +351,7 @@ const TaskFormSettingsPage = () => {
     const template = getDefaultTaskFormSchema(taskType, taskCategory);
 
     if (!template) {
-      showErrorToast('No built-in template is available for this task type');
+      showErrorToast(t('message.task-form-no-template'));
 
       return;
     }
@@ -417,7 +444,7 @@ const TaskFormSettingsPage = () => {
       parsedDefaultStageMappings = JSON.parse(defaultStageMappingsValue);
       parsedWorkflowDefinition = JSON.parse(workflowDefinitionValue);
     } catch {
-      showErrorToast('Task form settings JSON is invalid');
+      showErrorToast(t('message.task-form-invalid-json'));
 
       return;
     }
@@ -443,7 +470,7 @@ const TaskFormSettingsPage = () => {
         const workflowName =
           parsedWorkflowDefinition.name ?? payload.workflowDefinitionRef;
         if (!workflowName) {
-          showErrorToast('Workflow definition JSON must include a name');
+          showErrorToast(t('message.task-form-workflow-name-required'));
 
           return;
         }
@@ -460,7 +487,11 @@ const TaskFormSettingsPage = () => {
         ? await updateTaskFormSchema(payload)
         : await createTaskFormSchema(payload);
 
-      showSuccessToast('Task form saved successfully');
+      showSuccessToast(
+        t('message.entity-saved-successfully', {
+          entity: t('label.task-form'),
+        })
+      );
       await loadSchemas();
       handleSelectSchema(savedSchema);
     } catch (error) {
@@ -477,12 +508,15 @@ const TaskFormSettingsPage = () => {
     watchedName?.trim() ||
     selectedSchema.displayName ||
     selectedSchema.name ||
-    'New Task Form';
+    t('label.new-entity', { entity: t('label.task-form') });
   const pageDescription =
     watchedDescription?.trim() ||
     selectedSchema.description ||
-    'Configure task schemas, form behavior, and workflow transitions in one workspace.';
-  const schemaSubtitle = [watchedTaskType, watchedTaskCategory]
+    t('message.task-form-description');
+  const schemaSubtitle = [
+    watchedTaskType,
+    getTaskCategoryLabel(watchedTaskCategory),
+  ]
     .filter(Boolean)
     .join(' / ');
 
@@ -498,7 +532,9 @@ const TaskFormSettingsPage = () => {
           onFinish={handleSave}>
           <div className="task-form-settings-shell">
             <aside className="task-form-settings-sidebar">
-              <Card className="task-form-settings-sidebar-card" title="Schemas">
+              <Card
+                className="task-form-settings-sidebar-card"
+                title={t('label.schema-plural')}>
                 {loading ? (
                   <div className="text-center p-y-lg">
                     <Spin />
@@ -525,7 +561,7 @@ const TaskFormSettingsPage = () => {
                             </span>
                             <span className="task-form-settings-schema-item__meta">
                               {`${schema.taskType} / ${
-                                schema.taskCategory ?? '-'
+                                getTaskCategoryLabel(schema.taskCategory) ?? '-'
                               }`}
                             </span>
                           </button>
@@ -533,7 +569,7 @@ const TaskFormSettingsPage = () => {
                       })
                     ) : (
                       <Typography.Text className="text-grey-muted">
-                        No task forms found yet.
+                        {t('message.task-form-no-schemas')}
                       </Typography.Text>
                     )}
                   </div>
@@ -554,7 +590,7 @@ const TaskFormSettingsPage = () => {
               <div className="task-form-settings-hero">
                 <div className="task-form-settings-hero__copy">
                   <Typography.Text className="task-form-settings-hero__eyebrow">
-                    Form Builder
+                    {t('label.task-form-builder')}
                   </Typography.Text>
                   <Typography.Title
                     className="task-form-settings-hero__title"
@@ -591,24 +627,31 @@ const TaskFormSettingsPage = () => {
               <div className="task-form-settings-config-grid">
                 <Card
                   className="task-form-settings-card"
-                  title="General Configuration">
+                  title={t('label.task-form-general-configuration')}>
                   <div className="task-form-settings-form-grid">
                     <Form.Item
                       className="m-b-0"
-                      label="Name"
+                      label={t('label.name')}
                       name="name"
-                      rules={[{ required: true, message: 'Name is required' }]}>
+                      rules={[
+                        {
+                          required: true,
+                          message: t('label.field-required', {
+                            field: t('label.name'),
+                          }),
+                        },
+                      ]}>
                       <Input data-testid="task-form-name-input" />
                     </Form.Item>
                     <Form.Item
                       className="m-b-0"
-                      label="Display Name"
+                      label={t('label.display-name')}
                       name="displayName">
                       <Input data-testid="task-form-display-name-input" />
                     </Form.Item>
                     <Form.Item
                       className="m-b-0 task-form-settings-form-grid__span-2"
-                      label="Description"
+                      label={t('label.description')}
                       name="description">
                       <Input.TextArea
                         autoSize={{ minRows: 4, maxRows: 6 }}
@@ -620,27 +663,38 @@ const TaskFormSettingsPage = () => {
 
                 <Card
                   className="task-form-settings-card task-form-settings-card--sidebar"
-                  title="Classification">
+                  title={t('label.classification')}>
                   <div className="task-form-settings-card__stack">
                     <Form.Item
                       className="m-b-0"
-                      label="Task Type"
+                      label={t('label.entity-type-plural', {
+                        entity: t('label.task'),
+                      })}
                       name="taskType"
                       rules={[
-                        { required: true, message: 'Task type is required' },
+                        {
+                          required: true,
+                          message: t('label.field-required', {
+                            field: t('label.entity-type-plural', {
+                              entity: t('label.task'),
+                            }),
+                          }),
+                        },
                       ]}>
                       <Input data-testid="task-form-type-input" />
                     </Form.Item>
                     <Form.Item
                       className="m-b-0"
-                      label="Task Category"
+                      label={t('label.task-entity', {
+                        entity: t('label.category'),
+                      })}
                       name="taskCategory">
                       <Select
                         allowClear
                         data-testid="task-form-category-input"
                         options={Object.values(TaskCategory).map(
                           (category) => ({
-                            label: category,
+                            label: t(TASK_CATEGORY_LABEL_KEYS[category]),
                             value: category,
                           })
                         )}
@@ -648,14 +702,14 @@ const TaskFormSettingsPage = () => {
                     </Form.Item>
                     <Form.Item
                       className="m-b-0"
-                      label="Workflow Definition"
+                      label={t('label.workflow-definition')}
                       name="workflowDefinitionRef">
                       <Input data-testid="task-form-workflow-definition-input" />
                     </Form.Item>
                     <Button
                       data-testid="task-form-load-template-button"
                       onClick={handleLoadTemplate}>
-                      Load built-in template
+                      {t('label.task-form-load-template')}
                     </Button>
                   </div>
                 </Card>
@@ -667,14 +721,16 @@ const TaskFormSettingsPage = () => {
                   items={[
                     {
                       key: 'designer',
-                      label: 'Designer',
+                      label: t('label.task-form-designer'),
                       children: (
                         <div className="task-form-settings-designer-pane">
                           <Alert
                             showIcon
                             className="task-form-settings-designer-pane__alert"
-                            description="Use the builder for create forms, resolve forms, transition forms, and stage mappings. The raw JSON editors are still available under Advanced."
-                            message="Design task forms visually"
+                            description={t(
+                              'message.task-form-designer-description'
+                            )}
+                            message={t('label.task-form-design-visually')}
                             type="info"
                           />
                           <Tabs
@@ -682,7 +738,7 @@ const TaskFormSettingsPage = () => {
                             items={[
                               {
                                 key: 'create-form',
-                                label: 'Create Form',
+                                label: t('label.task-form-create'),
                                 children: (
                                   <TaskFormBuilderSection
                                     baseFormSchema={parseJsonObject(
@@ -691,10 +747,12 @@ const TaskFormSettingsPage = () => {
                                     baseUiSchema={parseJsonObject(
                                       createUiSchemaValue
                                     )}
-                                    description="Fields shown when a task is created."
+                                    description={t(
+                                      'message.task-form-create-description'
+                                    )}
                                     fields={createFields}
                                     testIdPrefix="task-form-create-builder"
-                                    title="Create Form Fields"
+                                    title={t('label.task-form-create-fields')}
                                     onChange={(fields) =>
                                       syncCreateDesigner(fields)
                                     }
@@ -703,7 +761,7 @@ const TaskFormSettingsPage = () => {
                               },
                               {
                                 key: 'resolve-form',
-                                label: 'Resolve Form',
+                                label: t('label.task-form-resolve'),
                                 children: (
                                   <TaskFormBuilderSection
                                     baseFormSchema={parseJsonObject(
@@ -712,10 +770,12 @@ const TaskFormSettingsPage = () => {
                                     baseUiSchema={parseJsonObject(
                                       uiSchemaValue
                                     )}
-                                    description="Fields shown when the task is reviewed or resolved."
+                                    description={t(
+                                      'message.task-form-resolve-description'
+                                    )}
                                     fields={resolveFields}
                                     testIdPrefix="task-form-resolve-builder"
-                                    title="Resolve Form Fields"
+                                    title={t('label.task-form-resolve-fields')}
                                     onChange={(fields) =>
                                       syncResolveDesigner(fields)
                                     }
@@ -724,7 +784,7 @@ const TaskFormSettingsPage = () => {
                               },
                               {
                                 key: 'transitions',
-                                label: 'Transition Forms',
+                                label: t('label.task-form-transition-plural'),
                                 children: (
                                   <div className="task-form-settings-transition-pane">
                                     <div className="task-form-settings-section-header">
@@ -732,12 +792,14 @@ const TaskFormSettingsPage = () => {
                                         <Typography.Title
                                           className="m-b-xs"
                                           level={5}>
-                                          Transition Forms
+                                          {t(
+                                            'label.task-form-transition-plural'
+                                          )}
                                         </Typography.Title>
                                         <Typography.Paragraph className="m-b-0 text-grey-muted">
-                                          Configure additional fields for
-                                          specific workflow transitions like
-                                          approve, reject, or reassign.
+                                          {t(
+                                            'message.task-form-transitions-description'
+                                          )}
                                         </Typography.Paragraph>
                                       </div>
                                       <Button
@@ -749,7 +811,11 @@ const TaskFormSettingsPage = () => {
                                             createEmptyDesignerTransition(),
                                           ])
                                         }>
-                                        Add transition form
+                                        {t('label.add-entity', {
+                                          entity: t(
+                                            'label.task-form-transition'
+                                          ),
+                                        })}
                                       </Button>
                                     </div>
                                     {transitionBuilders.length ? (
@@ -773,17 +839,27 @@ const TaskFormSettingsPage = () => {
                                                       )
                                                     )
                                                   }>
-                                                  Remove
+                                                  {t('label.remove')}
                                                 </Button>
                                               }
                                               key={transition.key}
                                               title={
                                                 transition.transitionId ||
-                                                `Transition ${index + 1}`
+                                                t(
+                                                  'label.task-form-numbered-item',
+                                                  {
+                                                    entity: t(
+                                                      'label.task-form-transition'
+                                                    ),
+                                                    number: index + 1,
+                                                  }
+                                                )
                                               }>
                                               <Form.Item
                                                 required
-                                                label="Transition Id">
+                                                label={t(
+                                                  'label.task-form-transition-id'
+                                                )}>
                                                 <Input
                                                   data-testid={`task-form-transition-id-${index}`}
                                                   placeholder="approve"
@@ -823,10 +899,14 @@ const TaskFormSettingsPage = () => {
                                                     | Record<string, unknown>
                                                     | undefined as undefined
                                                 }
-                                                description="Extra fields shown only for this transition."
+                                                description={t(
+                                                  'message.task-form-transition-description'
+                                                )}
                                                 fields={transition.fields}
                                                 testIdPrefix={`task-form-transition-builder-${index}`}
-                                                title="Transition Fields"
+                                                title={t(
+                                                  'label.task-form-transition-fields'
+                                                )}
                                                 onChange={(fields) =>
                                                   syncTransitionDesigner(
                                                     transitionBuilders.map(
@@ -850,7 +930,7 @@ const TaskFormSettingsPage = () => {
                                       </div>
                                     ) : (
                                       <Typography.Text className="text-grey-muted">
-                                        No transition forms configured yet.
+                                        {t('message.task-form-no-transitions')}
                                       </Typography.Text>
                                     )}
                                   </div>
@@ -858,7 +938,7 @@ const TaskFormSettingsPage = () => {
                               },
                               {
                                 key: 'workflow',
-                                label: 'Workflow Stages',
+                                label: t('label.task-form-workflow-stages'),
                                 children: (
                                   <div className="task-form-settings-stage-pane">
                                     <div className="task-form-settings-section-header">
@@ -866,12 +946,14 @@ const TaskFormSettingsPage = () => {
                                         <Typography.Title
                                           className="m-b-xs"
                                           level={5}>
-                                          Stage to Status Mapping
+                                          {t(
+                                            'label.task-form-stage-status-mapping'
+                                          )}
                                         </Typography.Title>
                                         <Typography.Paragraph className="m-b-0 text-grey-muted">
-                                          Map workflow stage ids to the coarse
-                                          task status exposed in APIs and
-                                          counts.
+                                          {t(
+                                            'message.task-form-stage-mappings-description'
+                                          )}
                                         </Typography.Paragraph>
                                       </div>
                                       <Button
@@ -883,7 +965,11 @@ const TaskFormSettingsPage = () => {
                                             createEmptyStageMapping(),
                                           ])
                                         }>
-                                        Add stage mapping
+                                        {t('label.add-entity', {
+                                          entity: t(
+                                            'label.task-form-stage-mapping'
+                                          ),
+                                        })}
                                       </Button>
                                     </div>
                                     {stageMappings.length ? (
@@ -906,19 +992,27 @@ const TaskFormSettingsPage = () => {
                                                     )
                                                   )
                                                 }>
-                                                Remove
+                                                {t('label.remove')}
                                               </Button>
                                             }
                                             key={mapping.key}
                                             size="small"
                                             title={
                                               mapping.stageId ||
-                                              `Stage ${index + 1}`
+                                              t(
+                                                'label.task-form-numbered-item',
+                                                {
+                                                  entity: t('label.stage'),
+                                                  number: index + 1,
+                                                }
+                                              )
                                             }>
                                             <div className="task-form-settings-form-grid">
                                               <Form.Item
                                                 className="m-b-0"
-                                                label="Stage Id">
+                                                label={t(
+                                                  'label.task-form-stage-id'
+                                                )}>
                                                 <Input
                                                   data-testid={`task-form-stage-id-${index}`}
                                                   placeholder="open"
@@ -945,13 +1039,22 @@ const TaskFormSettingsPage = () => {
                                               </Form.Item>
                                               <Form.Item
                                                 className="m-b-0"
-                                                label="Task Status">
+                                                label={t(
+                                                  'label.entity-status',
+                                                  {
+                                                    entity: t('label.task'),
+                                                  }
+                                                )}>
                                                 <Select
                                                   data-testid={`task-form-stage-status-${index}`}
                                                   options={Object.values(
                                                     TaskEntityStatus
                                                   ).map((status) => ({
-                                                    label: status,
+                                                    label: t(
+                                                      TASK_STATUS_LABEL_KEYS[
+                                                        status
+                                                      ]
+                                                    ),
                                                     value: status,
                                                   }))}
                                                   value={
@@ -983,7 +1086,9 @@ const TaskFormSettingsPage = () => {
                                       </div>
                                     ) : (
                                       <Typography.Text className="text-grey-muted">
-                                        No stage mappings configured yet.
+                                        {t(
+                                          'message.task-form-no-stage-mappings'
+                                        )}
                                       </Typography.Text>
                                     )}
                                   </div>
@@ -996,11 +1101,13 @@ const TaskFormSettingsPage = () => {
                     },
                     {
                       key: 'advanced',
-                      label: 'Advanced JSON',
+                      label: t('label.advanced-entity', {
+                        entity: t('label.task-form-json'),
+                      }),
                       children: (
                         <div className="task-form-settings-json-pane">
                           <Typography.Title className="m-b-sm" level={5}>
-                            Resolve Form Schema
+                            {t('label.task-form-resolve-schema')}
                           </Typography.Title>
                           <CodeEditor
                             editorClass="task-form-schema-editor"
@@ -1023,7 +1130,7 @@ const TaskFormSettingsPage = () => {
                           />
 
                           <Typography.Title className="m-b-sm" level={5}>
-                            Resolve UI Schema
+                            {t('label.task-form-resolve-ui-schema')}
                           </Typography.Title>
                           <CodeEditor
                             editorClass="task-form-ui-schema-editor"
@@ -1046,7 +1153,7 @@ const TaskFormSettingsPage = () => {
                           />
 
                           <Typography.Title className="m-b-sm" level={5}>
-                            Create Form Schema
+                            {t('label.task-form-create-schema')}
                           </Typography.Title>
                           <CodeEditor
                             editorClass="task-form-create-schema-editor"
@@ -1069,7 +1176,7 @@ const TaskFormSettingsPage = () => {
                           />
 
                           <Typography.Title className="m-b-sm" level={5}>
-                            Create UI Schema
+                            {t('label.task-form-create-ui-schema')}
                           </Typography.Title>
                           <CodeEditor
                             editorClass="task-form-create-ui-schema-editor"
@@ -1093,7 +1200,7 @@ const TaskFormSettingsPage = () => {
                           />
 
                           <Typography.Title className="m-b-sm" level={5}>
-                            Transition Forms
+                            {t('label.task-form-transition-plural')}
                           </Typography.Title>
                           <CodeEditor
                             editorClass="task-form-transition-forms-editor"
@@ -1114,7 +1221,7 @@ const TaskFormSettingsPage = () => {
                           />
 
                           <Typography.Title className="m-b-sm" level={5}>
-                            Default Stage Mappings
+                            {t('label.task-form-default-stage-mappings')}
                           </Typography.Title>
                           <CodeEditor
                             editorClass="task-form-stage-mappings-editor"
@@ -1134,7 +1241,7 @@ const TaskFormSettingsPage = () => {
                           />
 
                           <Typography.Title className="m-b-sm" level={5}>
-                            Workflow Definition JSON
+                            {t('label.task-form-workflow-json')}
                           </Typography.Title>
                           <CodeEditor
                             editorClass="task-form-workflow-definition-editor"

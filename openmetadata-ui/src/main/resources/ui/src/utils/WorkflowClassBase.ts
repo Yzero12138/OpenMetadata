@@ -25,11 +25,11 @@ export interface WorkflowCapabilities {
 export class WorkflowClassBase {
   public getCapabilities(): WorkflowCapabilities {
     return {
-      allowCreateWorkflow: false,
+      allowCreateWorkflow: true,
       allowDeleteWorkflow: false,
-      allowStructuralGraphEdits: false,
-      showWorkflowNodePalette: false,
-      allowFullStartNodeConfiguration: false,
+      allowStructuralGraphEdits: true,
+      showWorkflowNodePalette: true,
+      allowFullStartNodeConfiguration: true,
       allowStartNodeFilterScheduleAndBatchEdit: true,
       allowScheduledTrigger: false,
       allowViewModeDrag: true,

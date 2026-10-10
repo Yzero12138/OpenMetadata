@@ -10,13 +10,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Form, Input, Modal } from 'antd';
+import { Form, Input } from 'antd';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { VALIDATION_MESSAGES } from '../../../constants/constants';
 import { passwordRegex } from '../../../constants/regex.constants';
 import { ChangePasswordRequest } from '../../../generated/auth/changePasswordRequest';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 
 interface ChangePasswordFormProps {
   visible: boolean;
@@ -39,11 +39,10 @@ const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({
 
   return (
     <Modal
-      centered
       cancelText={t('label.cancel')}
-      closable={false}
       confirmLoading={isLoading}
       data-testid="modal-container"
+      isSubmitting={isLoading}
       maskClosable={false}
       okButtonProps={{
         form: 'change-password-form',

@@ -10,13 +10,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Form, FormProps, Input, Modal } from 'antd';
+import { Form, FormProps, Input } from 'antd';
 import { AxiosError } from 'axios';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { VALIDATION_MESSAGES } from '../../../../constants/constants';
 import { testEmailConnection } from '../../../../rest/settingConfigAPI';
 import { showErrorToast, showSuccessToast } from '../../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
 
 interface TesEmailProps {
   onCancel: () => void;
@@ -44,9 +45,8 @@ const TestEmail = ({ onCancel }: TesEmailProps) => {
     <Modal
       destroyOnClose
       open
-      closable={false}
-      closeIcon={null}
       data-testid="test-email-modal"
+      isSubmitting={isLoading}
       maskClosable={false}
       okButtonProps={{
         htmlType: 'submit',

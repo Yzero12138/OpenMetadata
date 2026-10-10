@@ -10,9 +10,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Dialog, Modal, ModalOverlay } from '@openmetadata/ui-core-components';
+
 import { isUndefined } from 'lodash';
 import { useTranslation } from 'react-i18next';
+import { CoreFormDrawer as Dialog } from '../../common/atoms/drawer/CoreFormDrawer';
 import { AssetsOfEntity } from '../../Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import './asset-selection-model.style.less';
 import AssetSelectionContentBody from './AssetSelectionContentBody';
@@ -42,57 +43,52 @@ export const AssetSelectionModal = ({
   });
 
   return (
-    <ModalOverlay
+    <Dialog
+      data-testid="asset-selection-modal"
       isOpen={open}
+      isSubmitting={state.isSaveLoading}
+      title={t('label.add-entity', { entity: t('label.asset-plural') })}
+      width={675}
+      onClose={onCancel}
       onOpenChange={(isOpen) => !isOpen && onCancel?.()}>
-      <Modal className="asset-selection-modal">
-        <Dialog
-          data-testid="asset-selection-modal"
-          title={t('label.add-entity', { entity: t('label.asset-plural') })}
-          width={675}
-          onClose={onCancel}>
-          <Dialog.Content>
-            <AssetSelectionContentBody
-              aggregations={state.aggregations}
-              assetJobResponse={state.assetJobResponse}
-              cancelDomainAssetMove={state.cancelDomainAssetMove}
-              clearFilters={state.clearFilters}
-              confirmDomainAssetMove={state.confirmDomainAssetMove}
-              dryRunWarnings={state.dryRunWarnings}
-              emptyPlaceHolderText={emptyPlaceHolderText}
-              exportJob={state.exportJob}
-              failedStatus={state.failedStatus}
-              filters={state.filters}
-              getErrorStatusAndMessage={state.getErrorStatusAndMessage}
-              handleCardClick={state.handleCardClick}
-              handleQuickFiltersValueSelect={
-                state.handleQuickFiltersValueSelect
-              }
-              isLoading={state.isLoading}
-              isSaveLoading={state.isSaveLoading}
-              items={state.items}
-              quickFilterQuery={state.quickFilterQuery}
-              search={state.search}
-              selectedItems={state.selectedItems}
-              setSearch={state.setSearch}
-              totalCount={state.totalCount}
-              onScroll={state.onScroll}
-              onSelectAll={state.onSelectAll}
-            />
-          </Dialog.Content>
-          <Dialog.Footer>
-            <AssetSelectionFooter
-              errorCount={state.failedStatus?.failedRequest?.length ?? 0}
-              hasAssetJobResponse={!isUndefined(state.assetJobResponse)}
-              isLoading={state.isLoading}
-              isSaveLoading={state.isSaveLoading}
-              selectedCount={state.selectedItems?.size ?? 0}
-              onCancel={onCancel}
-              onSave={state.onSaveAction}
-            />
-          </Dialog.Footer>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+      <Dialog.Content>
+        <AssetSelectionContentBody
+          aggregations={state.aggregations}
+          assetJobResponse={state.assetJobResponse}
+          cancelDomainAssetMove={state.cancelDomainAssetMove}
+          clearFilters={state.clearFilters}
+          confirmDomainAssetMove={state.confirmDomainAssetMove}
+          dryRunWarnings={state.dryRunWarnings}
+          emptyPlaceHolderText={emptyPlaceHolderText}
+          exportJob={state.exportJob}
+          failedStatus={state.failedStatus}
+          filters={state.filters}
+          getErrorStatusAndMessage={state.getErrorStatusAndMessage}
+          handleCardClick={state.handleCardClick}
+          handleQuickFiltersValueSelect={state.handleQuickFiltersValueSelect}
+          isLoading={state.isLoading}
+          isSaveLoading={state.isSaveLoading}
+          items={state.items}
+          quickFilterQuery={state.quickFilterQuery}
+          search={state.search}
+          selectedItems={state.selectedItems}
+          setSearch={state.setSearch}
+          totalCount={state.totalCount}
+          onScroll={state.onScroll}
+          onSelectAll={state.onSelectAll}
+        />
+      </Dialog.Content>
+      <Dialog.Footer>
+        <AssetSelectionFooter
+          errorCount={state.failedStatus?.failedRequest?.length ?? 0}
+          hasAssetJobResponse={!isUndefined(state.assetJobResponse)}
+          isLoading={state.isLoading}
+          isSaveLoading={state.isSaveLoading}
+          selectedCount={state.selectedItems?.size ?? 0}
+          onCancel={onCancel}
+          onSave={state.onSaveAction}
+        />
+      </Dialog.Footer>
+    </Dialog>
   );
 };

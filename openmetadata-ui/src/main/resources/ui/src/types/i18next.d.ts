@@ -20,6 +20,9 @@ declare module 'i18next' {
     returnObjects: false;
     defaultNS: 'translation';
     resources: {
+      hospital: {
+        [key: string]: string;
+      };
       translation: {
         [key: string]: string;
       };

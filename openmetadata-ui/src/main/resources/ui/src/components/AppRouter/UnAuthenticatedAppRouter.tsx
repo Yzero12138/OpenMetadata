@@ -25,26 +25,8 @@ const SigninPage = withPageSuspenseFallback(
   lazy(() => import('../../pages/LoginPage/SignInPage'))
 );
 
-const ForgotPassword = withPageSuspenseFallback(
-  lazy(() => import('../../pages/ForgotPassword/ForgotPassword.component'))
-);
-
-const ResetPassword = withPageSuspenseFallback(
-  lazy(() => import('../../pages/ResetPassword/ResetPassword.component'))
-);
-
-const BasicSignupPage = withPageSuspenseFallback(
-  lazy(() => import('../../pages/SignUp/BasicSignup.component'))
-);
-
 const PageNotFound = withPageSuspenseFallback(
   lazy(() => import('../../pages/PageNotFound/PageNotFound'))
-);
-
-const AccountActivationConfirmation = withPageSuspenseFallback(
-  lazy(
-    () => import('../../pages/SignUp/account-activation-confirmation.component')
-  )
 );
 
 const Auth0Callback = withPageSuspenseFallback(
@@ -65,11 +47,6 @@ export const UnAuthenticatedAppRouter = () => {
       isSigningUp: state.isSigningUp,
     }))
   );
-
-  const isBasicAuthProvider =
-    authConfig &&
-    (authConfig.provider === AuthProvider.Basic ||
-      authConfig.provider === AuthProvider.LDAP);
 
   const CallbackComponent = useMemo(() => {
     switch (authConfig?.provider) {
@@ -106,26 +83,18 @@ export const UnAuthenticatedAppRouter = () => {
       )}
       {/* keep this route before any conditional JSX.Element rendering */}
       <Route element={<PageNotFound />} path={APP_ROUTER_ROUTES.NOT_FOUND} />
-      {isBasicAuthProvider && (
-        <>
-          <Route
-            element={<BasicSignupPage />}
-            path={APP_ROUTER_ROUTES.REGISTER}
-          />
-          <Route
-            element={<ForgotPassword />}
-            path={APP_ROUTER_ROUTES.FORGOT_PASSWORD}
-          />
-          <Route
-            element={<ResetPassword />}
-            path={APP_ROUTER_ROUTES.RESET_PASSWORD}
-          />
-          <Route
-            element={<AccountActivationConfirmation />}
-            path={APP_ROUTER_ROUTES.ACCOUNT_ACTIVATION}
-          />
-        </>
-      )}
+      {[
+        APP_ROUTER_ROUTES.REGISTER,
+        APP_ROUTER_ROUTES.FORGOT_PASSWORD,
+        APP_ROUTER_ROUTES.RESET_PASSWORD,
+        APP_ROUTER_ROUTES.ACCOUNT_ACTIVATION,
+      ].map((path) => (
+        <Route
+          element={<Navigate replace to={APP_ROUTER_ROUTES.SIGNIN} />}
+          key={path}
+          path={path}
+        />
+      ))}
     </Routes>
   );
 };

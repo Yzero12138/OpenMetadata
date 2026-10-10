@@ -28,6 +28,7 @@ import {
   NodeConfig,
 } from '../interface/workflow-builder-components.interface';
 import { CustomNodeData } from '../interface/WorkflowBuilder.interface';
+import { t as translate } from './i18next/LocalUtil';
 import {
   deserializeEventBasedFilters,
   deserializePeriodicBatchFilters,
@@ -45,16 +46,17 @@ export const getLabelFromSubType = (subType: NodeSubType): string => {
 };
 
 export const getDisplayLabelFromSubType = (
-  subType: NodeSubType | undefined
+  subType: NodeSubType | undefined,
+  t: (key: string) => string = translate
 ): string => {
   if (!subType) {
-    return 'TASK';
+    return t('label.task');
   }
 
   const mapping =
     NODE_TYPE_MAPPINGS[subType as keyof typeof NODE_TYPE_MAPPINGS];
 
-  return mapping?.displayLabel || subType.toUpperCase() || 'TASK';
+  return mapping ? t(mapping.labelKey) : subType;
 };
 
 export const getTypeFromSubType = (subType: NodeSubType): NodeType => {

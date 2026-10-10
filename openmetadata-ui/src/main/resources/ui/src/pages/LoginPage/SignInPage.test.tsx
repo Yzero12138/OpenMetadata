@@ -1,5 +1,5 @@
 /*
- *  Copyright 2022 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -10,203 +10,69 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import {
-  findByTestId,
-  findByText,
-  render,
-  screen,
-} from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-
-import { useAuthProvider } from '../../components/Auth/AuthProviders/AuthProvider';
-import { CarouselLayout } from '../../components/Layout/CarouselLayout/CarouselLayout';
+import { act, render, screen } from '@testing-library/react';
+import axios from 'axios';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { ROUTES } from '../../constants/constants';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import SignInPage from './SignInPage';
 
-const mockuseApplicationStore = useApplicationStore as unknown as jest.Mock;
-const mockUseAuthProvider = useAuthProvider as unknown as jest.Mock;
+jest.mock('axios');
+jest.mock('../../hooks/useApplicationStore');
+const mockedGet = axios.get as jest.Mock;
+const mockedStore = useApplicationStore as unknown as jest.Mock;
 
-jest.mock('../../hooks/useApplicationStore', () => ({
-  useApplicationStore: jest.fn().mockImplementation(() => ({
-    applicationConfig: {
-      customLogoConfig: {
-        customLogoUrlPath: 'https://custom-logo.png',
-        customMonogramUrlPath: 'https://custom-monogram.png',
-      },
-    },
-    getOidcToken: jest.fn(),
-  })),
-}));
-
-jest.mock('../../components/Auth/AuthProviders/AuthProvider', () => ({
-  useAuthProvider: jest.fn().mockImplementation(() => ({
-    onLoginHandler: jest.fn(),
-  })),
-}));
-
-jest.mock('../../components/Auth/AuthProviders/BasicAuthProvider', () => ({
-  useBasicAuth: jest.fn().mockImplementation(() => ({
-    handleLogin: jest.fn(),
-  })),
-}));
-
-jest.mock('./LoginCarousel', () =>
-  jest.fn().mockReturnValue(<p>LoginCarousel</p>)
-);
-
-jest.mock('../../components/common/BrandImage/BrandImage', () => {
-  return jest.fn().mockReturnValue(<p>testBrandLogo</p>);
-});
-
-jest.mock('../../components/common/DocumentTitle/DocumentTitle', () => {
-  return jest.fn().mockReturnValue(<p>DocumentTitle</p>);
-});
-
-jest.mock('../../components/Layout/CarouselLayout/CarouselLayout', () => ({
-  CarouselLayout: jest.fn().mockImplementation(({ children }) => children),
-}));
-
-jest.mock('../../components/common/Loader/Loader', () => {
-  return jest.fn().mockReturnValue(<div data-testid="loader">Loading...</div>);
-});
-
-describe('Test SignInPage Component', () => {
-  afterEach(() => {
-    jest.clearAllMocks();
+describe('Hospital portal sign-in', () => {
+  beforeEach(() => {
     jest.useRealTimers();
-  });
-
-  afterAll(() => {
-    jest.resetAllMocks();
-  });
-
-  it('Component should render for Basic auth provider', async () => {
-    mockuseApplicationStore.mockReturnValue({
-      isAuthDisabled: false,
-      authConfig: { provider: 'basic' },
-      onLoginHandler: jest.fn(),
-      onLogoutHandler: jest.fn(),
-      getOidcToken: jest.fn(),
-    });
-    const { container } = render(<SignInPage />, {
-      wrapper: MemoryRouter,
-    });
-    const signInPage = await findByTestId(container, 'login-form-container');
-
-    expect(signInPage).toBeInTheDocument();
-    expect(CarouselLayout).toHaveBeenCalledWith(
-      expect.objectContaining({
-        pageTitle: 'label.sign-in',
-      }),
-      {}
-    );
-  });
-
-  it.each([
-    ['google', 'Sign in with google'],
-    ['okta', 'Sign in with okta'],
-    ['auth0', 'Sign in with auth0'],
-    ['azure', 'Sign in with azure'],
-    ['custom-oidc', 'Sign in with sso'],
-    ['aws-cognito', 'Sign in with aws cognito'],
-    ['unknown-provider', 'SSO Provider unknown-provider is not supported'],
-  ])('Sign in button should render correctly for %s', async (provider) => {
-    mockuseApplicationStore.mockReturnValue({
-      isAuthDisabled: false,
-      authConfig: { provider },
-      onLogoutHandler: jest.fn(),
-      getOidcToken: jest.fn(),
-    });
-    const { container } = render(<SignInPage />, {
-      wrapper: MemoryRouter,
-    });
-    const isUnknow = provider === 'unknown-provider';
-    const signinButton = await findByText(
-      container,
-      isUnknow
-        ? /message.sso-provider-not-supported/i
-        : /label.sign-in-with-sso/i
-    );
-
-    expect(signinButton).toBeInTheDocument();
-  });
-
-  it('SSO providers should auto-redirect when enableAutoRedirect is true', async () => {
-    const onLoginHandler = jest.fn();
-    mockUseAuthProvider.mockReturnValue({ onLoginHandler });
-
-    mockuseApplicationStore.mockReturnValue({
-      isAuthDisabled: false,
-      authConfig: { provider: 'google', enableAutoRedirect: true },
-      onLogoutHandler: jest.fn(),
-      getOidcToken: jest.fn(),
-    });
-
-    const { container } = render(<SignInPage />, {
-      wrapper: MemoryRouter,
-    });
-
-    const loader = await findByTestId(container, 'loader');
-
-    expect(loader).toBeInTheDocument();
-
-    expect(onLoginHandler).toHaveBeenCalled();
-  });
-
-  it('Basic auth provider should show login form', async () => {
-    mockuseApplicationStore.mockReturnValue({
-      isAuthDisabled: false,
-      authConfig: { provider: 'basic' },
-      onLoginHandler: jest.fn(),
-      onLogoutHandler: jest.fn(),
-      getOidcToken: jest.fn(),
-    });
-    const { container } = render(<SignInPage />, {
-      wrapper: MemoryRouter,
-    });
-
-    const emailInput = await findByTestId(container, 'email');
-
-    expect(emailInput).toBeInTheDocument();
-  });
-
-  it('Custom OIDC provider should show sign-in button by default', async () => {
-    mockuseApplicationStore.mockReturnValue({
-      isAuthDisabled: false,
-      authConfig: { provider: 'custom-oidc', providerName: 'Custom OIDC' },
-      onLogoutHandler: jest.fn(),
-      getOidcToken: jest.fn(),
-    });
-    const { container } = render(<SignInPage />, {
-      wrapper: MemoryRouter,
-    });
-
-    const signinButton = await findByText(container, /label.sign-in-with-sso/i);
-
-    expect(signinButton).toBeInTheDocument();
-  });
-
-  it('Page should render the correct logo image for Basic auth', async () => {
-    mockuseApplicationStore.mockReturnValue({
-      isAuthDisabled: false,
-      authConfig: { provider: 'basic' },
-      onLoginHandler: jest.fn(),
-      onLogoutHandler: jest.fn(),
-      getOidcToken: jest.fn(),
-      applicationConfig: {
-        customLogoConfig: {
-          customLogoUrlPath: 'https://custom-logo.png',
-          customMonogramUrlPath: 'https://custom-monogram.png',
-        },
+    jest.clearAllMocks();
+    mockedStore.mockReturnValue({ isAuthenticated: false });
+    mockedGet.mockResolvedValue({
+      data: {
+        enabled: true,
+        issuer: 'https://integrate.hospital.test',
+        portalUrl: 'https://integrate.hospital.test/s/portal',
       },
     });
-    render(<SignInPage />, {
-      wrapper: MemoryRouter,
+  });
+
+  it('offers the employee portal and has no native email or password fields', async () => {
+    let container: HTMLElement;
+    await act(async () => {
+      ({ container } = render(<SignInPage />, { wrapper: MemoryRouter }));
+    });
+    const portal = await screen.findByRole('link', { name: 'portalAction' });
+
+    expect(portal).toHaveAttribute(
+      'href',
+      'https://integrate.hospital.test/s/portal'
+    );
+    expect(container!.querySelector('input')).toBeNull();
+    expect(screen.queryByText('label.sign-up')).not.toBeInTheDocument();
+  });
+
+  it('shows an actionable error when the connection is disabled', async () => {
+    mockedGet.mockResolvedValue({ data: { enabled: false } });
+    await act(async () => {
+      render(<SignInPage />, { wrapper: MemoryRouter });
     });
 
-    const brandLogoImage = await screen.findByText('testBrandLogo');
+    expect(await screen.findByRole('alert')).toHaveTextContent('configError');
+    expect(screen.getByRole('button', { name: 'portalAction' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'retry' })).toBeEnabled();
+  });
 
-    expect(brandLogoImage).toBeInTheDocument();
+  it('returns an already authenticated employee to the workbench', async () => {
+    mockedStore.mockReturnValue({ isAuthenticated: true });
+    render(
+      <MemoryRouter initialEntries={[ROUTES.SIGNIN]}>
+        <Routes>
+          <Route element={<SignInPage />} path={ROUTES.SIGNIN} />
+          <Route element={<p>Employee workbench</p>} path={ROUTES.HOME} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Employee workbench')).toBeInTheDocument();
   });
 });

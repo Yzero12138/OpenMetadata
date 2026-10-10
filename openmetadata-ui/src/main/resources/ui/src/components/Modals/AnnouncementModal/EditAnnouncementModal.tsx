@@ -10,39 +10,23 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Form, Input, Modal, Space } from 'antd';
+import { Form, Input, Space } from 'antd';
+import { AxiosError } from 'axios';
 import { DateTime } from 'luxon';
-import { FC, useMemo } from 'react';
+import { FC, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { VALIDATION_MESSAGES } from '../../../constants/constants';
 import { FieldProp, FieldTypes } from '../../../interface/FormUtils.interface';
-import { AnnouncementEntity } from '../../../rest/announcementsAPI';
 import { getTimeZone } from '../../../utils/date-time/DateTimeUtils';
 import { getField } from '../../../utils/formUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import DatePicker from '../../common/DatePicker/DatePicker';
 import { CreateAnnouncement } from './AddAnnouncementModal';
 import './announcement-modal.less';
+import { EditAnnouncementModalProps } from './EditAnnouncementModal.interface';
 
-interface Props {
-  announcement: Pick<
-    AnnouncementEntity,
-    'description' | 'startTime' | 'endTime'
-  >;
-  announcementTitle: string;
-  open: boolean;
-  onCancel: () => void;
-  onConfirm: (
-    title: string,
-    announcement: Pick<
-      AnnouncementEntity,
-      'description' | 'startTime' | 'endTime'
-    >
-  ) => void;
-}
-
-const EditAnnouncementModal: FC<Props> = ({
+const EditAnnouncementModal: FC<EditAnnouncementModalProps> = ({
   open,
   onCancel,
   onConfirm,
@@ -50,13 +34,18 @@ const EditAnnouncementModal: FC<Props> = ({
   announcement,
 }) => {
   const { t } = useTranslation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const savePending = useRef(false);
 
-  const handleConfirm = ({
+  const handleConfirm = async ({
     title,
     description,
     startTime,
     endTime,
   }: CreateAnnouncement) => {
+    if (savePending.current) {
+      return;
+    }
     const startTimeMs = startTime.toMillis();
     const endTimeMs = endTime.toMillis();
 
@@ -70,7 +59,16 @@ const EditAnnouncementModal: FC<Props> = ({
         endTime: endTimeMs,
       };
 
-      onConfirm(title, updatedAnnouncement);
+      savePending.current = true;
+      setIsSubmitting(true);
+      try {
+        await onConfirm(title, updatedAnnouncement);
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+      } finally {
+        savePending.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -92,10 +90,10 @@ const EditAnnouncementModal: FC<Props> = ({
 
   return (
     <Modal
-      centered
       className="announcement-modal"
-      closable={false}
+      confirmLoading={isSubmitting}
       data-testid="edit-announcement"
+      isSubmitting={isSubmitting}
       maskClosable={false}
       okButtonProps={{
         form: 'announcement-form',

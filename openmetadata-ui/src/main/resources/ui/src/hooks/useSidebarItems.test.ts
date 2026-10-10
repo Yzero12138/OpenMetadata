@@ -15,6 +15,8 @@ import { ReactNode } from 'react';
 import { LeftSidebarItem } from '../components/MyData/LeftSidebar/LeftSidebar.interface';
 import { useApplicationsProvider } from '../components/Settings/Applications/ApplicationsProvider/ApplicationsProvider';
 import { AppPlugin } from '../components/Settings/Applications/plugins/AppPlugin';
+import { ROUTES } from '../constants/constants';
+import { SIDEBAR_LIST } from '../constants/LeftSidebar.constants';
 import { NavigationItem } from '../generated/system/ui/uiCustomization';
 import { filterHiddenNavigationItems } from '../utils/CustomizaNavigation/CustomizeNavigation';
 import { useCustomPages } from './useCustomPages';
@@ -119,6 +121,14 @@ describe('useSidebarItems', () => {
       ]),
     } as unknown as AppPlugin,
   ];
+  const integrationEntry = SIDEBAR_LIST.find(
+    (item) => item.key === ROUTES.HOSPITAL_INTEGRATION
+  );
+  const expectedItems = [
+    mockSidebarItems[0],
+    integrationEntry,
+    ...mockSidebarItems.slice(1),
+  ];
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -144,7 +154,7 @@ describe('useSidebarItems', () => {
       mockNavigationItems,
       []
     );
-    expect(result.current).toEqual(mockSidebarItems);
+    expect(result.current).toEqual(expectedItems);
   });
 
   it('should pass plugins to filterHiddenNavigationItems when plugins are available', () => {
@@ -160,7 +170,7 @@ describe('useSidebarItems', () => {
       mockNavigationItems,
       mockPlugins
     );
-    expect(result.current).toEqual(mockSidebarItems);
+    expect(result.current).toEqual(expectedItems);
   });
 
   it('should handle null navigation items', () => {
@@ -173,7 +183,7 @@ describe('useSidebarItems', () => {
     const { result } = renderHook(() => useSidebarItems());
 
     expect(mockFilterHiddenNavigationItems).toHaveBeenCalledWith(null, []);
-    expect(result.current).toEqual(mockSidebarItems);
+    expect(result.current).toEqual(expectedItems);
   });
 
   it('should handle undefined plugins', () => {
@@ -189,7 +199,7 @@ describe('useSidebarItems', () => {
       mockNavigationItems,
       []
     );
-    expect(result.current).toEqual(mockSidebarItems);
+    expect(result.current).toEqual(expectedItems);
   });
 
   it('should recalculate sidebar items when navigation changes', () => {
@@ -261,7 +271,7 @@ describe('useSidebarItems', () => {
     const { result } = renderHook(() => useSidebarItems());
 
     expect(mockFilterHiddenNavigationItems).toHaveBeenCalledWith([], []);
-    expect(result.current).toEqual(mockSidebarItems);
+    expect(result.current).toEqual(expectedItems);
   });
 
   it('should handle multiple plugins', () => {
@@ -302,6 +312,39 @@ describe('useSidebarItems', () => {
       mockNavigationItems,
       multiplePlugins
     );
+    expect(result.current).toEqual(expectedItems);
+  });
+
+  it('respects an explicitly hidden integration entry in saved navigation', () => {
+    mockUseCustomPages.mockReturnValue({
+      navigation: [
+        {
+          id: ROUTES.HOSPITAL_INTEGRATION,
+          title: 'hospitalIntegration.title',
+          pageId: 'navigation',
+          isHidden: true,
+        },
+      ],
+      customizedPage: null,
+      isLoading: false,
+    });
+    const { result } = renderHook(() => useSidebarItems());
+
     expect(result.current).toEqual(mockSidebarItems);
+  });
+
+  it('does not duplicate an integration entry already returned by native navigation', () => {
+    if (!integrationEntry) {
+      throw new Error('Missing integration sidebar entry');
+    }
+    mockFilterHiddenNavigationItems.mockReturnValue([
+      integrationEntry,
+      ...mockSidebarItems,
+    ]);
+    const { result } = renderHook(() => useSidebarItems());
+
+    expect(
+      result.current.filter((item) => item.key === ROUTES.HOSPITAL_INTEGRATION)
+    ).toHaveLength(1);
   });
 });

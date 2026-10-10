@@ -1,0 +1,212 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hospital-metadata-postgres-data
+  namespace: datahub-open-test
+  labels:
+    app.kubernetes.io/part-of: hospital-metadata
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hospital-metadata-postgres
+  namespace: datahub-open-test
+  labels:
+    app.kubernetes.io/part-of: hospital-metadata
+spec:
+  selector:
+    app.kubernetes.io/name: hospital-metadata-postgres
+  ports:
+    - port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hospital-metadata-postgres
+  namespace: datahub-open-test
+  labels:
+    app.kubernetes.io/part-of: hospital-metadata
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-metadata-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hospital-metadata-postgres
+        app.kubernetes.io/part-of: hospital-metadata
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: harbor-cred
+      containers:
+        - name: postgres
+          image: harbor.qcrmyy.local/coop/hospital-postgres:17.10-bookworm
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: hospital-openmetadata-config
+                  key: DB_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: hospital-openmetadata-config
+                  key: OM_DATABASE
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hospital-openmetadata-runtime
+                  key: DB_USER_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, openmetadata_user, -d, openmetadata_db]
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hospital-metadata-postgres-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hospital-metadata-search-data
+  namespace: datahub-open-test
+  labels:
+    app.kubernetes.io/part-of: hospital-metadata
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hospital-metadata-search
+  namespace: datahub-open-test
+  labels:
+    app.kubernetes.io/part-of: hospital-metadata
+spec:
+  selector:
+    app.kubernetes.io/name: hospital-metadata-search
+  ports:
+    - port: 9200
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hospital-metadata-search
+  namespace: datahub-open-test
+  labels:
+    app.kubernetes.io/part-of: hospital-metadata
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-metadata-search
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hospital-metadata-search
+        app.kubernetes.io/part-of: hospital-metadata
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: harbor-cred
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: opensearch
+          image: harbor.qcrmyy.local/coop/hospital-opensearch:3.3.0
+          ports:
+            - name: http
+              containerPort: 9200
+          env:
+            - name: discovery.type
+              value: single-node
+            - name: OPENSEARCH_JAVA_OPTS
+              value: -Xms1g -Xmx1g
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "true"
+            - name: DISABLE_INSTALL_DEMO_CONFIG
+              value: "true"
+            - name: node.store.allow_mmap
+              value: "false"
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/opensearch/data
+          startupProbe:
+            httpGet:
+              path: /_cluster/health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hospital-metadata-search-data
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hospital-metadata-dependencies
+  namespace: datahub-open-test
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [hospital-metadata-postgres, hospital-metadata-search]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hospital-openmetadata
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 9200

@@ -23,7 +23,7 @@ import {
 } from '../../mocks/MyDataPage.mock';
 import { getActiveAnnouncements } from '../../rest/announcementsAPI';
 import { getDocumentByFQN } from '../../rest/DocStoreAPI';
-import MyDataPage from './MyDataPage.component';
+import { CustomizableMetadataHome as MyDataPage } from './MyDataPage.component';
 
 const mockLocalStorage = (() => {
   let store: Record<string, string> = {};

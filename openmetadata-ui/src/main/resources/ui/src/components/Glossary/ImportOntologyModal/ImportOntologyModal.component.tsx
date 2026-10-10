@@ -13,10 +13,7 @@
 import {
   Alert,
   Button,
-  Dialog,
   FileUploadDropZone,
-  Modal,
-  ModalOverlay,
   Typography,
 } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
@@ -29,6 +26,7 @@ import {
   OntologyImportResult,
 } from '../../../rest/importExportAPI';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import { CoreFormDrawer as Dialog } from '../../common/atoms/drawer/CoreFormDrawer';
 import { ImportOntologyModalProps } from './ImportOntologyModal.interface';
 
 const looksLikeRdfXml = (content: string): boolean => {
@@ -174,126 +172,122 @@ const ImportOntologyModal = ({
     validation.termsCreated + validation.termsUpdated > 0;
 
   return (
-    <ModalOverlay
+    <Dialog
       isDismissable={!isImporting}
       isOpen={open}
+      isSubmitting={isImporting}
+      title={t('label.import-ontology')}
+      width={640}
+      onClose={handleCancel}
       onOpenChange={(isOpen) => !isOpen && !isImporting && handleCancel()}>
-      <Modal>
-        <Dialog
-          showCloseButton
-          title={t('label.import-ontology')}
-          width={640}
-          onClose={handleCancel}>
-          <Dialog.Content>
-            <div
-              className="tw:flex tw:flex-col tw:gap-4 tw:pb-2"
-              data-testid="import-ontology-modal">
-              <Typography className="tw:text-secondary" size="text-sm">
-                {t('message.import-ontology-help')}
-              </Typography>
+      <Dialog.Content>
+        <div
+          className="tw:flex tw:flex-col tw:gap-4 tw:pb-2"
+          data-testid="import-ontology-modal">
+          <Typography className="tw:text-secondary" size="text-sm">
+            {t('message.import-ontology-help')}
+          </Typography>
 
-              {/* Wrap the dropzone so the test id lands on a visible element and
+          {/* Wrap the dropzone so the test id lands on a visible element and
                   scopes the hidden <input type="file"> for upload automation. */}
-              <div data-testid="upload-ontology-dragger">
-                <FileUploadDropZone
-                  accept=".ttl,.rdf,.owl,.nt,.xml"
-                  allowsMultiple={false}
-                  clickToUploadLabel={t('label.click-to-upload')}
-                  hint={t('message.upload-ontology-file')}
-                  input-data-testid="upload-ontology-input"
-                  orDragAndDropLabel={t('label.or-drag-and-drop')}
-                  // Block extensions outside `accept` (e.g. .jsonld/.json, which the backend
-                  // rejects) at the drop boundary instead of reading them and surfacing a
-                  // server-side parse error.
-                  onDropFiles={handleDropFiles}
-                  onDropUnacceptedFiles={handleUnsupportedFile}
-                />
-              </div>
+          <div data-testid="upload-ontology-dragger">
+            <FileUploadDropZone
+              accept=".ttl,.rdf,.owl,.nt,.xml"
+              allowsMultiple={false}
+              clickToUploadLabel={t('label.click-to-upload')}
+              hint={t('message.upload-ontology-file')}
+              input-data-testid="upload-ontology-input"
+              orDragAndDropLabel={t('label.or-drag-and-drop')}
+              // Block extensions outside `accept` (e.g. .jsonld/.json, which the backend
+              // rejects) at the drop boundary instead of reading them and surfacing a
+              // server-side parse error.
+              onDropFiles={handleDropFiles}
+              onDropUnacceptedFiles={handleUnsupportedFile}
+            />
+          </div>
 
-              {fileName && (
-                <Typography
-                  className="tw:text-secondary"
-                  data-testid="ontology-file-name"
-                  size="text-sm"
-                  weight="medium">
-                  {fileName}
-                </Typography>
-              )}
+          {fileName && (
+            <Typography
+              className="tw:text-secondary"
+              data-testid="ontology-file-name"
+              size="text-sm"
+              weight="medium">
+              {fileName}
+            </Typography>
+          )}
 
-              {isValidating && (
-                <Typography
-                  className="tw:text-secondary"
-                  data-testid="ontology-validating"
-                  size="text-sm">
-                  {t('label.validating-ellipsis')}
-                </Typography>
-              )}
+          {isValidating && (
+            <Typography
+              className="tw:text-secondary"
+              data-testid="ontology-validating"
+              size="text-sm">
+              {t('label.validating-ellipsis')}
+            </Typography>
+          )}
 
-              {!isUndefined(validation) && (
-                <div className="tw:flex tw:flex-col tw:gap-2">
-                  <Alert
-                    data-testid="ontology-validation-summary"
-                    title={t('message.ontology-import-summary', {
-                      terms: validation.termsCreated + validation.termsUpdated,
-                      relations: validation.relationsAdded,
-                      mappings: validation.conceptMappingsAdded,
-                      properties: validation.customPropertiesCreated,
+          {!isUndefined(validation) && (
+            <div className="tw:flex tw:flex-col tw:gap-2">
+              <Alert
+                data-testid="ontology-validation-summary"
+                title={t('message.ontology-import-summary', {
+                  terms: validation.termsCreated + validation.termsUpdated,
+                  relations: validation.relationsAdded,
+                  mappings: validation.conceptMappingsAdded,
+                  properties: validation.customPropertiesCreated,
+                })}
+                variant={hasMaterializedTerms ? 'success' : 'warning'}
+              />
+
+              {validation.messages.length > 0 && (
+                <div
+                  className="tw:flex tw:flex-col tw:gap-1 tw:rounded-lg tw:border tw:border-secondary tw:p-3"
+                  data-testid="ontology-validation-issues">
+                  <Typography
+                    className="tw:text-secondary"
+                    size="text-sm"
+                    weight="medium">
+                    {t('message.ontology-import-issues-count', {
+                      count: validation.messages.length,
                     })}
-                    variant={hasMaterializedTerms ? 'success' : 'warning'}
-                  />
-
-                  {validation.messages.length > 0 && (
-                    <div
-                      className="tw:flex tw:flex-col tw:gap-1 tw:rounded-lg tw:border tw:border-secondary tw:p-3"
-                      data-testid="ontology-validation-issues">
-                      <Typography
-                        className="tw:text-secondary"
-                        size="text-sm"
-                        weight="medium">
-                        {t('message.ontology-import-issues-count', {
-                          count: validation.messages.length,
-                        })}
-                      </Typography>
-                      <ul className="tw:flex tw:flex-col tw:gap-1 tw:pl-4">
-                        {validation.messages.map((message) => (
-                          <li className="tw:list-disc" key={message}>
-                            <Typography
-                              className="tw:text-error-primary"
-                              size="text-sm">
-                              {message}
-                            </Typography>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  </Typography>
+                  <ul className="tw:flex tw:flex-col tw:gap-1 tw:pl-4">
+                    {validation.messages.map((message) => (
+                      <li className="tw:list-disc" key={message}>
+                        <Typography
+                          className="tw:text-error-primary"
+                          size="text-sm">
+                          {message}
+                        </Typography>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>
-          </Dialog.Content>
+          )}
+        </div>
+      </Dialog.Content>
 
-          <Dialog.Footer>
-            <Button
-              color="secondary"
-              data-testid="cancel-button"
-              isDisabled={isImporting}
-              size="sm"
-              onPress={handleCancel}>
-              {t('label.cancel')}
-            </Button>
-            <Button
-              color="primary"
-              data-testid="import-ontology-submit"
-              isDisabled={!hasMaterializedTerms}
-              isLoading={isImporting}
-              size="sm"
-              onPress={handleImport}>
-              {t('label.import')}
-            </Button>
-          </Dialog.Footer>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+      <Dialog.Footer>
+        <Button
+          color="secondary"
+          data-testid="cancel-button"
+          isDisabled={isImporting}
+          size="sm"
+          onPress={handleCancel}>
+          {t('label.cancel')}
+        </Button>
+        <Button
+          color="primary"
+          data-testid="import-ontology-submit"
+          isDisabled={!hasMaterializedTerms}
+          isLoading={isImporting}
+          size="sm"
+          onPress={handleImport}>
+          {t('label.import')}
+        </Button>
+      </Dialog.Footer>
+    </Dialog>
   );
 };
 

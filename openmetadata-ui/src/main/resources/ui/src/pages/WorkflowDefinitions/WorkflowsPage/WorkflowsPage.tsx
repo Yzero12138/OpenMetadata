@@ -24,6 +24,7 @@ import { CursorClick01, Plus, Settings01, ZapFast } from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Heading } from 'react-aria-components';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ReactComponent as WorkflowIcon } from '../../../assets/svg/workflow.svg';
@@ -42,6 +43,7 @@ import {
   PAGE_SIZE_BASE,
   PAGE_SIZE_LARGE,
   PAGE_SIZE_MEDIUM,
+  ROUTES,
 } from '../../../constants/constants';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
 import { CursorType } from '../../../enums/pagination.enum';
@@ -49,20 +51,17 @@ import { WorkflowDefinition } from '../../../generated/governance/workflows/work
 import { Paging } from '../../../generated/type/paging';
 import { useIsAiMode } from '../../../hooks/useAppMode';
 import {
-  createWorkflowDefinition,
   getWorkflowDefinitions,
   WorkflowDefinitionsParams,
 } from '../../../rest/workflowDefinitionsAPI';
 import { SettingMenuItem } from '../../../utils/GlobalSettingsUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import workflowClassBase from '../../../utils/WorkflowClassBase';
+import { getLocalizedWorkflow } from '../../../utils/WorkflowDisplayUtils';
 import { getWorkflowDefinitionDetailPath } from '../../../utils/WorkflowRouterUtils';
-import {
-  WORKFLOW_NAME_MAX_LENGTH,
-  WORKFLOW_NAME_MIN_LENGTH,
-  WORKFLOW_NAME_REGEX,
-} from '../../../utils/WorkflowValidationUtils';
+import { getWorkflowNameError } from '../../../utils/WorkflowValidationUtils';
 import { WorkflowDetailsTabs } from '../WorkflowDetails/workflow-details.interface';
+import './WorkflowPagination.less';
 
 const WorkflowsPage = () => {
   const { t } = useTranslation();
@@ -78,6 +77,7 @@ const WorkflowsPage = () => {
   const [pageSize, setPageSize] = useState(PAGE_SIZE_MEDIUM);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [workflowName, setWorkflowName] = useState('');
+  const [workflowDisplayName, setWorkflowDisplayName] = useState('');
   const [description, setDescription] = useState('');
   const [nameError, setNameError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,32 +111,9 @@ const WorkflowsPage = () => {
     [t]
   );
 
-  const validateWorkflowName = useCallback(
-    (value: string): string => {
-      if (!value) {
-        return t('label.workflow-name-is-required');
-      }
-      if (!WORKFLOW_NAME_REGEX.test(value)) {
-        return t('message.workflow-name-invalid-characters');
-      }
-      if (value.length < WORKFLOW_NAME_MIN_LENGTH) {
-        return t('message.workflow-name-min-length', {
-          count: WORKFLOW_NAME_MIN_LENGTH,
-        });
-      }
-      if (value.length > WORKFLOW_NAME_MAX_LENGTH) {
-        return t('message.workflow-name-max-length', {
-          count: WORKFLOW_NAME_MAX_LENGTH,
-        });
-      }
-
-      return '';
-    },
-    [t]
-  );
-
   const resetForm = useCallback(() => {
     setWorkflowName('');
+    setWorkflowDisplayName('');
     setDescription('');
     setNameError('');
   }, []);
@@ -172,12 +149,17 @@ const WorkflowsPage = () => {
 
         const res = await getWorkflowDefinitions(params);
 
-        const result = (res.data || []).map((workflow: WorkflowDefinition) => ({
-          ...workflow,
-          icon: WorkflowIcon,
-          key: workflow.fullyQualifiedName || '',
-          label: workflow.displayName ?? workflow.name,
-        }));
+        const result = (res.data || []).map((workflow: WorkflowDefinition) => {
+          const display = getLocalizedWorkflow(workflow, t);
+
+          return {
+            ...workflow,
+            ...display,
+            icon: WorkflowIcon,
+            key: workflow.fullyQualifiedName || '',
+            label: display.displayName ?? workflow.name,
+          };
+        });
 
         setWorkflows(result);
         setPaging(res.paging || { total: 0 });
@@ -188,7 +170,7 @@ const WorkflowsPage = () => {
         setLoading(false);
       }
     },
-    [pageSize]
+    [pageSize, t]
   );
 
   const handlePageChange = useCallback(
@@ -205,12 +187,13 @@ const WorkflowsPage = () => {
     getWorkflows();
   }, [getWorkflows]);
 
-  const handleModalSubmit = useCallback(async () => {
+  const handleModalSubmit = useCallback(() => {
     if (isSubmitting) {
       return;
     }
 
-    const error = validateWorkflowName(workflowName);
+    const technicalName = workflowName.trim();
+    const error = getWorkflowNameError(technicalName);
     if (error) {
       setNameError(error);
 
@@ -218,52 +201,16 @@ const WorkflowsPage = () => {
     }
 
     setIsSubmitting(true);
-    try {
-      const workflowData = {
-        description: description || '',
-        displayName: workflowName,
-        edges: [],
-        name: workflowName,
-        nodes: [],
-        trigger: {
-          config: {},
-          output: [],
-          type: 'eventBasedEntity',
+    navigate(ROUTES.WORKFLOW_NEW, {
+      state: {
+        workflowDraft: {
+          name: technicalName,
+          displayName: workflowDisplayName.trim() || technicalName,
+          description,
         },
-      };
-
-      await createWorkflowDefinition(workflowData);
-      await getWorkflows(1);
-
-      setIsModalOpen(false);
-      resetForm();
-
-      navigate(
-        `${getWorkflowDefinitionDetailPath(
-          workflowName,
-          WorkflowDetailsTabs.WORKFLOW
-        )}?mode=edit`
-      );
-    } catch (err) {
-      showErrorToast(
-        err as AxiosError,
-        t('server.create-entity-error', {
-          entity: t('label.workflow'),
-        })
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [
-    isSubmitting,
-    workflowName,
-    description,
-    validateWorkflowName,
-    resetForm,
-    navigate,
-    t,
-    getWorkflows,
-  ]);
+      },
+    });
+  }, [isSubmitting, workflowName, workflowDisplayName, description, navigate]);
 
   const createWorkflowButton = allowCreateWorkflow ? (
     <Button
@@ -369,7 +316,7 @@ const WorkflowsPage = () => {
               </div>
             </div>
             <div
-              className="tw:rounded-b-xl tw:border-x tw:border-b tw:border-border-secondary tw:bg-primary tw:px-6 tw:py-3"
+              className="workflow-list-pagination tw:rounded-b-xl tw:border-x tw:border-b tw:border-border-secondary tw:bg-primary tw:px-6 tw:py-3"
               data-testid="workflows-pagination">
               <NextPrevious
                 currentPage={currentPage}
@@ -401,11 +348,11 @@ const WorkflowsPage = () => {
         {({ close }) => (
           <>
             <SlideoutMenu.Header onClose={close}>
-              <Typography
-                as="p"
-                className="tw:m-0 tw:mb-1 tw:text-base tw:font-semibold tw:text-primary">
+              <Heading
+                className="tw:m-0 tw:mb-1 tw:text-base tw:font-semibold tw:text-primary"
+                slot="title">
                 {t('label.create-new-workflow')}
-              </Typography>
+              </Heading>
               <Typography
                 as="p"
                 className="tw:m-0 tw:text-sm tw:text-secondary">
@@ -415,18 +362,12 @@ const WorkflowsPage = () => {
             <SlideoutMenu.Content>
               <div className="tw:flex tw:flex-col tw:gap-5">
                 <div>
-                  <div className="tw:flex tw:items-center tw:gap-0.5 tw:m-0 tw:mb-1.5 tw:text-sm tw:font-medium tw:text-secondary">
-                    <Typography as="span">
-                      {t('label.workflow-name')}
-                    </Typography>
-                    <Typography as="span" className="tw:text-error-primary">
-                      *
-                    </Typography>
-                  </div>
                   <Input
+                    isRequired
                     data-testid="workflow-name"
                     isDisabled={isSubmitting}
                     isInvalid={!!nameError}
+                    label={t('label.workflow-name')}
                     placeholder={t('label.workflow-name-placeholder')}
                     value={workflowName}
                     onChange={(value) => {
@@ -446,14 +387,22 @@ const WorkflowsPage = () => {
                   )}
                 </div>
                 <div>
-                  <Typography
-                    as="p"
-                    className="tw:m-0 tw:mb-1.5 tw:text-sm tw:font-medium tw:text-secondary">
-                    {t('label.description')}
-                  </Typography>
+                  <Input
+                    hideRequiredIndicator
+                    data-testid="workflow-display-name"
+                    isDisabled={isSubmitting}
+                    label={t('label.display-name')}
+                    placeholder={t('label.display-name')}
+                    value={workflowDisplayName}
+                    onChange={setWorkflowDisplayName}
+                  />
+                </div>
+                <div>
                   <TextArea
+                    hideRequiredIndicator
                     data-testid="workflow-description"
                     isDisabled={isSubmitting}
+                    label={t('label.description')}
                     placeholder={t('label.description')}
                     rows={4}
                     value={description}

@@ -11,7 +11,14 @@
  *  limitations under the License.
  */
 
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import { Form } from 'antd';
 import { DateTime } from 'luxon';
 import * as ToastUtils from '../../../utils/ToastUtils';
 import EditAnnouncementModal from './EditAnnouncementModal';
@@ -32,7 +39,11 @@ jest.mock('../../../utils/date-time/DateTimeUtils', () => ({
 }));
 
 jest.mock('../../../utils/formUtils', () => ({
-  getField: jest.fn(() => <div data-testid="mocked-description-field" />),
+  getField: jest.fn(() => (
+    <Form.Item name="description">
+      <textarea data-testid="mocked-description-field" />
+    </Form.Item>
+  )),
 }));
 
 const mockShowErrorToast = ToastUtils.showErrorToast as jest.MockedFunction<
@@ -70,7 +81,9 @@ describe('EditAnnouncementModal', () => {
     expect(
       screen.getByRole('button', { name: 'label.save' })
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'label.cancel' })
+    ).toBeInTheDocument();
   });
 
   it('should not render the modal when closed', () => {
@@ -82,27 +95,25 @@ describe('EditAnnouncementModal', () => {
   });
 
   it('should show error when start time is greater than or equal to end time', async () => {
-    render(<EditAnnouncementModal {...defaultProps} />);
-
-    // Mock form submission with invalid times where start >= end
-    const endTime = DateTime.now().plus({ hours: 1 });
-    const startTime = DateTime.now().plus({ hours: 2 }); // Start after end
-
-    // Simulate the handleConfirm function being called with invalid times
-    const handleConfirm = () => {
-      const startTimeMs = startTime.toMillis();
-      const endTimeMs = endTime.toMillis();
-
-      if (startTimeMs >= endTimeMs) {
-        mockShowErrorToast('message.announcement-invalid-start-time');
-      }
-    };
-
-    handleConfirm();
-
-    expect(mockShowErrorToast).toHaveBeenCalledWith(
-      'message.announcement-invalid-start-time'
+    render(
+      <EditAnnouncementModal
+        {...defaultProps}
+        announcement={{
+          ...mockAnnouncement,
+          startTime: mockAnnouncement.endTime,
+        }}
+      />
     );
+
+    fireEvent.click(screen.getByRole('button', { name: 'label.save' }));
+
+    await waitFor(() =>
+      expect(mockShowErrorToast).toHaveBeenCalledWith(
+        'message.announcement-invalid-start-time'
+      )
+    );
+
+    expect(defaultProps.onConfirm).not.toHaveBeenCalled();
   });
 
   it('should successfully update announcement with valid data', async () => {
@@ -112,31 +123,17 @@ describe('EditAnnouncementModal', () => {
       <EditAnnouncementModal {...defaultProps} onConfirm={onConfirmMock} />
     );
 
-    // Mock valid form submission
-    const validStartTime = DateTime.now().plus({ hours: 1 });
-    const validEndTime = DateTime.now().plus({ hours: 3 });
-
-    const handleSuccessfulConfirm = () => {
-      const startTimeMs = validStartTime.toMillis();
-      const endTimeMs = validEndTime.toMillis();
-
-      const updatedAnnouncement = {
-        ...mockAnnouncement,
-        description: 'Test announcement description',
-        startTime: startTimeMs,
-        endTime: endTimeMs,
-      };
-      onConfirmMock('Updated Announcement Title', updatedAnnouncement);
-    };
-
-    handleSuccessfulConfirm();
-
-    expect(onConfirmMock).toHaveBeenCalledWith('Updated Announcement Title', {
-      ...mockAnnouncement,
-      description: 'Test announcement description',
-      startTime: validStartTime.toMillis(),
-      endTime: validEndTime.toMillis(),
+    fireEvent.change(screen.getByLabelText('label.title:'), {
+      target: { value: 'Updated Announcement Title' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'label.save' }));
+
+    await waitFor(() =>
+      expect(onConfirmMock).toHaveBeenCalledWith(
+        'Updated Announcement Title',
+        mockAnnouncement
+      )
+    );
   });
 
   it('should call onCancel when cancel button is clicked', async () => {
@@ -144,11 +141,84 @@ describe('EditAnnouncementModal', () => {
 
     render(<EditAnnouncementModal {...defaultProps} onCancel={onCancelMock} />);
 
-    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+    const cancelButton = screen.getByRole('button', { name: 'label.cancel' });
     await act(async () => {
       fireEvent.click(cancelButton);
     });
 
     expect(onCancelMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('awaits announcement save and blocks repeat save, cancel, close and Escape', async () => {
+    let finishSave: (() => void) | undefined;
+    const onConfirm = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishSave = resolve;
+        })
+    );
+    const onCancel = jest.fn();
+    render(
+      <EditAnnouncementModal
+        {...defaultProps}
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'label.save' }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
+
+    expect(screen.getByRole('button', { name: /label.save$/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'label.cancel' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'label.close' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /label.save$/ }));
+    fireEvent.submit(screen.getByTestId('announcement-form'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.cancel' }));
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onCancel).not.toHaveBeenCalled();
+
+    await act(async () => finishSave?.());
+
+    expect(
+      screen.getByRole('button', { name: 'label.close' })
+    ).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'label.close' }));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains the announcement draft and restores save after rejection', async () => {
+    let failSave: ((error: Error) => void) | undefined;
+    const saveError = new Error('Announcement save failed');
+    const onConfirm = jest.fn().mockImplementationOnce(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          failSave = reject;
+        })
+    );
+    render(<EditAnnouncementModal {...defaultProps} onConfirm={onConfirm} />);
+    fireEvent.change(screen.getByLabelText('label.title:'), {
+      target: { value: 'Unfinished announcement' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'label.save' }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
+
+    await act(async () => failSave?.(saveError));
+
+    expect(mockShowErrorToast).toHaveBeenCalledWith(saveError);
+    expect(screen.getByLabelText('label.title:')).toHaveValue(
+      'Unfinished announcement'
+    );
+    expect(
+      screen.getByRole('button', { name: 'label.save' })
+    ).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'label.save' }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(2));
   });
 });

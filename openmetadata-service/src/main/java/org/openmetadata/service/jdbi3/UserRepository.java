@@ -99,6 +99,8 @@ import org.openmetadata.service.security.SecurityUtil;
 import org.openmetadata.service.security.auth.BotTokenCache;
 import org.openmetadata.service.security.auth.SecurityConfigurationManager;
 import org.openmetadata.service.security.auth.UserActivityTracker;
+import org.openmetadata.service.security.integrate.IntegrateIdentityClient;
+import org.openmetadata.service.security.integrate.IntegrateSsoConfig;
 import org.openmetadata.service.security.policyevaluator.SubjectCache;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
 import org.openmetadata.service.security.session.SessionService;
@@ -141,8 +143,13 @@ public class UserRepository extends EntityRepository<User> {
   private InheritedFieldEntitySearch inheritedFieldEntitySearch;
   private final UserPreferencesRepository userPreferencesRepository =
       new UserPreferencesRepository();
+  private final IntegrateSsoConfig integrateSsoConfig;
 
   public UserRepository() {
+    this(IntegrateSsoConfig.fromEnvironment());
+  }
+
+  UserRepository(IntegrateSsoConfig integrateSsoConfig) {
     super(
         UserResource.COLLECTION_PATH,
         USER,
@@ -150,6 +157,7 @@ public class UserRepository extends EntityRepository<User> {
         Entity.getCollectionDAO().userDAO(),
         USER_PATCH_FIELDS,
         USER_UPDATE_FIELDS);
+    this.integrateSsoConfig = integrateSsoConfig;
     this.quoteFqn = true;
     supportsSearch = true;
 
@@ -1570,8 +1578,11 @@ public class UserRepository extends EntityRepository<User> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      // LowerCase Email
-      updated.setEmail(original.getEmail().toLowerCase());
+      if (shouldCompare("email") && canMigrateIntegrateEmail()) {
+        recordChange("email", original.getEmail(), updated.getEmail());
+      } else {
+        updated.setEmail(original.getEmail().toLowerCase());
+      }
       compareAndUpdate(
           "lastLoginTime",
           () ->
@@ -1611,6 +1622,24 @@ public class UserRepository extends EntityRepository<User> {
           () -> SubjectCache.invalidateUserContext(updated.getName()),
           "personas",
           "defaultPersona");
+    }
+
+    private boolean canMigrateIntegrateEmail() {
+      String name = original.getName();
+      return integrateSsoConfig.enabled()
+          && name != null
+          && name.matches("integrate_[0-9a-f]{64}")
+          && name.equals(updated.getName())
+          && original.getId() != null
+          && original.getId().equals(updated.getId())
+          && Entity.ADMIN_USER_NAME.equals(updated.getUpdatedBy())
+          && !Boolean.TRUE.equals(original.getIsBot())
+          && !Boolean.TRUE.equals(updated.getIsBot())
+          && !Boolean.TRUE.equals(original.getDeleted())
+          && !Boolean.TRUE.equals(updated.getDeleted())
+          && (name + "@" + integrateSsoConfig.emailDomain()).equals(original.getEmail())
+          && IntegrateIdentityClient.email(name, integrateSsoConfig.emailDomain())
+              .equals(updated.getEmail());
     }
 
     private void updateAllowImpersonation() {

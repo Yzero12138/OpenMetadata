@@ -12,13 +12,15 @@
  */
 
 import axios, { AxiosError } from 'axios';
-import { useCallback } from 'react';
+import { t } from 'i18next';
+import { useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Node } from 'reactflow';
 import { useWorkflowModeContext } from '../contexts/WorkflowModeContext';
 import { NodeSubType } from '../generated/governance/workflows/elements/nodeSubType';
 import { UseWorkflowActionsProps } from '../interface/workflow-builder-components.interface';
 import {
+  createWorkflowDefinition,
   deleteWorkflowByFQN,
   updateWorkflowDefinition,
 } from '../rest/workflowDefinitionsAPI';
@@ -28,7 +30,10 @@ import {
 } from '../services/WorkflowValidationService';
 import { shouldShowForm, shouldUseConfigSidebar } from '../utils/NodeUtils';
 import { showErrorToast, showSuccessToast } from '../utils/ToastUtils';
-import { getWorkflowDefinitionsListPath } from '../utils/WorkflowRouterUtils';
+import {
+  getWorkflowDefinitionDetailPath,
+  getWorkflowDefinitionsListPath,
+} from '../utils/WorkflowRouterUtils';
 import { useWorkflowEdgeManagement } from './useWorkflowEdgeManagement';
 
 export const useWorkflowActions = ({
@@ -53,6 +58,7 @@ export const useWorkflowActions = ({
 }: UseWorkflowActionsProps) => {
   const { isViewMode, enterViewMode } = useWorkflowModeContext();
   const navigate = useNavigate();
+  const saveInFlight = useRef(false);
 
   const edgeManagement = useWorkflowEdgeManagement({
     nodes,
@@ -163,9 +169,13 @@ export const useWorkflowActions = ({
   );
 
   const handleSaveWorkflow = useCallback(async (): Promise<boolean> => {
+    if (saveInFlight.current) {
+      return false;
+    }
+    saveInFlight.current = true;
     try {
       if (!workflowDefinition || !workflowMetadata) {
-        showErrorToast('Workflow data is missing');
+        showErrorToast(t('message.no-data-available'));
 
         return false;
       }
@@ -177,8 +187,12 @@ export const useWorkflowActions = ({
         workflowMetadata
       );
 
-      const savedWorkflow = await updateWorkflowDefinition(workflowData);
-      showSuccessToast('Workflow saved successfully!');
+      const savedWorkflow = workflowMetadata.isNewWorkflow
+        ? await createWorkflowDefinition(workflowData)
+        : await updateWorkflowDefinition(workflowData);
+      showSuccessToast(
+        t('message.entity-saved-successfully', { entity: t('label.workflow') })
+      );
 
       setWorkflowDefinition(savedWorkflow);
       setWorkflowMetadata({
@@ -190,7 +204,14 @@ export const useWorkflowActions = ({
         isNewWorkflow: false,
       });
 
-      enterViewMode();
+      if (workflowMetadata.isNewWorkflow) {
+        navigate(
+          `${getWorkflowDefinitionDetailPath(savedWorkflow.name)}?mode=view`,
+          { replace: true }
+        );
+      } else {
+        enterViewMode();
+      }
 
       return true;
     } catch (error) {
@@ -203,6 +224,8 @@ export const useWorkflowActions = ({
       }
 
       return false;
+    } finally {
+      saveInFlight.current = false;
     }
   }, [
     workflowDefinition,
@@ -212,6 +235,7 @@ export const useWorkflowActions = ({
     setWorkflowDefinition,
     setWorkflowMetadata,
     enterViewMode,
+    navigate,
   ]);
 
   const handleWorkflowMetadataUpdate = useCallback(
@@ -230,19 +254,23 @@ export const useWorkflowActions = ({
         }),
       });
     },
-    [setWorkflowMetadata]
+    [setWorkflowMetadata, workflowMetadata]
   );
 
   const performDeleteWorkflow = useCallback(async () => {
     if (!workflowMetadata?.name) {
-      showErrorToast('Workflow name is required for deletion');
+      showErrorToast(t('label.workflow-name-is-required'));
 
       return;
     }
 
     try {
       await deleteWorkflowByFQN(workflowMetadata.name, true);
-      showSuccessToast('Workflow deleted successfully');
+      showSuccessToast(
+        t('message.entity-deleted-successfully', {
+          entity: t('label.workflow'),
+        })
+      );
 
       navigate(getWorkflowDefinitionsListPath());
     } catch (error) {

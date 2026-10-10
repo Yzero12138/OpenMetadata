@@ -36,6 +36,7 @@ import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import ContractImportModal from './ODCSImportModal.component';
 
 jest.mock('@openmetadata/ui-core-components', () => ({
+  ...jest.requireActual('@openmetadata/ui-core-components'),
   Badge: jest.fn(({ children }: { children: React.ReactNode }) => (
     <span>{children}</span>
   )),
@@ -2199,7 +2200,7 @@ termsOfUse: Updated terms`;
         />
       );
 
-      const closeButton = screen.getByTestId('dialog-close-button');
+      const closeButton = screen.getByRole('button', { name: 'label.close' });
       fireEvent.click(closeButton);
 
       expect(mockOnClose).toHaveBeenCalled();

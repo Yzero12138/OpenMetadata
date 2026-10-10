@@ -10,14 +10,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 import {
   Button,
-  Dialog,
   FileUpload,
   FileUploadDropZone,
-  Modal,
-  ModalOverlay,
 } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
 import { FC, useRef, useState } from 'react';
@@ -28,6 +24,7 @@ import { ContextFile } from '../../../generated/entity/data/contextFile';
 import { uploadDriveFile } from '../../../rest/assetAPI';
 import { runWithConcurrencyLimit } from '../../../utils/AsyncUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import { CoreFormDrawer as Dialog } from '../../common/atoms/drawer/CoreFormDrawer';
 import {
   QueuedFile,
   UploadDocumentModalProps,
@@ -200,77 +197,75 @@ const UploadDocumentModal: FC<UploadDocumentModalProps> = ({
   };
 
   return (
-    <ModalOverlay
+    <Dialog
       isDismissable
       isOpen={isOpen}
-      style={{ zIndex: 999 }}
+      isSubmitting={isUploading}
+      width={500}
+      onClose={handleClose}
       onOpenChange={(open) => !open && handleClose()}>
-      <Modal>
-        <Dialog showCloseButton width={500} onClose={handleClose}>
-          <Dialog.Header title={t('label.upload-document-plural')} />
-          <Dialog.Content className="tw:pb-6">
-            <FileUpload.Root>
-              <FileUploadDropZone
-                allowsMultiple
-                clickToUploadLabel={t('label.click-to-upload')}
-                hint={t('message.upload-document-hint')}
-                input-data-testid="file-upload-input"
-                maxSize={DOCUMENT_MAX_FILE_SIZE}
-                orDragAndDropLabel={t('label.or-drag-and-drop')}
-                onDropFiles={handleDropFiles}
-                onSizeLimitExceed={handleSizeLimitExceed}
-              />
+      <Dialog.Header title={t('label.upload-document-plural')} />
+      <Dialog.Content className="tw:pb-6">
+        <FileUpload.Root>
+          <FileUploadDropZone
+            allowsMultiple
+            clickToUploadLabel={t('label.click-to-upload')}
+            hint={t('message.upload-document-hint')}
+            input-data-testid="file-upload-input"
+            maxSize={DOCUMENT_MAX_FILE_SIZE}
+            orDragAndDropLabel={t('label.or-drag-and-drop')}
+            onDropFiles={handleDropFiles}
+            onSizeLimitExceed={handleSizeLimitExceed}
+          />
 
-              {files.length > 0 && (
-                <FileUpload.List>
-                  {files.map(({ id, file, progress, status, sizeExceeded }) => (
-                    <FileUpload.ListItemProgressBar
-                      completeLabel={t('label.complete')}
-                      deleteLabel={t('label.delete')}
-                      failed={status === UploadStatus.Error}
-                      failedLabel={t('label.failed')}
-                      key={id}
-                      name={file.name}
-                      progress={
-                        status === UploadStatus.Done ||
-                        status === UploadStatus.Uploaded
-                          ? 100
-                          : progress
-                      }
-                      size={file.size}
-                      tryAgainLabel={t('label.try-again')}
-                      type={getFileExt(file.name)}
-                      uploadingLabel={t('label.uploading')}
-                      onDelete={() => handleRemove(id)}
-                      onRetry={
-                        status === UploadStatus.Error &&
-                        !sizeExceeded &&
-                        !isUploading
-                          ? () => handleRetry(id)
-                          : undefined
-                      }
-                    />
-                  ))}
-                </FileUpload.List>
-              )}
-            </FileUpload.Root>
-          </Dialog.Content>
-          <Dialog.Footer className="tw:border-0 tw:mt-0!">
-            <Button color="secondary" size="sm" onClick={handleClose}>
-              {t('label.cancel')}
-            </Button>
-            <Button
-              color="primary"
-              isDisabled={!hasPendingFiles || isUploading}
-              isLoading={isUploading}
-              size="sm"
-              onClick={handleAttach}>
-              {t('label.attach-file-plural')}
-            </Button>
-          </Dialog.Footer>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+          {files.length > 0 && (
+            <FileUpload.List>
+              {files.map(({ id, file, progress, status, sizeExceeded }) => (
+                <FileUpload.ListItemProgressBar
+                  completeLabel={t('label.complete')}
+                  deleteLabel={t('label.delete')}
+                  failed={status === UploadStatus.Error}
+                  failedLabel={t('label.failed')}
+                  key={id}
+                  name={file.name}
+                  progress={
+                    status === UploadStatus.Done ||
+                    status === UploadStatus.Uploaded
+                      ? 100
+                      : progress
+                  }
+                  size={file.size}
+                  tryAgainLabel={t('label.try-again')}
+                  type={getFileExt(file.name)}
+                  uploadingLabel={t('label.uploading')}
+                  onDelete={() => handleRemove(id)}
+                  onRetry={
+                    status === UploadStatus.Error &&
+                    !sizeExceeded &&
+                    !isUploading
+                      ? () => handleRetry(id)
+                      : undefined
+                  }
+                />
+              ))}
+            </FileUpload.List>
+          )}
+        </FileUpload.Root>
+      </Dialog.Content>
+      <Dialog.Footer className="tw:border-0 tw:mt-0!">
+        <Button color="secondary" size="sm" onClick={handleClose}>
+          {t('label.cancel')}
+        </Button>
+        <Button
+          color="primary"
+          isDisabled={!hasPendingFiles || isUploading}
+          isLoading={isUploading}
+          size="sm"
+          onClick={handleAttach}>
+          {t('label.attach-file-plural')}
+        </Button>
+      </Dialog.Footer>
+    </Dialog>
   );
 };
 

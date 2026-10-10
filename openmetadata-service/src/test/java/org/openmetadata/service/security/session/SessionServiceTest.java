@@ -649,6 +649,49 @@ class SessionServiceTest {
   }
 
   @Test
+  void externalSessionCannotOutliveIntegrateAndKeepsItsCredentialEncrypted() {
+    when(authConfig.getSessionExpiry()).thenReturn(3600);
+    User user = new User().withId(UUID.randomUUID()).withName("integrate_employee");
+    when(repository.findByUserIdAndStatus(
+            eq(user.getId().toString()), eq(SessionStatus.ACTIVE), anyInt()))
+        .thenReturn(List.of());
+
+    UserSession session =
+        sessionService.createActiveSession(
+            request, response, "integrate", user, null, "portal-session-token", 90);
+
+    assertEquals(90_000, session.getExpiresAt() - session.getCreatedAt());
+    assertNotEquals("portal-session-token", session.getProviderRefreshToken());
+    assertEquals("portal-session-token", sessionService.decryptProviderRefreshToken(session));
+    assertNull(sessionService.decryptOmRefreshToken(session));
+    verify(response)
+        .addHeader(eq("Set-Cookie"), org.mockito.ArgumentMatchers.contains("Max-Age=90"));
+  }
+
+  @Test
+  void everyFreshReadRechecksExternalAuthorityAndRevokesAnInactiveSession() {
+    long now = System.currentTimeMillis();
+    UserSession session =
+        UserSession.builder()
+            .id(validSessionId('x'))
+            .provider("integrate")
+            .status(SessionStatus.ACTIVE)
+            .version(1L)
+            .expiresAt(now + 60_000)
+            .idleExpiresAt(now + 60_000)
+            .build();
+    when(repository.findById(session.getId())).thenReturn(Optional.of(session));
+    when(repository.updateIfVersion(any(UserSession.class), eq(1L))).thenReturn(true);
+    sessionService.setExternalSessionValidator(candidate -> false);
+
+    assertTrue(sessionService.getFreshSessionById(session.getId()).isEmpty());
+
+    ArgumentCaptor<UserSession> stored = ArgumentCaptor.forClass(UserSession.class);
+    verify(repository).updateIfVersion(stored.capture(), eq(1L));
+    assertEquals(SessionStatus.REVOKED, stored.getValue().getStatus());
+  }
+
+  @Test
   void bearerAccessRefreshesLruPositionBeforeSessionLimitEviction() {
     when(authConfig.getMaxActiveSessionsPerUser()).thenReturn(5);
     long now = System.currentTimeMillis();

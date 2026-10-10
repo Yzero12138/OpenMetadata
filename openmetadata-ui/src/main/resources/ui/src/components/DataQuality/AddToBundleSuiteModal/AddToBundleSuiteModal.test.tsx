@@ -126,6 +126,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
   );
 
   return {
+    ...jest.requireActual('@openmetadata/ui-core-components'),
     Button: ({
       children,
       onPress,
@@ -178,14 +179,13 @@ describe('AddToBundleSuiteModal', () => {
   it('should render modal when open', () => {
     render(<AddToBundleSuiteModal {...mockProps} />);
 
-    expect(screen.getByTestId('modal-overlay')).toBeInTheDocument();
-    expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('should not render modal when closed', () => {
     render(<AddToBundleSuiteModal {...mockProps} open={false} />);
 
-    expect(screen.queryByTestId('modal-overlay')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('should load bundle suites on mount', () => {
@@ -211,7 +211,7 @@ describe('AddToBundleSuiteModal', () => {
   it('should call onCancel when close button is clicked', () => {
     render(<AddToBundleSuiteModal {...mockProps} />);
 
-    const closeButton = screen.getByTestId('close-button');
+    const closeButton = screen.getByRole('button', { name: 'label.close' });
     fireEvent.click(closeButton);
 
     expect(mockOnCancel).toHaveBeenCalled();
@@ -238,7 +238,7 @@ describe('AddToBundleSuiteModal', () => {
     expect(addButton).toBeDisabled();
   });
 
-  it('should call onCancel when add button is clicked with no test cases', async () => {
+  it('should keep the drawer open when add is disabled with no test cases', async () => {
     const propsWithNoTestCases = {
       ...mockProps,
       selectedTestCases: [],
@@ -252,7 +252,8 @@ describe('AddToBundleSuiteModal', () => {
       fireEvent.click(addButton);
     });
 
-    expect(mockOnCancel).toHaveBeenCalled();
+    expect(addButton).toBeDisabled();
+    expect(mockOnCancel).not.toHaveBeenCalled();
     expect(addTestCasesToLogicalTestSuiteBulk).not.toHaveBeenCalled();
   });
 
@@ -328,7 +329,7 @@ describe('AddToBundleSuiteModal', () => {
     expect(addTestCasesToLogicalTestSuiteBulk).not.toHaveBeenCalled();
   });
 
-  it('should cancel if no test cases selected', async () => {
+  it('should keep add disabled after choosing a suite with no test cases', async () => {
     render(<AddToBundleSuiteModal {...mockProps} selectedTestCases={[]} />);
 
     fireEvent.click(await screen.findByTestId('bundle-suite-select-option'));
@@ -337,7 +338,8 @@ describe('AddToBundleSuiteModal', () => {
       fireEvent.click(screen.getByTestId('add-button'));
     });
 
-    expect(mockOnCancel).toHaveBeenCalled();
+    expect(screen.getByTestId('add-button')).toBeDisabled();
+    expect(mockOnCancel).not.toHaveBeenCalled();
     expect(addTestCasesToLogicalTestSuiteBulk).not.toHaveBeenCalled();
   });
 

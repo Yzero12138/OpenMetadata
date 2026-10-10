@@ -60,6 +60,8 @@ import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 import org.openmetadata.service.security.auth.SecurityConfigurationManager;
+import org.openmetadata.service.security.integrate.IntegrateIdentityClient;
+import org.openmetadata.service.security.integrate.IntegrateSsoConfig;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.RestUtil.PutResponse;
@@ -121,7 +123,7 @@ public final class UserUtil {
         updatedUser.setIsAdmin(isAdmin);
 
         // user email
-        updatedUser.setEmail(String.format("%s@%s", username, domain));
+        updatedUser.setEmail(userEmail(username, domain));
       } else {
         if (Boolean.TRUE.equals(originalUser.getIsBot())) {
           LOG.error(
@@ -238,7 +240,14 @@ public final class UserUtil {
 
   public static User user(String name, String domain, String updatedBy) {
     return getUser(
-        updatedBy, new CreateUser().withName(name).withEmail(name + "@" + domain).withIsBot(false));
+        updatedBy,
+        new CreateUser().withName(name).withEmail(userEmail(name, domain)).withIsBot(false));
+  }
+
+  private static String userEmail(String name, String domain) {
+    return IntegrateSsoConfig.fromEnvironment().enabled()
+        ? IntegrateIdentityClient.email(name, domain)
+        : name + "@" + domain;
   }
 
   /**

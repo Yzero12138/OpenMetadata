@@ -15,6 +15,12 @@ import { SIDEBAR_NESTED_KEYS } from '../constants/LeftSidebar.constants';
 import { getSidebarActiveKeys, getSidebarPathname } from './LeftSidebarUtils';
 
 describe('getSidebarActiveKeys', () => {
+  it('keeps the hospital integration entry active on its two-part route', () => {
+    expect(
+      getSidebarActiveKeys(ROUTES.HOSPITAL_INTEGRATION, SIDEBAR_NESTED_KEYS)
+    ).toEqual([ROUTES.HOSPITAL_INTEGRATION]);
+  });
+
   it('should return the two-segment path for a list page', () => {
     expect(getSidebarActiveKeys('/tags', SIDEBAR_NESTED_KEYS)).toEqual([
       '/tags',

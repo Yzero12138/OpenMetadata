@@ -77,6 +77,25 @@ describe('useWorkflowMode — isNoOp', () => {
     expect(result.current.isNoOp).toBe(true);
   });
 
+  it('keeps noOp workflows read-only even when the editor and palette are enabled', () => {
+    mockGetCapabilities.mockReturnValue({
+      allowStructuralGraphEdits: true,
+      showWorkflowNodePalette: true,
+      allowFullStartNodeConfiguration: true,
+    });
+    const { result } = renderHook(() =>
+      useWorkflowMode(undefined, makeWorkflow(Type.NoOp))
+    );
+
+    expect(result.current.canAccessSidebar).toBe(false);
+    expect(result.current.canDragNodes).toBe(false);
+    expect(result.current.showWorkflowNodePalette).toBe(false);
+    expect(result.current.allowStructuralGraphEdits).toBe(false);
+    expect(result.current.isFormDisabled).toBe(true);
+    expect(result.current.isInputDisabled).toBe(true);
+    expect(result.current.isDropdownDisabled).toBe(true);
+  });
+
   it('returns isNoOp false when trigger type is eventBasedEntity', () => {
     const { result } = renderHook(() =>
       useWorkflowMode('TestWorkflow', makeWorkflow(Type.EventBasedEntity))

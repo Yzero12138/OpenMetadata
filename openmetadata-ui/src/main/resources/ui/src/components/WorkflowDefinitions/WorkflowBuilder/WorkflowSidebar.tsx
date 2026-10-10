@@ -26,6 +26,7 @@ import { NodeSubType } from '../../../generated/governance/workflows/elements/no
 import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
 import { TaskItemProps } from '../../../interface/workflow-builder-components.interface';
 import { getNodeIcon } from '../../../utils/NodeIconUtils';
+import { getDisplayLabelFromSubType } from '../../../utils/NodeUtils';
 
 const TaskItem = ({
   disabled = false,
@@ -70,7 +71,7 @@ const TaskItem = ({
           className="tw:m-0 tw:text-primary"
           size="text-sm"
           weight="regular">
-          {label}
+          {getDisplayLabelFromSubType(type, t)}
         </Typography>
       </div>
       {isBeta && (
@@ -106,8 +107,9 @@ const WorkflowSidebar = ({ isNodeDragEnabled }: WorkflowSidebarProps) => {
 
   const automatedTasks = Object.entries(NODE_TYPE_MAPPINGS)
     .filter(
-      ([, mapping]) =>
+      ([subType, mapping]) =>
         mapping.type === NodeType.AutomatedTask &&
+        subType !== NodeSubType.PolicyAgentTask &&
         !('category' in mapping && mapping.category === 'sink')
     )
     .map(([subType, mapping]) => ({

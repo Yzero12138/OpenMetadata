@@ -10,13 +10,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Modal, Typography } from 'antd';
+import { Button, Typography } from 'antd';
 import { isEmpty, omit } from 'lodash';
 import { FC, useCallback, useMemo, useState } from 'react';
 import type { Column } from 'react-data-grid';
 import { useTranslation } from 'react-i18next';
 import { useGridEditController } from '../../../../hooks/useGridEditController';
 import { getEntityName } from '../../../../utils/EntityNameUtils';
+import { LegacyFormDrawer as Modal } from '../../atoms/drawer/LegacyFormDrawer';
 import { lazyTextEditor } from '../../DataGrid/LazyDataGrid';
 import { KeyDownStopPropagationWrapper } from '../../KeyDownStopPropagationWrapper/KeyDownStopPropagationWrapper';
 import { TableTypePropertyValueType } from '../CustomPropertyTable.interface';
@@ -94,9 +95,7 @@ const EditTableTypePropertyModal: FC<EditTableTypePropertyModalProps> = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
-      closable={false}
       data-testid="edit-table-type-property-modal"
       footer={
         <KeyDownStopPropagationWrapper>
@@ -128,6 +127,7 @@ const EditTableTypePropertyModal: FC<EditTableTypePropertyModalProps> = ({
           </div>
         </KeyDownStopPropagationWrapper>
       }
+      isSubmitting={isUpdating}
       maskClosable={false}
       open={isVisible}
       title={
@@ -138,7 +138,8 @@ const EditTableTypePropertyModal: FC<EditTableTypePropertyModalProps> = ({
           })}
         </Typography.Text>
       }
-      width={800}>
+      width={800}
+      onCancel={onCancel}>
       {isEmpty(dataSource) ? (
         <TableTypePropertyView columns={columns} rows={rows} />
       ) : (

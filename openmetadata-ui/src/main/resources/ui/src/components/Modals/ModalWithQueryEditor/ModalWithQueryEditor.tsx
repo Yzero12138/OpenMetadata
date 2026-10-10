@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Form, Modal, Typography } from 'antd';
+import { Button, Form, Typography } from 'antd';
 import { FormProps, useForm } from 'antd/lib/form/Form';
 import { AxiosError } from 'axios';
 import { lazy, useEffect, useState } from 'react';
@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { CSMode } from '../../../enums/codemirror.enum';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import withSuspenseFallback from '../../AppRouter/withSuspenseFallback';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import Loader from '../../common/Loader/Loader';
 import { ModalWithQueryEditorProps } from './ModalWithQueryEditor.interface';
 
@@ -31,7 +32,6 @@ export const ModalWithQueryEditor = ({
   onSave,
   onCancel,
   visible,
-  getContainer,
 }: ModalWithQueryEditorProps) => {
   const { t } = useTranslation();
   const [form] = useForm();
@@ -58,10 +58,8 @@ export const ModalWithQueryEditor = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       className="description-markdown-editor"
-      closable={false}
       data-testid="markdown-editor"
       footer={[
         <Button
@@ -80,7 +78,7 @@ export const ModalWithQueryEditor = ({
           {isSaving ? <Loader size="small" type="white" /> : t('label.save')}
         </Button>,
       ]}
-      getContainer={getContainer}
+      isSubmitting={isSaving || isLoading}
       maskClosable={false}
       open={visible}
       title={<Typography.Text data-testid="header">{header}</Typography.Text>}

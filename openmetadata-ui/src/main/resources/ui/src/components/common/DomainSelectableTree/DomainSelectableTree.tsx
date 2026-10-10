@@ -240,7 +240,7 @@ const DomainSelectablTree: FC<DomainSelectableTreeProps> = ({
           key: `${parentFqn}-load-more`,
           value: `${parentFqn}-load-more`,
           name: 'Load More',
-          label: 'Load More',
+          label: t('label.load-more'),
           isLeaf: true,
           selectable: false,
           disabled: true,

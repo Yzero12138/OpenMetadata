@@ -23,7 +23,7 @@ interface RenewTokenResponse {
 }
 
 export const renewToken = async () => {
-  const { data } = await axiosClient.get<RenewTokenResponse>(
+  const { data } = await axiosClient.post<RenewTokenResponse>(
     `${BASE_URL}/refresh`
   );
 

@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hospital-openmetadata-to-platform
+  namespace: coop-dev
+  labels:
+    app.kubernetes.io/part-of: hospital-metadata
+spec:
+  podSelector:
+    matchLabels:
+      app: platform
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: datahub-open-test
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hospital-openmetadata
+      ports:
+        - protocol: TCP
+          port: 8081

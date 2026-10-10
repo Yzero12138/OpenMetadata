@@ -48,6 +48,7 @@ import customizeMyDataPageClassBase from '../../utils/CustomizeMyDataPageClassBa
 import { getPersonaPage } from '../../utils/CustomizePage/PersonaPage.utils';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
 import type { WidgetConfig } from '../CustomizablePage/CustomizablePage.interface';
+import HospitalWorkbench from './HospitalWorkbench';
 import './my-data.less';
 import MyDataPageSkeleton from './MyDataPageSkeleton.component';
 
@@ -335,4 +336,5 @@ const MyDataPage = () => {
   );
 };
 
-export default MyDataPage;
+export { MyDataPage as CustomizableMetadataHome };
+export default HospitalWorkbench;

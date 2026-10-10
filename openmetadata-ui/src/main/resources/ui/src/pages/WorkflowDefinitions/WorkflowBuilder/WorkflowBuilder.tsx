@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Card, Tabs } from '@openmetadata/ui-core-components';
+import { Button, Card, Tabs } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { compare, Operation } from 'fast-json-patch';
@@ -23,7 +23,7 @@ import React, {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { Edge, Node, ReactFlowProvider } from 'reactflow';
 import DeleteModal from '../../../components/common/DeleteModal/DeleteModal';
 import HeaderBreadcrumb from '../../../components/common/HeaderBreadcrumb/HeaderBreadcrumb.component';
@@ -50,6 +50,7 @@ import {
   WorkflowModeProvider,
 } from '../../../contexts/WorkflowModeContext';
 import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
+import { WorkflowDefinition } from '../../../generated/governance/workflows/workflowDefinition';
 import { useIsAiMode } from '../../../hooks/useAppMode';
 import { useFqn } from '../../../hooks/useFqn';
 import { useWorkflowActions } from '../../../hooks/useWorkflowActions';
@@ -66,8 +67,11 @@ import {
 import { getEntityName } from '../../../utils/EntityNameUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import workflowClassBase from '../../../utils/WorkflowClassBase';
+import { getLocalizedWorkflow } from '../../../utils/WorkflowDisplayUtils';
+import { getWorkflowDraft } from '../../../utils/WorkflowDraftUtils';
 import { applyFlowchartLayout } from '../../../utils/WorkflowLayout';
 import { getWorkflowDefinitionsListPath } from '../../../utils/WorkflowRouterUtils';
+import './WorkflowBuilder.less';
 
 interface WorkflowBuilderInternalProps {
   workflowLogic: UseWorkflowLogicReturn;
@@ -116,6 +120,7 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
   const syncWithStore = workflowLogic.syncWithStore;
   const { canRedo, canUndo, redo, saveState, undo } = useWorkflowHistory();
   const workflowBuilderTabs = useMemo(() => getWorkflowBuilderTabs(t), [t]);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
   const sourceNode = useMemo(() => {
     if (!pendingConnection) {
@@ -357,12 +362,27 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
     }, [handleSaveWorkflow]);
 
   const handleUpdateDisplayName = useCallback(
-    async (newDisplayName: string) => {
+    async (newDisplayName: string, newName?: string) => {
       try {
+        if (workflowMetadata?.isNewWorkflow && workflowDefinition) {
+          const name = newName ?? workflowDefinition.name;
+          workflowLogic.setWorkflowDefinition({
+            ...workflowDefinition,
+            name,
+            displayName: newDisplayName,
+          });
+          workflowLogic.setWorkflowMetadata({
+            ...workflowMetadata,
+            name,
+            displayName: newDisplayName,
+          });
+
+          return true;
+        }
         if (!workflowDefinition?.id) {
           showErrorToast(t('message.workflow-id-required'));
 
-          return;
+          return false;
         }
 
         const updatedWorkflowDefinition = {
@@ -392,15 +412,22 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
             entity: t('label.display-name'),
           })
         );
+
+        return true;
       } catch (error) {
         showErrorToast(error as AxiosError);
+
+        return false;
       }
     },
     [
       workflowDefinition,
-      workflowMetadata?.description,
+      workflowMetadata,
       handleWorkflowMetadataUpdate,
       syncWithStore,
+      workflowLogic.setWorkflowDefinition,
+      workflowLogic.setWorkflowMetadata,
+      t,
     ]
   );
 
@@ -409,8 +436,16 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
     onSaveWorkflow: handleSaveWorkflowWithSnapshot,
   });
 
-  const workflowDisplayName =
-    workflowMetadata?.displayName || 'Workflow Builder';
+  const workflowDisplayName = workflowDefinition
+    ? getLocalizedWorkflow(
+        {
+          ...workflowDefinition,
+          displayName:
+            workflowMetadata?.displayName ?? workflowDefinition.displayName,
+        },
+        t
+      ).displayName || workflowDefinition.name
+    : t('label.workflow-builder-tab');
   const workflowName = workflowMetadata?.name;
 
   // AI-mode breadcrumb: rendered inside the HeaderShell gradient header.
@@ -449,11 +484,12 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
   }
 
   const sidebarClassName = classNames(
-    'tw:absolute tw:top-8.5 tw:left-5 tw:bottom-5 tw:w-72 tw:z-10',
+    'workflow-node-palette tw:absolute tw:top-8.5 tw:left-5 tw:bottom-5 tw:w-72 tw:z-10',
     'tw:flex tw:flex-col tw:min-h-0',
     'tw:rounded-lg tw:bg-primary tw:border tw:border-border-secondary tw:shadow-sm',
     'tw:overflow-y-auto tw:transition-opacity tw:duration-300',
     {
+      'is-open': isPaletteOpen,
       'tw:opacity-30': focusedConnection || isConnectionModalOpen,
     }
   );
@@ -490,6 +526,7 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
             handleSaveWorkflow={handleSaveWorkflowWithSnapshot}
             handleTestWorkflow={handleTestWorkflow}
             isAiMode={isAiMode}
+            isNewWorkflow={workflowMetadata?.isNewWorkflow}
             isRunLoading={isRunLoading}
             title={workflowDisplayName}
             workflowName={workflowName}
@@ -515,6 +552,22 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
             </Tabs.List>
           </Tabs>
         </Card>
+        {activeTab === workflowBuilderTabs[0].value &&
+          canAccessSidebar &&
+          showWorkflowNodePalette && (
+            <div className="tw:md:hidden tw:mt-3">
+              <Button
+                aria-controls="workflow-node-palette"
+                aria-expanded={isPaletteOpen}
+                color="secondary"
+                data-testid="toggle-workflow-palette"
+                size="sm"
+                onPress={() => setIsPaletteOpen((open) => !open)}>
+                {t(isPaletteOpen ? 'label.hide' : 'label.show')} ·{' '}
+                {t('label.drag-and-drop-nodes')}
+              </Button>
+            </div>
+          )}
         <div className="tw:relative tw:flex tw:flex-1 tw:min-h-0 tw:flex-col tw:pt-4">
           {activeTab === workflowBuilderTabs[0].value ? (
             <div className="tw:flex-1 tw:min-h-0 tw:flex tw:flex-col tw:overflow-hidden">
@@ -558,7 +611,7 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
           {activeTab === workflowBuilderTabs[0].value &&
             canAccessSidebar &&
             showWorkflowNodePalette && (
-              <div className={sidebarClassName}>
+              <div className={sidebarClassName} id="workflow-node-palette">
                 <WorkflowSidebar
                   isNodeDragEnabled={
                     isEditMode && showWorkflowNodePalette
@@ -625,10 +678,11 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
   );
 };
 
-const WorkflowBuilderWrapper: React.FC<{ workflowFqn?: string }> = ({
-  workflowFqn,
-}) => {
-  const workflowLogic = useWorkflowLogic({ fqn: workflowFqn });
+const WorkflowBuilderWrapper: React.FC<{
+  workflowFqn?: string;
+  initialDraft?: WorkflowDefinition;
+}> = ({ workflowFqn, initialDraft }) => {
+  const workflowLogic = useWorkflowLogic({ fqn: workflowFqn, initialDraft });
   const { workflowDefinition } = workflowLogic;
 
   return (
@@ -642,16 +696,18 @@ const WorkflowBuilderWrapper: React.FC<{ workflowFqn?: string }> = ({
 
 const WorkflowBuilder: React.FC = () => {
   const { fqn } = useFqn();
+  const { state }: { state: unknown } = useLocation();
+  const initialDraft = useMemo(() => getWorkflowDraft(state), [state]);
   const allowCreateWorkflow =
     workflowClassBase.getCapabilities().allowCreateWorkflow;
 
-  if (!fqn?.trim() && !allowCreateWorkflow) {
+  if (!fqn?.trim() && (!allowCreateWorkflow || !initialDraft)) {
     return <Navigate replace to={getWorkflowDefinitionsListPath()} />;
   }
 
   return (
     <ReactFlowProvider>
-      <WorkflowBuilderWrapper workflowFqn={fqn} />
+      <WorkflowBuilderWrapper initialDraft={initialDraft} workflowFqn={fqn} />
     </ReactFlowProvider>
   );
 };

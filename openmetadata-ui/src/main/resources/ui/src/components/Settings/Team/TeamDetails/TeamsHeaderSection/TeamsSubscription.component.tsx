@@ -10,16 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import {
-  Button,
-  Form,
-  Input,
-  Modal,
-  Select,
-  Space,
-  Tooltip,
-  Typography,
-} from 'antd';
+import { Button, Form, Input, Select, Space, Tooltip, Typography } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -36,6 +27,7 @@ import {
 } from '../../../../../constants/Teams.constants';
 import { Webhook } from '../../../../../generated/type/profile';
 import { getWebhookIcon } from '../../../../../utils/TeamUtils';
+import { LegacyFormDrawer as Modal } from '../../../../common/atoms/drawer/LegacyFormDrawer';
 import { SubscriptionWebhook, TeamsSubscriptionProps } from '../team.interface';
 import './teams-subscription.less';
 const TeamsSubscription = ({
@@ -199,10 +191,9 @@ const TeamsSubscription = ({
           className="remove-button-default-styling"
           onClick={(e) => e.stopPropagation()}>
           <Modal
-            centered
             open
-            closable={false}
             confirmLoading={isLoading}
+            isSubmitting={isLoading}
             maskClosable={false}
             okButtonProps={{
               form: 'subscription-form',

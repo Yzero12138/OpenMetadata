@@ -14,7 +14,9 @@ import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { Button, Col, Form, Row, Select, Space } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DomainType } from '../../../generated/api/domains/createDomain';
+import { getDomainTypeLabel } from '../../../utils/DomainTypeLabelUtils';
 import { DomainTypeSelectFormProps } from './DomainTypeSelectForm.interface';
 
 const DomainTypeSelectForm = ({
@@ -23,10 +25,12 @@ const DomainTypeSelectForm = ({
   onCancel,
 }: DomainTypeSelectFormProps) => {
   const [form] = useForm();
+  const { t } = useTranslation();
   const [isSubmitLoading, setIsSubmitLoading] = useState(false);
   const domainTypeArray = Object.keys(DomainType).map((key) => ({
     key,
     value: DomainType[key as keyof typeof DomainType],
+    label: getDomainTypeLabel(DomainType[key as keyof typeof DomainType], t),
   }));
 
   return (

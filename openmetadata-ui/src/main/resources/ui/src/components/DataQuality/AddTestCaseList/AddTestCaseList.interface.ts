@@ -24,6 +24,7 @@ export interface AddTestCaseListChangePayload
 export interface AddTestCaseModalProps {
   onCancel?: () => void;
   onSubmit?: (payload: AddTestCaseListSubmitPayload) => void | Promise<void>;
+  onSubmittingChange?: (isSubmitting: boolean) => void;
   onChange?: (payload: AddTestCaseListChangePayload) => void;
   existingTest?: EntityReference[];
   cancelText?: string;

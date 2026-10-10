@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Col, Modal, Row, Space, Typography } from 'antd';
+import { Button, Col, Row, Space, Typography } from 'antd';
 import { isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,9 +23,13 @@ import {
 } from '../../../../generated/entity/applications/app';
 import { getIngestionPipelineByFqn } from '../../../../rest/ingestionPipelineAPI';
 import { getCronDefaultValue } from '../../../../utils/CronExpressionUtils';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
 import Loader from '../../../common/Loader/Loader';
 import ScheduleInterval from '../../Services/AddIngestion/Steps/ScheduleInterval';
-import { WorkflowExtraConfig } from '../../Services/AddIngestion/Steps/ScheduleInterval.interface';
+import {
+  ScheduleIntervalHandle,
+  WorkflowExtraConfig,
+} from '../../Services/AddIngestion/Steps/ScheduleInterval.interface';
 import applicationsClassBase from '../AppDetails/ApplicationsClassBase';
 import AppRunsHistory from '../AppRunsHistory/AppRunsHistory.component';
 import { AppRunsHistoryRef } from '../AppRunsHistory/AppRunsHistory.interface';
@@ -44,6 +48,7 @@ const AppSchedule = ({
   const { t } = useTranslation();
   const [showModal, setShowModal] = useState(false);
   const appRunsHistoryRef = useRef<AppRunsHistoryRef>(null);
+  const scheduleRef = useRef<ScheduleIntervalHandle>(null);
   const [isPipelineDeployed, setIsPipelineDeployed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaveLoading, setIsSaveLoading] = useState(false);
@@ -278,14 +283,31 @@ const AppSchedule = ({
       <Modal
         destroyOnClose
         className="update-schedule-modal"
-        closable={false}
         data-testid="update-schedule-modal"
-        footer={null}
+        footer={
+          <>
+            <Button
+              data-testid="back-button"
+              disabled={isSaveLoading}
+              onClick={onDialogCancel}>
+              {t('label.cancel')}
+            </Button>
+            <Button
+              data-testid="deploy-button"
+              loading={isSaveLoading}
+              type="primary"
+              onClick={() => scheduleRef.current?.submit()}>
+              {t('label.save')}
+            </Button>
+          </>
+        }
+        isSubmitting={isSaveLoading}
         maskClosable={false}
         okText={t('label.save')}
         open={showModal}
         title={t('label.update-entity', { entity: t('label.schedule') })}
-        width={650}>
+        width={650}
+        onCancel={onDialogCancel}>
         <ScheduleInterval
           isEditMode
           buttonProps={{
@@ -295,7 +317,9 @@ const AppSchedule = ({
           defaultSchedule={defaultCron}
           includePeriodOptions={initialOptions}
           initialData={initialData}
+          ref={scheduleRef}
           schedularOptions={translatedSchedularOptions}
+          showActionButtons={false}
           status={isSaveLoading ? 'waiting' : 'initial'}
           onBack={onDialogCancel}
           onDeploy={onDialogSave}

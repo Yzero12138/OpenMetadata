@@ -37,6 +37,7 @@ import {
   Typography,
 } from 'antd';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { JsonSchemaObject } from '../../../rest/taskFormSchemasAPI';
 import {
   buildDesignerSchema,
@@ -57,28 +58,28 @@ interface TaskFormBuilderSectionProps {
 }
 
 const FIELD_TYPE_OPTIONS = [
-  { label: 'Short text', value: 'shortText' },
-  { label: 'Long text', value: 'longText' },
-  { label: 'Number', value: 'number' },
-  { label: 'Boolean', value: 'boolean' },
-  { label: 'Select', value: 'singleSelect' },
-  { label: 'Multi-select', value: 'multiSelect' },
-  { label: 'JSON', value: 'json' },
+  { label: 'label.task-form-short-text', value: 'shortText' },
+  { label: 'label.task-form-long-text', value: 'longText' },
+  { label: 'label.number', value: 'number' },
+  { label: 'label.task-form-boolean', value: 'boolean' },
+  { label: 'label.task-form-single-select', value: 'singleSelect' },
+  { label: 'label.multi-select', value: 'multiSelect' },
+  { label: 'label.task-form-json', value: 'json' },
 ];
 
 const JSON_SCHEMA_TYPE_OPTIONS = [
-  { label: 'Object', value: 'object' },
-  { label: 'Array', value: 'array' },
+  { label: 'label.task-form-object', value: 'object' },
+  { label: 'label.task-form-array', value: 'array' },
 ];
 
 const FIELD_TYPE_LABEL_MAP: Record<TaskFormDesignerField['type'], string> = {
-  shortText: 'Single line text',
-  longText: 'Multiline text',
-  number: 'Numeric field',
-  boolean: 'Toggle',
-  singleSelect: 'Single select',
-  multiSelect: 'Multi-select',
-  json: 'JSON field',
+  shortText: 'label.task-form-short-text',
+  longText: 'label.task-form-long-text',
+  number: 'label.number',
+  boolean: 'label.task-form-boolean',
+  singleSelect: 'label.task-form-single-select',
+  multiSelect: 'label.multi-select',
+  json: 'label.task-form-json',
 };
 
 const TaskFormBuilderSection = ({
@@ -90,6 +91,7 @@ const TaskFormBuilderSection = ({
   baseFormSchema,
   baseUiSchema,
 }: TaskFormBuilderSectionProps) => {
+  const { t } = useTranslation();
   const previewConfig = useMemo(
     () => buildDesignerSchema(fields, baseFormSchema, baseUiSchema),
     [baseFormSchema, baseUiSchema, fields]
@@ -127,7 +129,7 @@ const TaskFormBuilderSection = ({
           data-testid={`${testIdPrefix}-add-field`}
           icon={<PlusOutlined />}
           onClick={() => onChange([...fields, createEmptyDesignerField()])}>
-          Add field
+          {t('label.add-entity', { entity: t('label.field') })}
         </Button>
       </div>
 
@@ -139,9 +141,11 @@ const TaskFormBuilderSection = ({
                 field.type === 'singleSelect' || field.type === 'multiSelect';
               const supportsJsonType = field.type === 'json';
               const summary = [
-                `Input type: ${FIELD_TYPE_LABEL_MAP[field.type]}`,
-                field.required ? 'Required' : undefined,
-                field.hidden ? 'Hidden' : undefined,
+                t('label.task-form-input-type', {
+                  type: t(FIELD_TYPE_LABEL_MAP[field.type]),
+                }),
+                field.required ? t('label.required') : undefined,
+                field.hidden ? t('label.task-form-hidden') : undefined,
               ]
                 .filter(Boolean)
                 .join(' • ');
@@ -164,7 +168,7 @@ const TaskFormBuilderSection = ({
                           )
                         )
                       }>
-                      Remove
+                      {t('label.remove')}
                     </Button>
                   }
                   key={field.key}
@@ -172,7 +176,12 @@ const TaskFormBuilderSection = ({
                   title={
                     <div className="task-form-builder-section__field-heading">
                       <Typography.Text className="task-form-builder-section__field-title">
-                        {field.label || field.name || `Field ${index + 1}`}
+                        {field.label ||
+                          field.name ||
+                          t('label.task-form-numbered-item', {
+                            entity: t('label.field'),
+                            number: index + 1,
+                          })}
                       </Typography.Text>
                       <Typography.Text className="task-form-builder-section__field-meta">
                         {summary}
@@ -181,7 +190,9 @@ const TaskFormBuilderSection = ({
                   }>
                   <div className="d-grid gap-3">
                     <div className="task-form-builder-section__field-grid">
-                      <Form.Item className="m-b-0" label="Field name">
+                      <Form.Item
+                        className="m-b-0"
+                        label={t('label.field-name')}>
                         <Input
                           data-testid={`${testIdPrefix}-field-name-${index}`}
                           placeholder="requestReason"
@@ -194,7 +205,9 @@ const TaskFormBuilderSection = ({
                           }
                         />
                       </Form.Item>
-                      <Form.Item className="m-b-0" label="Label">
+                      <Form.Item
+                        className="m-b-0"
+                        label={t('label.task-form-label')}>
                         <Input
                           data-testid={`${testIdPrefix}-field-label-${index}`}
                           placeholder="Request Reason"
@@ -207,10 +220,17 @@ const TaskFormBuilderSection = ({
                           }
                         />
                       </Form.Item>
-                      <Form.Item className="m-b-0" label="Field type">
+                      <Form.Item
+                        className="m-b-0"
+                        label={t('label.entity-type-plural', {
+                          entity: t('label.field'),
+                        })}>
                         <Select
                           data-testid={`${testIdPrefix}-field-type-${index}`}
-                          options={FIELD_TYPE_OPTIONS}
+                          options={FIELD_TYPE_OPTIONS.map((option) => ({
+                            ...option,
+                            label: t(option.label),
+                          }))}
                           value={field.type}
                           onChange={(value) =>
                             updateField(index, (currentField) => ({
@@ -232,10 +252,15 @@ const TaskFormBuilderSection = ({
                     </div>
 
                     {supportsJsonType ? (
-                      <Form.Item className="m-b-0" label="JSON shape">
+                      <Form.Item
+                        className="m-b-0"
+                        label={t('label.task-form-json-shape')}>
                         <Select
                           data-testid={`${testIdPrefix}-field-schema-type-${index}`}
-                          options={JSON_SCHEMA_TYPE_OPTIONS}
+                          options={JSON_SCHEMA_TYPE_OPTIONS.map((option) => ({
+                            ...option,
+                            label: t(option.label),
+                          }))}
                           value={field.schemaType ?? 'object'}
                           onChange={(value) =>
                             updateField(index, (currentField) => ({
@@ -248,12 +273,16 @@ const TaskFormBuilderSection = ({
                     ) : null}
 
                     {supportsOptions ? (
-                      <Form.Item className="m-b-0" label="Options">
+                      <Form.Item
+                        className="m-b-0"
+                        label={t('label.task-form-options')}>
                         <Select
                           data-testid={`${testIdPrefix}-field-options-${index}`}
                           mode="tags"
                           open={false}
-                          placeholder="Add options"
+                          placeholder={t('label.add-entity', {
+                            entity: t('label.task-form-options'),
+                          })}
                           tokenSeparators={[',']}
                           value={field.options}
                           onChange={(value) =>
@@ -266,11 +295,13 @@ const TaskFormBuilderSection = ({
                       </Form.Item>
                     ) : null}
 
-                    <Form.Item className="m-b-0" label="Help text">
+                    <Form.Item
+                      className="m-b-0"
+                      label={t('label.task-form-help-text')}>
                       <Input.TextArea
                         autoSize={{ minRows: 2, maxRows: 4 }}
                         data-testid={`${testIdPrefix}-field-description-${index}`}
-                        placeholder="Explain what this field is used for"
+                        placeholder={t('message.task-form-help-placeholder')}
                         value={field.description}
                         onChange={(event) =>
                           updateField(index, (currentField) => ({
@@ -291,7 +322,7 @@ const TaskFormBuilderSection = ({
                             required: event.target.checked,
                           }))
                         }>
-                        Required
+                        {t('label.required')}
                       </Checkbox>
                       <Checkbox
                         checked={field.hidden}
@@ -302,7 +333,7 @@ const TaskFormBuilderSection = ({
                             hidden: event.target.checked,
                           }))
                         }>
-                        Hidden
+                        {t('label.task-form-hidden')}
                       </Checkbox>
                     </Space>
                   </div>
@@ -312,7 +343,7 @@ const TaskFormBuilderSection = ({
           ) : (
             <Empty
               data-testid={`${testIdPrefix}-empty`}
-              description="No fields configured yet"
+              description={t('message.task-form-no-fields')}
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
           )}
@@ -322,7 +353,7 @@ const TaskFormBuilderSection = ({
           className="task-form-builder-section__preview"
           data-testid={`${testIdPrefix}-preview`}
           size="small"
-          title="Preview">
+          title={t('label.preview')}>
           {fields.length ? (
             <div>
               <TaskPayloadSchemaFields
@@ -334,7 +365,7 @@ const TaskFormBuilderSection = ({
             </div>
           ) : (
             <Typography.Text className="text-grey-muted">
-              Add fields to preview this form.
+              {t('message.task-form-preview-placeholder')}
             </Typography.Text>
           )}
         </Card>

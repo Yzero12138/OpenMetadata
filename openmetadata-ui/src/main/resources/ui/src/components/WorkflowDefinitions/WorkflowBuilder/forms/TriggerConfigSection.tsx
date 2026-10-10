@@ -19,7 +19,7 @@ import {
   SelectItemType,
   Typography,
 } from '@openmetadata/ui-core-components';
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useListData } from 'react-stately';
 import {
@@ -115,7 +115,20 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
     },
   ];
 
-  const selectedEventTypes = useSyncedListData(eventType);
+  const getEventLabel = useCallback(
+    (value: string) => {
+      if (value === 'Created') {
+        return t('label.created-lowercase');
+      }
+      if (value === 'Updated') {
+        return t('label.updated');
+      }
+
+      return value;
+    },
+    [t]
+  );
+  const selectedEventTypes = useSyncedListData(eventType, getEventLabel);
   const selectedExcludeFields = useSyncedListData(excludeFields, getFieldLabel);
   const selectedIncludeFields = useSyncedListData(include, getFieldLabel);
 
@@ -206,7 +219,10 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
               isRequired
               data-testid="event-type-select"
               isDisabled={nonIncludeExcludeDisabled}
-              items={availableEventTypes.map((v) => ({ id: v, label: v }))}
+              items={availableEventTypes.map((v) => ({
+                id: v,
+                label: getEventLabel(v),
+              }))}
               label={t('label.event-type')}
               placeholder={t('message.select-event-types')}
               selectedItems={selectedEventTypes}
@@ -217,7 +233,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
               onItemInserted={(key) => {
                 selectedEventTypes.append({
                   id: String(key),
-                  label: String(key),
+                  label: getEventLabel(String(key)),
                 });
                 onEventTypeChange({
                   target: {

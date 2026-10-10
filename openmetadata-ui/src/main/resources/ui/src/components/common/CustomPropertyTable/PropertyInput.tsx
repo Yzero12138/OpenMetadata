@@ -13,6 +13,7 @@
 
 import { Input } from 'antd';
 import { ChangeEvent, FC, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import InlineEdit from '../InlineEdit/InlineEdit.component';
 
 export interface PropertyInputProps {
@@ -32,6 +33,7 @@ export const PropertyInput: FC<PropertyInputProps> = ({
   onSave,
   isLoading,
 }: PropertyInputProps) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState<string | number>(value);
 
   const onChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -52,7 +54,7 @@ export const PropertyInput: FC<PropertyInputProps> = ({
         data-testid="value-input"
         id="value"
         name={propertyName}
-        placeholder="value"
+        placeholder={t('label.value')}
         type={type}
         value={inputValue}
         onChange={onChange}

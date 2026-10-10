@@ -510,7 +510,7 @@ export const buildWorkflowForSave = async (
   edges: Edge[],
   workflowDefinition: WorkflowDefinition | null,
   workflowMetadata?: { displayName?: string; description?: string } | null
-): Promise<WorkflowDefinition> => {
+) => {
   const workflowName = workflowDefinition?.name || 'CustomWorkflow';
   const workflowDisplayName =
     workflowMetadata?.displayName ||
@@ -592,7 +592,15 @@ export const buildWorkflowForSave = async (
       config: finalTriggerConfig,
       output: ['relatedEntity', 'updatedBy'],
     },
-    nodes: workflowNodes,
+    nodes: workflowNodes.map(({ inputNamespaceMap, ...node }) => ({
+      ...node,
+      ...(inputNamespaceMap && {
+        inputNamespaceMap: {
+          ...inputNamespaceMap,
+          relatedEntity: inputNamespaceMap.relatedEntity ?? 'global',
+        },
+      }),
+    })),
     edges: workflowEdges,
     config: {
       storeStageStatus: triggerType === Type.EventBasedEntity,

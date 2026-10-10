@@ -11,10 +11,33 @@
  *  limitations under the License.
  */
 
+import { t } from './i18next/LocalUtil';
+
 export const WORKFLOW_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;
 
 export const WORKFLOW_NAME_MIN_LENGTH = 3;
 export const WORKFLOW_NAME_MAX_LENGTH = 50;
+
+export const getWorkflowNameError = (value: string): string => {
+  if (!value) {
+    return t('label.workflow-name-is-required');
+  }
+  if (!WORKFLOW_NAME_REGEX.test(value)) {
+    return t('message.workflow-name-invalid-characters');
+  }
+  if (value.length < WORKFLOW_NAME_MIN_LENGTH) {
+    return t('message.workflow-name-min-length', {
+      count: WORKFLOW_NAME_MIN_LENGTH,
+    });
+  }
+  if (value.length > WORKFLOW_NAME_MAX_LENGTH) {
+    return t('message.workflow-name-max-length', {
+      count: WORKFLOW_NAME_MAX_LENGTH,
+    });
+  }
+
+  return '';
+};
 
 /**
  * Gets validation rules for Ant Design Form
@@ -23,19 +46,22 @@ export const WORKFLOW_NAME_MAX_LENGTH = 50;
 export const getWorkflowNameValidationRules = () => [
   {
     required: true,
-    message: 'Workflow name is required',
+    message: t('label.workflow-name-is-required'),
   },
   {
     pattern: WORKFLOW_NAME_REGEX,
-    message:
-      'Workflow name can only contain letters, numbers, underscores, and hyphens',
+    message: t('message.workflow-name-invalid-characters'),
   },
   {
     min: WORKFLOW_NAME_MIN_LENGTH,
-    message: `Workflow name must be at least ${WORKFLOW_NAME_MIN_LENGTH} characters long`,
+    message: t('message.workflow-name-min-length', {
+      count: WORKFLOW_NAME_MIN_LENGTH,
+    }),
   },
   {
     max: WORKFLOW_NAME_MAX_LENGTH,
-    message: `Workflow name must not exceed ${WORKFLOW_NAME_MAX_LENGTH} characters`,
+    message: t('message.workflow-name-max-length', {
+      count: WORKFLOW_NAME_MAX_LENGTH,
+    }),
   },
 ];

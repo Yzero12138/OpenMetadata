@@ -82,7 +82,7 @@ const FeedsFilterPopover = ({
           <List.Item
             className="selectable-list-item cursor-pointer"
             key={item.key}
-            title="All"
+            title={item.title}
             onClick={() => setSelectedFilter(item.key)}>
             <Space align="start">
               <Checkbox checked={selectedFilter === item.key} />
