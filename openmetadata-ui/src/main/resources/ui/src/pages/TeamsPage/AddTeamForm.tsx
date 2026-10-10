@@ -12,12 +12,13 @@
  */
 
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Form, Input, Modal, Select } from 'antd';
+import { Button, Form, Input, Select } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { AxiosError } from 'axios';
 import { toLower, trim } from 'lodash';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LegacyFormDrawer as Modal } from '../../components/common/atoms/drawer/LegacyFormDrawer';
 import { DomainLabel } from '../../components/common/DomainLabel/DomainLabel.component';
 import { VALIDATION_MESSAGES } from '../../constants/constants';
 import { NAME_FIELD_RULES } from '../../constants/Form.constants';
@@ -149,9 +150,8 @@ const AddTeamForm: React.FC<AddTeamFormType> = ({
 
   return (
     <Modal
-      centered
-      closable={false}
       confirmLoading={isLoading}
+      isSubmitting={isLoading}
       maskClosable={false}
       okButtonProps={{
         form: 'add-team-form',

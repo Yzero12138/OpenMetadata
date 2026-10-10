@@ -10,11 +10,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Form, FormProps, Input, Modal } from 'antd';
+import { Form, FormProps, Input } from 'antd';
 import { AxiosError } from 'axios';
 import { lazy, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LegacyFormDrawer as Modal } from '../../../../common/atoms/drawer/LegacyFormDrawer';
 
 import { HTTP_STATUS_CODE } from '../../../../../constants/Auth.constants';
 import { NO_PERMISSION_FOR_ACTION } from '../../../../../constants/HelperTextUtil';
@@ -140,9 +140,8 @@ const AddSqlQueryFormModal = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
-      closable={false}
+      isSubmitting={isSaving}
       maskClosable={false}
       okButtonProps={{
         disabled: !permissions.query?.Create || !table?.id || !currentUser?.id,

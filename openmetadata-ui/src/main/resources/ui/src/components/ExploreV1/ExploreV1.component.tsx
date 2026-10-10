@@ -29,7 +29,7 @@ import {
   InfoCircle,
   Trash01,
 } from '@untitledui/icons';
-import { Card, Col, Menu, Modal, Radio, Row, Skeleton } from 'antd';
+import { Card, Col, Menu, Radio, Row, Skeleton } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { isEmpty, isString, isUndefined, noop, omit } from 'lodash';
@@ -69,6 +69,7 @@ import {
 import searchClassBase from '../../utils/SearchClassBase';
 import { showSuccessToast } from '../../utils/ToastUtils';
 import withSuspenseFallback from '../AppRouter/withSuspenseFallback';
+import { LegacyFormDrawer as Modal } from '../common/atoms/drawer/LegacyFormDrawer';
 import {
   CSV_JOBS_REFRESH_EVENT,
   markCsvJobOwned,
@@ -949,10 +950,10 @@ const ExploreV1: React.FC<ExploreProps> = ({
       {searchQueryParam && tabItems.length === 0 && loading && <Loader />}
 
       <Modal
-        centered
         cancelText={t('label.cancel')}
         className="search-export-modal tw:overflow-hidden"
         data-testid="export-scope-modal"
+        isSubmitting={isExporting}
         okButtonProps={{
           disabled:
             isExporting ||

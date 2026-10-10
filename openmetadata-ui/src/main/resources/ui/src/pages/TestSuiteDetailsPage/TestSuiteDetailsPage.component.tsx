@@ -10,15 +10,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 import {
   Box,
   Button,
-  Dialog,
   DialogTrigger,
   Input,
-  Modal,
-  ModalOverlay,
   Tooltip,
   Typography,
 } from '@openmetadata/ui-core-components';
@@ -26,10 +22,11 @@ import { Copy01 } from '@untitledui/icons';
 import { Tabs, TabsProps } from 'antd';
 import classNames from 'classnames';
 import { isUndefined } from 'lodash';
-import { ComponentProps, useCallback, useMemo } from 'react';
+import { ComponentProps, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ReactComponent as TestSuiteIcon } from '../../assets/svg/icon-test-suite.svg';
+import { CoreFormDrawer as Dialog } from '../../components/common/atoms/drawer/CoreFormDrawer';
 import { useListSearchInput } from '../../components/common/atoms/navigation/useListSearchInput';
 import { DomainLabel } from '../../components/common/DomainLabel/DomainLabel.component';
 import Description from '../../components/common/EntityDescription/Description';
@@ -63,6 +60,7 @@ const TestSuiteDetailsPage = () => {
   const { t } = useTranslation();
   const testCasePluralLabel = t('label.test-case-plural');
   const navigate = useNavigate();
+  const [isAddingTestCases, setIsAddingTestCases] = useState(false);
   const {
     testSuite,
     testSuiteDescription,
@@ -97,6 +95,16 @@ const TestSuiteDetailsPage = () => {
     handleDisplayNameChange,
     handleTestSuiteUpdate,
   } = useTestSuiteDetailsPage();
+
+  const handleTestCaseDrawerOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && isAddingTestCases) {
+        return;
+      }
+      setIsTestCaseModalOpen(open);
+    },
+    [isAddingTestCases, setIsTestCaseModalOpen]
+  );
 
   const { searchInputProps } = useListSearchInput({
     searchQuery: testCaseSearchQuery,
@@ -368,7 +376,7 @@ const TestSuiteDetailsPage = () => {
                 testSuitePermissions.EditTests) && (
                 <DialogTrigger
                   isOpen={isTestCaseModalOpen}
-                  onOpenChange={setIsTestCaseModalOpen}>
+                  onOpenChange={handleTestCaseDrawerOpenChange}>
                   <Button
                     color="primary"
                     data-testid="add-test-case-btn"
@@ -377,29 +385,26 @@ const TestSuiteDetailsPage = () => {
                       entity: testCasePluralLabel,
                     })}
                   </Button>
-                  <ModalOverlay>
-                    <Modal>
-                      <Dialog
-                        showCloseButton
-                        title={t('label.add-entity', {
-                          entity: testCasePluralLabel,
-                        })}
-                        onClose={() => setIsTestCaseModalOpen(false)}>
-                        <Dialog.Content>
-                          <AddTestCaseList
-                            existingTest={testSuite?.tests ?? []}
-                            getPopupContainer={(trigger) =>
-                              (trigger.closest(
-                                '[role="dialog"]'
-                              ) as HTMLElement) ?? document.body
-                            }
-                            onCancel={() => setIsTestCaseModalOpen(false)}
-                            onSubmit={handleAddTestCaseSubmit}
-                          />
-                        </Dialog.Content>
-                      </Dialog>
-                    </Modal>
-                  </ModalOverlay>
+                  <Dialog
+                    isOpen={isTestCaseModalOpen}
+                    isSubmitting={isAddingTestCases}
+                    title={t('label.add-entity', {
+                      entity: testCasePluralLabel,
+                    })}
+                    onClose={() => handleTestCaseDrawerOpenChange(false)}>
+                    <Dialog.Content>
+                      <AddTestCaseList
+                        existingTest={testSuite?.tests ?? []}
+                        getPopupContainer={(trigger) =>
+                          (trigger.closest('[role="dialog"]') as HTMLElement) ??
+                          document.body
+                        }
+                        onCancel={() => handleTestCaseDrawerOpenChange(false)}
+                        onSubmit={handleAddTestCaseSubmit}
+                        onSubmittingChange={setIsAddingTestCases}
+                      />
+                    </Dialog.Content>
+                  </Dialog>
                 </DialogTrigger>
               )}
               <ManageButton

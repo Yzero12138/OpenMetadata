@@ -18,7 +18,6 @@ import {
   Button,
   ButtonUtility,
   Card,
-  Dialog,
   Dot,
   FieldProp,
   FieldTypes,
@@ -27,8 +26,6 @@ import {
   getField,
   HintText,
   HookForm,
-  Modal,
-  ModalOverlay,
   Select,
   TextArea,
   Tooltip,
@@ -102,6 +99,8 @@ import { getErrorText } from '../../../utils/StringUtils';
 import tagClassBase from '../../../utils/TagClassBase';
 import { showSuccessToast } from '../../../utils/ToastUtils';
 import withSuspenseFallback from '../../AppRouter/withSuspenseFallback';
+import { CoreFormDrawer as Dialog } from '../../common/atoms/drawer/CoreFormDrawer';
+import { FormDrawerActions } from '../../common/atoms/drawer/FormDrawerActions';
 import DataAssetSelectList from '../../DataAssets/DataAssetSelectList/DataAssetSelectList';
 import {
   CreateMemoryModalProps,
@@ -622,551 +621,542 @@ const CreateMemoryModal: FC<CreateMemoryModalProps> = ({
   };
 
   return (
-    <ModalOverlay
+    <Dialog
       isOpen={isOpen}
-      style={{ zIndex: 999 }}
+      isSubmitting={isSubmitting || isDeleting}
+      title={modalTitle}
+      width={600}
+      onClose={handleClose}
       onOpenChange={(open) => !open && handleClose()}>
-      <Modal>
-        <Dialog showCloseButton title="" width={600} onClose={handleClose}>
-          <Dialog.Content className="tw:p-0!">
-            <div ref={modalContainerRef}>
-              <ConfigProvider
-                getPopupContainer={() =>
-                  modalContainerRef.current ?? document.body
-                }>
-                <HookForm
-                  className="tw:flex tw:flex-col tw:max-h-[92vh]"
-                  form={form}
-                  onSubmit={form.handleSubmit(handleSubmit)}>
-                  {/* Sticky header */}
-                  <div className="tw:flex tw:items-center tw:gap-3 tw:pt-5 tw:pb-4 tw:shrink-0 tw:px-6">
-                    <div className="tw:flex tw:items-center tw:justify-center tw:w-10 tw:h-10 tw:rounded-lg tw:bg-utility-brand-50 tw:border tw:border-utility-indigo-100 tw:shrink-0">
-                      <Lightbulb03
-                        className="tw:text-utility-brand-700"
-                        size={20}
-                        strokeWidth={1.5}
-                      />
-                    </div>
-                    <div className="tw:flex tw:flex-col tw:gap-0.5 tw:flex-1">
-                      <div className="tw:max-w-112">
-                        <Typography ellipsis size="text-lg" weight="semibold">
-                          {modalTitle}
-                        </Typography>
-                      </div>
-                      {(memoryToEdit?.owners?.[0]?.name ??
-                        memoryToEdit?.updatedBy) && (
-                        <div className="tw:flex tw:items-center tw:gap-1">
-                          <Typography
-                            className="tw:text-quaternary"
-                            size="text-xs">
-                            {t('label.created-by')}
-                          </Typography>
-                          <UserPopOverCard
-                            showUserName
-                            className="tw:text-primary"
-                            profileWidth={16}
-                            userName={memoryToEdit?.owners?.[0]?.name || ''}
-                          />
-                          <span className="tw:text-utility-gray-400 tw:leading-none tw:select-none tw:text-xl">
-                            &middot;
-                          </span>
-                          <Typography
-                            className="tw:text-quaternary"
-                            size="text-xs">
-                            {formatDate(memoryToEdit.updatedAt)}
-                          </Typography>
-                        </div>
-                      )}
-                      {memorySource && memorySourceLink && (
-                        <div className="tw:flex tw:items-center tw:gap-1">
-                          <FileLock02
-                            className="tw:shrink-0 tw:text-utility-gray-400"
-                            size={12}
-                            strokeWidth={2}
-                          />
-                          <Typography
-                            className="tw:text-quaternary"
-                            size="text-xs">
-                            {t('label.extracted-from')}
-                          </Typography>
-                          <Link
-                            className="tw:text-xs tw:font-medium tw:text-brand-secondary tw:hover:underline tw:truncate"
-                            data-testid="memory-source-file-link"
-                            to={memorySourceLink}>
-                            {getEntityName(memorySource)}
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+      <Dialog.Header>
+        <div className="tw:flex tw:items-center tw:gap-3 tw:shrink-0">
+          <div className="tw:flex tw:items-center tw:justify-center tw:w-10 tw:h-10 tw:rounded-lg tw:bg-utility-brand-50 tw:border tw:border-utility-indigo-100 tw:shrink-0">
+            <Lightbulb03
+              className="tw:text-utility-brand-700"
+              size={20}
+              strokeWidth={1.5}
+            />
+          </div>
+          <div className="tw:flex tw:flex-col tw:gap-0.5 tw:flex-1">
+            <div className="tw:max-w-112">
+              <Typography ellipsis size="text-lg" weight="semibold">
+                {modalTitle}
+              </Typography>
+            </div>
+            {(memoryToEdit?.owners?.[0]?.name ?? memoryToEdit?.updatedBy) && (
+              <div className="tw:flex tw:items-center tw:gap-1">
+                <Typography className="tw:text-quaternary" size="text-xs">
+                  {t('label.created-by')}
+                </Typography>
+                <UserPopOverCard
+                  showUserName
+                  className="tw:text-primary"
+                  profileWidth={16}
+                  userName={memoryToEdit?.owners?.[0]?.name || ''}
+                />
+                <span className="tw:text-utility-gray-400 tw:leading-none tw:select-none tw:text-xl">
+                  &middot;
+                </span>
+                <Typography className="tw:text-quaternary" size="text-xs">
+                  {formatDate(memoryToEdit.updatedAt)}
+                </Typography>
+              </div>
+            )}
+            {memorySource && memorySourceLink && (
+              <div className="tw:flex tw:items-center tw:gap-1">
+                <FileLock02
+                  className="tw:shrink-0 tw:text-utility-gray-400"
+                  size={12}
+                  strokeWidth={2}
+                />
+                <Typography className="tw:text-quaternary" size="text-xs">
+                  {t('label.extracted-from')}
+                </Typography>
+                <Link
+                  className="tw:text-xs tw:font-medium tw:text-brand-secondary tw:hover:underline tw:truncate"
+                  data-testid="memory-source-file-link"
+                  to={memorySourceLink}>
+                  {getEntityName(memorySource)}
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </Dialog.Header>
+      <Dialog.Content className="tw:p-0!">
+        <div ref={modalContainerRef}>
+          <ConfigProvider
+            getPopupContainer={() =>
+              modalContainerRef.current ?? document.body
+            }>
+            <HookForm
+              className="tw:flex tw:flex-col"
+              form={form}
+              id="context-memory-form"
+              onSubmit={form.handleSubmit(handleSubmit)}>
+              {/* Sticky header */}
 
-                  {/* Scrollable body */}
-                  <div className="tw:flex tw:flex-col tw:gap-5 tw:pb-4 tw:overflow-y-auto tw:flex-1 tw:px-6">
-                    {/* Read-only banner for non-owners */}
-                    {isViewOnly && !isOwner && !canDelete && memoryToEdit && (
-                      <div className="tw:flex tw:items-start tw:gap-2 tw:rounded-lg tw:border tw:border-warning-300 tw:bg-warning-50 tw:px-3 tw:py-2.5">
-                        <Lock01
-                          className="tw:shrink-0 tw:text-warning-700 tw:mt-0.5"
-                          size={16}
-                          strokeWidth={2}
-                        />
-                        <div className="tw:flex tw:flex-col">
-                          <Typography
-                            className="tw:text-warning-700"
-                            size="text-xs"
-                            weight="semibold">
-                            {t('label.cant-edit-this-memory')}
-                          </Typography>
-                          <Typography
-                            as="p"
-                            className="tw:text-warning-700 tw:leading-4"
-                            size="text-xs">
-                            {t('message.context-memory-read-only-description', {
-                              creatorName:
-                                memoryToEdit.owners?.[0]?.name ??
-                                memoryToEdit.updatedBy,
-                            })}
-                          </Typography>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Inline error alert */}
-                    {modalError && (
-                      <Alert
-                        closable
-                        title={modalError}
-                        variant="error"
-                        onClose={() => setModalError('')}
-                      />
-                    )}
-
-                    {/* Section 1: Title — uses getField (TEXT) */}
-                    <div className="tw:flex tw:flex-col tw:gap-1">
-                      {getField(titleField)}
-                    </div>
-
-                    {/* Section 2: Memory content — FormField escape hatch for custom preview/edit tabs */}
-                    <FormField
-                      control={form.control}
-                      name="memory"
-                      rules={{
-                        required: t('label.field-required', {
-                          field: t(MEMORY_LABEL_KEY),
-                        }),
-                      }}>
-                      {({ field, fieldState }) => (
-                        <div className="tw:flex tw:flex-col tw:gap-1">
-                          <div className="tw:flex tw:items-center tw:justify-between">
-                            <div className="tw:flex tw:items-center tw:gap-1">
-                              <FormItemLabel
-                                label={t(MEMORY_LABEL_KEY)}
-                                required={!isViewOnly}
-                              />
-                              <Tooltip
-                                title={t(
-                                  contextCenterClassBase.getMemoryPromptTranslationKey()
-                                )}>
-                                <TooltipTrigger className="tw:leading-0">
-                                  <InfoCircle
-                                    className="tw:text-utility-gray-400 tw:cursor-pointer"
-                                    size={14}
-                                    strokeWidth={2}
-                                  />
-                                </TooltipTrigger>
-                              </Tooltip>
-                            </div>
-                            {!isViewOnly && (
-                              <Button
-                                color="secondary"
-                                size="sm"
-                                onClick={() =>
-                                  setMemoryTab((prev) =>
-                                    prev === 'edit' ? 'preview' : 'edit'
-                                  )
-                                }>
-                                {memoryTab === 'edit'
-                                  ? t('label.preview')
-                                  : t('label.edit')}
-                              </Button>
-                            )}
-                          </div>
-                          {renderMemoryContent(field)}
-                          {fieldState.error?.message && (
-                            <HintText isInvalid>
-                              {fieldState.error.message}
-                            </HintText>
-                          )}
-                        </div>
-                      )}
-                    </FormField>
-
-                    {/* Section 3: Type — uses getField (SELECT) */}
-                    <div className="tw:flex tw:flex-col tw:gap-1">
-                      {getField(memoryTypeField)}
-                    </div>
-
-                    {/* Section 4: Linked Data Assets */}
-                    <div className="tw:flex tw:flex-col tw:gap-2">
-                      <Box align="center" justify="between">
-                        <Typography
-                          className="tw:text-tertiary"
-                          size="text-xs"
-                          weight="semibold">
-                          {`${t('label.linked-data-asset-plural')} (${
-                            linkedAssets.length
-                          })`}
-                        </Typography>
-                        {!isViewOnly && (
-                          <DataAssetSelectList
-                            placeholder={t('label.search-assets-to-link')}
-                            popoverClassName="tw:h-100"
-                            popoverPlacement="bottom end"
-                            renderTrigger={({ open }) => (
-                              <Button
-                                className="tw:px-2.5 tw:py-1.5"
-                                color="link-color"
-                                iconLeading={Plus}
-                                size="sm"
-                                onPress={open}>
-                                {t('label.link-an-entity', {
-                                  entity: t('label.asset'),
-                                })}
-                              </Button>
-                            )}
-                            searchIndex={SearchIndex.DATA_ASSET}
-                            value={linkedAssets}
-                            onChange={handleAssetChange}
-                          />
-                        )}
-                      </Box>
-
-                      {isViewOnly ? (
-                        <LinkedAssetsReadOnly assets={linkedAssets} />
-                      ) : (
-                        <>
-                          {linkedAssets.length === 0 ? (
-                            <EmptyLinkedAssets />
-                          ) : (
-                            <div className="tw:flex tw:flex-col tw:gap-2">
-                              {linkedAssets.map((asset) => {
-                                const assetKey =
-                                  asset.reference?.fullyQualifiedName ??
-                                  String(asset.value ?? '');
-
-                                return (
-                                  <LinkedAssetCard
-                                    asset={asset}
-                                    key={assetKey}
-                                    onRemove={(fqn) =>
-                                      setLinkedAssets((prev) =>
-                                        prev.filter(
-                                          (a) =>
-                                            (a.reference?.fullyQualifiedName ??
-                                              String(a.value ?? '')) !== fqn
-                                        )
-                                      )
-                                    }
-                                  />
-                                );
-                              })}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Section 5: Metadata */}
-                    <div>
+              {/* Scrollable body */}
+              <div className="tw:flex tw:flex-col tw:gap-5 tw:pb-4">
+                {/* Read-only banner for non-owners */}
+                {isViewOnly && !isOwner && !canDelete && memoryToEdit && (
+                  <div className="tw:flex tw:items-start tw:gap-2 tw:rounded-lg tw:border tw:border-warning-300 tw:bg-warning-50 tw:px-3 tw:py-2.5">
+                    <Lock01
+                      className="tw:shrink-0 tw:text-warning-700 tw:mt-0.5"
+                      size={16}
+                      strokeWidth={2}
+                    />
+                    <div className="tw:flex tw:flex-col">
                       <Typography
-                        className="tw:text-tertiary"
+                        className="tw:text-warning-700"
                         size="text-xs"
                         weight="semibold">
-                        {t('label.metadata')}
+                        {t('label.cant-edit-this-memory')}
                       </Typography>
-                      <Card className="tw:flex tw:flex-col tw:divide-y tw:divide-tertiary tw:mt-2">
-                        {/* Visibility row — FormField escape hatch for badge vs select display */}
-                        <div className="tw:flex tw:items-start tw:gap-3 tw:px-4 tw:py-3">
-                          <div className="tw:basis-[30%] tw:shrink-0">
-                            <Typography
-                              className="tw:text-quaternary tw:w-28 tw:shrink-0"
-                              size="text-sm">
-                              {t('label.visibility')}
-                            </Typography>
-                          </div>
-                          <FormField control={form.control} name="visibility">
-                            {({ field }) => {
-                              const visibilityOption = VISIBILITY_OPTIONS.find(
-                                (o) => o.id === field.value
-                              );
+                      <Typography
+                        as="p"
+                        className="tw:text-warning-700 tw:leading-4"
+                        size="text-xs">
+                        {t('message.context-memory-read-only-description', {
+                          creatorName:
+                            memoryToEdit.owners?.[0]?.name ??
+                            memoryToEdit.updatedBy,
+                        })}
+                      </Typography>
+                    </div>
+                  </div>
+                )}
 
-                              return (
-                                <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-2">
-                                  {isEditingVisibility || !memoryToEdit ? (
-                                    <div className="tw:flex tw:items-center tw:gap-2">
-                                      <Select
-                                        className="tw:flex-1"
-                                        data-testid="memory-visibility-select"
-                                        fontSize="sm"
-                                        size="sm"
-                                        value={field.value}
-                                        onChange={(key) =>
-                                          field.onChange(key as ShareVisibility)
-                                        }>
-                                        {VISIBILITY_OPTIONS.map((opt) => (
-                                          <Select.Item
-                                            id={opt.id}
-                                            key={opt.id}
-                                            label={t(opt.labelKey)}
-                                          />
-                                        ))}
-                                      </Select>
-                                      {memoryToEdit && (
-                                        <Button
-                                          color="secondary"
-                                          size="sm"
-                                          onClick={() =>
-                                            setIsEditingVisibility(false)
-                                          }>
-                                          {t('label.cancel')}
-                                        </Button>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className="tw:flex tw:items-center tw:gap-2">
-                                      <Badge
-                                        className="tw:flex tw:items-center tw:gap-1 tw:uppercase"
-                                        color={
-                                          visibilityOption?.badgeColor ??
-                                          'brand'
-                                        }
-                                        size="sm"
-                                        type="color">
-                                        {visibilityOption
-                                          ? VISIBILITY_ICON_MAP[
-                                              visibilityOption.iconName
-                                            ]
-                                          : VISIBILITY_ICON_MAP.Share07}
-                                        {visibilityOption
-                                          ? t(visibilityOption.labelKey)
-                                          : t('label.shared')}
-                                      </Badge>
-                                      {visibilityOption && (
-                                        <Typography
-                                          className="tw:text-quaternary"
-                                          size="text-xs">
-                                          {t(visibilityOption.descriptionKey)}
-                                        </Typography>
-                                      )}
-                                      {!isViewOnly && isOwner && (
-                                        <ButtonUtility
-                                          color="tertiary"
-                                          data-testid="memory-visibility-edit-button"
-                                          icon={
-                                            <EditIcon height={14} width={14} />
-                                          }
-                                          onClick={() =>
-                                            setIsEditingVisibility(true)
-                                          }
-                                        />
-                                      )}
-                                    </div>
+                {/* Inline error alert */}
+                {modalError && (
+                  <Alert
+                    closable
+                    title={modalError}
+                    variant="error"
+                    onClose={() => setModalError('')}
+                  />
+                )}
+
+                {/* Section 1: Title — uses getField (TEXT) */}
+                <div className="tw:flex tw:flex-col tw:gap-1">
+                  {getField(titleField)}
+                </div>
+
+                {/* Section 2: Memory content — FormField escape hatch for custom preview/edit tabs */}
+                <FormField
+                  control={form.control}
+                  name="memory"
+                  rules={{
+                    required: t('label.field-required', {
+                      field: t(MEMORY_LABEL_KEY),
+                    }),
+                  }}>
+                  {({ field, fieldState }) => (
+                    <div className="tw:flex tw:flex-col tw:gap-1">
+                      <div className="tw:flex tw:items-center tw:justify-between">
+                        <div className="tw:flex tw:items-center tw:gap-1">
+                          <FormItemLabel
+                            label={t(MEMORY_LABEL_KEY)}
+                            required={!isViewOnly}
+                          />
+                          <Tooltip
+                            title={t(
+                              contextCenterClassBase.getMemoryPromptTranslationKey()
+                            )}>
+                            <TooltipTrigger className="tw:leading-0">
+                              <InfoCircle
+                                className="tw:text-utility-gray-400 tw:cursor-pointer"
+                                size={14}
+                                strokeWidth={2}
+                              />
+                            </TooltipTrigger>
+                          </Tooltip>
+                        </div>
+                        {!isViewOnly && (
+                          <Button
+                            color="secondary"
+                            size="sm"
+                            onClick={() =>
+                              setMemoryTab((prev) =>
+                                prev === 'edit' ? 'preview' : 'edit'
+                              )
+                            }>
+                            {memoryTab === 'edit'
+                              ? t('label.preview')
+                              : t('label.edit')}
+                          </Button>
+                        )}
+                      </div>
+                      {renderMemoryContent(field)}
+                      {fieldState.error?.message && (
+                        <HintText isInvalid>
+                          {fieldState.error.message}
+                        </HintText>
+                      )}
+                    </div>
+                  )}
+                </FormField>
+
+                {/* Section 3: Type — uses getField (SELECT) */}
+                <div className="tw:flex tw:flex-col tw:gap-1">
+                  {getField(memoryTypeField)}
+                </div>
+
+                {/* Section 4: Linked Data Assets */}
+                <div className="tw:flex tw:flex-col tw:gap-2">
+                  <Box align="center" justify="between">
+                    <Typography
+                      className="tw:text-tertiary"
+                      size="text-xs"
+                      weight="semibold">
+                      {`${t('label.linked-data-asset-plural')} (${
+                        linkedAssets.length
+                      })`}
+                    </Typography>
+                    {!isViewOnly && (
+                      <DataAssetSelectList
+                        placeholder={t('label.search-assets-to-link')}
+                        popoverClassName="tw:h-100"
+                        popoverPlacement="bottom end"
+                        renderTrigger={({ open }) => (
+                          <Button
+                            className="tw:px-2.5 tw:py-1.5"
+                            color="link-color"
+                            iconLeading={Plus}
+                            size="sm"
+                            onPress={open}>
+                            {t('label.link-an-entity', {
+                              entity: t('label.asset'),
+                            })}
+                          </Button>
+                        )}
+                        searchIndex={SearchIndex.DATA_ASSET}
+                        value={linkedAssets}
+                        onChange={handleAssetChange}
+                      />
+                    )}
+                  </Box>
+
+                  {isViewOnly ? (
+                    <LinkedAssetsReadOnly assets={linkedAssets} />
+                  ) : (
+                    <>
+                      {linkedAssets.length === 0 ? (
+                        <EmptyLinkedAssets />
+                      ) : (
+                        <div className="tw:flex tw:flex-col tw:gap-2">
+                          {linkedAssets.map((asset) => {
+                            const assetKey =
+                              asset.reference?.fullyQualifiedName ??
+                              String(asset.value ?? '');
+
+                            return (
+                              <LinkedAssetCard
+                                asset={asset}
+                                key={assetKey}
+                                onRemove={(fqn) =>
+                                  setLinkedAssets((prev) =>
+                                    prev.filter(
+                                      (a) =>
+                                        (a.reference?.fullyQualifiedName ??
+                                          String(a.value ?? '')) !== fqn
+                                    )
+                                  )
+                                }
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Section 5: Metadata */}
+                <div>
+                  <Typography
+                    className="tw:text-tertiary"
+                    size="text-xs"
+                    weight="semibold">
+                    {t('label.metadata')}
+                  </Typography>
+                  <Card className="tw:flex tw:flex-col tw:divide-y tw:divide-tertiary tw:mt-2">
+                    {/* Visibility row — FormField escape hatch for badge vs select display */}
+                    <div className="tw:flex tw:items-start tw:gap-3 tw:px-4 tw:py-3">
+                      <div className="tw:basis-[30%] tw:shrink-0">
+                        <Typography
+                          className="tw:text-quaternary tw:w-28 tw:shrink-0"
+                          size="text-sm">
+                          {t('label.visibility')}
+                        </Typography>
+                      </div>
+                      <FormField control={form.control} name="visibility">
+                        {({ field }) => {
+                          const visibilityOption = VISIBILITY_OPTIONS.find(
+                            (o) => o.id === field.value
+                          );
+
+                          return (
+                            <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-2">
+                              {isEditingVisibility || !memoryToEdit ? (
+                                <div className="tw:flex tw:items-center tw:gap-2">
+                                  <Select
+                                    className="tw:flex-1"
+                                    data-testid="memory-visibility-select"
+                                    fontSize="sm"
+                                    size="sm"
+                                    value={field.value}
+                                    onChange={(key) =>
+                                      field.onChange(key as ShareVisibility)
+                                    }>
+                                    {VISIBILITY_OPTIONS.map((opt) => (
+                                      <Select.Item
+                                        id={opt.id}
+                                        key={opt.id}
+                                        label={t(opt.labelKey)}
+                                      />
+                                    ))}
+                                  </Select>
+                                  {memoryToEdit && (
+                                    <Button
+                                      color="secondary"
+                                      size="sm"
+                                      onClick={() =>
+                                        setIsEditingVisibility(false)
+                                      }>
+                                      {t('label.cancel')}
+                                    </Button>
                                   )}
                                 </div>
-                              );
-                            }}
-                          </FormField>
-                        </div>
-
-                        {/* Tags row */}
-                        <div className="tw:flex tw:flex-col tw:gap-2 tw:px-4 tw:py-3">
-                          <div className="tw:flex tw:items-center tw:gap-3">
-                            <div className="tw:basis-[30%]">
-                              <Typography
-                                className="tw:text-quaternary tw:w-28 tw:shrink-0"
-                                size="text-sm">
-                                {t('label.tag-plural')}
-                              </Typography>
-                            </div>
-                            <div className="tw:flex tw:items-center tw:gap-1.5 tw:flex-wrap tw:flex-1">
-                              {isViewOnly && selectedTags.length === 0 && (
-                                <EmptyTags />
-                              )}
-                              {selectedTags.map((tag) =>
-                                isViewOnly ? (
+                              ) : (
+                                <div className="tw:flex tw:items-center tw:gap-2">
                                   <Badge
-                                    className="tw:max-w-40 tw:min-w-0"
-                                    key={String(tag.tagFQN ?? '')}
+                                    className="tw:flex tw:items-center tw:gap-1 tw:uppercase"
+                                    color={
+                                      visibilityOption?.badgeColor ?? 'brand'
+                                    }
                                     size="sm"
-                                    type="modern">
-                                    {tag.style?.color && (
-                                      <div className="tw:shrink-0">
-                                        <Dot
-                                          size="sm"
-                                          style={{
-                                            color: tag.style?.color,
-                                            marginRight: '6px',
-                                          }}
-                                        />
-                                      </div>
-                                    )}
-                                    <Typography
-                                      ellipsis
-                                      className="tw:text-secondary"
-                                      size="text-xs">
-                                      {tag.tagFQN}
-                                    </Typography>
+                                    type="color">
+                                    {visibilityOption
+                                      ? VISIBILITY_ICON_MAP[
+                                          visibilityOption.iconName
+                                        ]
+                                      : VISIBILITY_ICON_MAP.Share07}
+                                    {visibilityOption
+                                      ? t(visibilityOption.labelKey)
+                                      : t('label.shared')}
                                   </Badge>
-                                ) : (
-                                  <BadgeWithButton
-                                    color="gray"
-                                    key={tag.tagFQN}
-                                    type="modern"
-                                    onButtonClick={() =>
-                                      handleRemoveTag(tag.tagFQN)
-                                    }>
-                                    <div className="tw:max-w-40 tw:flex tw:items-center">
-                                      {tag.style?.color && (
-                                        <div className="tw:shrink-0">
-                                          <Dot
-                                            size="sm"
-                                            style={{
-                                              color: tag.style?.color,
-                                              marginRight: '6px',
-                                            }}
-                                          />
-                                        </div>
-                                      )}
-                                      <Typography
-                                        ellipsis
-                                        className="tw:text-secondary"
-                                        size="text-xs">
-                                        {tag.tagFQN}
-                                      </Typography>
-                                    </div>
-                                  </BadgeWithButton>
-                                )
-                              )}
-                              {!isViewOnly && (
-                                <Button
-                                  color="link-color"
-                                  iconLeading={Plus}
-                                  size="sm"
-                                  onClick={() => setShowTagForm((v) => !v)}>
-                                  {t('label.add-entity', {
-                                    entity: t('label.tag'),
-                                  })}
-                                </Button>
+                                  {visibilityOption && (
+                                    <Typography
+                                      className="tw:text-quaternary"
+                                      size="text-xs">
+                                      {t(visibilityOption.descriptionKey)}
+                                    </Typography>
+                                  )}
+                                  {!isViewOnly && isOwner && (
+                                    <ButtonUtility
+                                      color="tertiary"
+                                      data-testid="memory-visibility-edit-button"
+                                      icon={<EditIcon height={14} width={14} />}
+                                      onClick={() =>
+                                        setIsEditingVisibility(true)
+                                      }
+                                    />
+                                  )}
+                                </div>
                               )}
                             </div>
-                          </div>
+                          );
+                        }}
+                      </FormField>
+                    </div>
 
-                          {showTagForm && !isViewOnly && (
-                            <TagSelectForm
-                              defaultValue={selectedTags.map(
-                                (tag) => tag.tagFQN
-                              )}
-                              fetchApi={fetchTagOptions}
-                              placeholder={t('label.search-entity', {
-                                entity: t('label.tag-plural'),
-                              })}
-                              tagType={TagSource.Classification}
-                              onCancel={() => setShowTagForm(false)}
-                              onSubmit={handleTagSave}
-                            />
-                          )}
+                    {/* Tags row */}
+                    <div className="tw:flex tw:flex-col tw:gap-2 tw:px-4 tw:py-3">
+                      <div className="tw:flex tw:items-center tw:gap-3">
+                        <div className="tw:basis-[30%]">
+                          <Typography
+                            className="tw:text-quaternary tw:w-28 tw:shrink-0"
+                            size="text-sm">
+                            {t('label.tag-plural')}
+                          </Typography>
                         </div>
-
-                        {Boolean(memoryToEdit?.updatedAt) && (
-                          <div className="tw:flex tw:items-center tw:gap-3 tw:px-4 tw:py-3">
-                            <div className="tw:basis-[30%]">
-                              <Typography
-                                className="tw:text-quaternary tw:w-28 tw:shrink-0"
-                                size="text-sm">
-                                {t('label.updated')}
-                              </Typography>
-                            </div>
-                            <Typography
-                              className="tw:text-tertiary"
-                              size="text-sm">
-                              {formatDate(memoryToEdit?.updatedAt)}
-                            </Typography>
-                          </div>
-                        )}
-                        {memoryToEdit &&
-                          contextCenterClassBase
-                            .getMemoryMetadataList(memoryToEdit)
-                            .map(({ key, label, value }) => (
-                              <div
-                                className="tw:flex tw:items-center tw:gap-3 tw:px-4 tw:py-3"
-                                key={key}>
-                                <div className="tw:basis-[30%]">
+                        <div className="tw:flex tw:items-center tw:gap-1.5 tw:flex-wrap tw:flex-1">
+                          {isViewOnly && selectedTags.length === 0 && (
+                            <EmptyTags />
+                          )}
+                          {selectedTags.map((tag) =>
+                            isViewOnly ? (
+                              <Badge
+                                className="tw:max-w-40 tw:min-w-0"
+                                key={String(tag.tagFQN ?? '')}
+                                size="sm"
+                                type="modern">
+                                {tag.style?.color && (
+                                  <div className="tw:shrink-0">
+                                    <Dot
+                                      size="sm"
+                                      style={{
+                                        color: tag.style?.color,
+                                        marginRight: '6px',
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                <Typography
+                                  ellipsis
+                                  className="tw:text-secondary"
+                                  size="text-xs">
+                                  {tag.tagFQN}
+                                </Typography>
+                              </Badge>
+                            ) : (
+                              <BadgeWithButton
+                                color="gray"
+                                key={tag.tagFQN}
+                                type="modern"
+                                onButtonClick={() =>
+                                  handleRemoveTag(tag.tagFQN)
+                                }>
+                                <div className="tw:max-w-40 tw:flex tw:items-center">
+                                  {tag.style?.color && (
+                                    <div className="tw:shrink-0">
+                                      <Dot
+                                        size="sm"
+                                        style={{
+                                          color: tag.style?.color,
+                                          marginRight: '6px',
+                                        }}
+                                      />
+                                    </div>
+                                  )}
                                   <Typography
-                                    className="tw:text-quaternary tw:w-28 tw:shrink-0"
-                                    size="text-sm">
-                                    {label}
+                                    ellipsis
+                                    className="tw:text-secondary"
+                                    size="text-xs">
+                                    {tag.tagFQN}
                                   </Typography>
                                 </div>
-                                {value}
-                              </div>
-                            ))}
-                      </Card>
-                    </div>
-                  </div>
+                              </BadgeWithButton>
+                            )
+                          )}
+                          {!isViewOnly && (
+                            <Button
+                              color="link-color"
+                              iconLeading={Plus}
+                              size="sm"
+                              onClick={() => setShowTagForm((v) => !v)}>
+                              {t('label.add-entity', {
+                                entity: t('label.tag'),
+                              })}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
 
-                  {/* Sticky footer */}
-                  <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:py-4 tw:border-t tw:border-tertiary tw:shrink-0 tw:px-6">
-                    <div>
-                      {Boolean(memoryToEdit) && canDelete && (
-                        <Button
-                          color="tertiary-destructive"
-                          iconLeading={TrashIcon}
-                          isDisabled={isDeleting || isSubmitting}
-                          isLoading={isDeleting}
-                          size="sm"
-                          onClick={handleDelete}>
-                          {t('label.delete')}
-                        </Button>
+                      {showTagForm && !isViewOnly && (
+                        <TagSelectForm
+                          defaultValue={selectedTags.map((tag) => tag.tagFQN)}
+                          fetchApi={fetchTagOptions}
+                          placeholder={t('label.search-entity', {
+                            entity: t('label.tag-plural'),
+                          })}
+                          tagType={TagSource.Classification}
+                          onCancel={() => setShowTagForm(false)}
+                          onSubmit={handleTagSave}
+                        />
                       )}
                     </div>
-                    <div className="tw:flex tw:items-center tw:gap-3">
+
+                    {Boolean(memoryToEdit?.updatedAt) && (
+                      <div className="tw:flex tw:items-center tw:gap-3 tw:px-4 tw:py-3">
+                        <div className="tw:basis-[30%]">
+                          <Typography
+                            className="tw:text-quaternary tw:w-28 tw:shrink-0"
+                            size="text-sm">
+                            {t('label.updated')}
+                          </Typography>
+                        </div>
+                        <Typography className="tw:text-tertiary" size="text-sm">
+                          {formatDate(memoryToEdit?.updatedAt)}
+                        </Typography>
+                      </div>
+                    )}
+                    {memoryToEdit &&
+                      contextCenterClassBase
+                        .getMemoryMetadataList(memoryToEdit)
+                        .map(({ key, label, value }) => (
+                          <div
+                            className="tw:flex tw:items-center tw:gap-3 tw:px-4 tw:py-3"
+                            key={key}>
+                            <div className="tw:basis-[30%]">
+                              <Typography
+                                className="tw:text-quaternary tw:w-28 tw:shrink-0"
+                                size="text-sm">
+                                {label}
+                              </Typography>
+                            </div>
+                            {value}
+                          </div>
+                        ))}
+                  </Card>
+                </div>
+              </div>
+
+              {/* Sticky footer */}
+              <FormDrawerActions>
+                <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:w-full">
+                  <div>
+                    {Boolean(memoryToEdit) && canDelete && (
                       <Button
-                        color="secondary"
-                        isDisabled={isSubmitting || isDeleting}
+                        color="tertiary-destructive"
+                        iconLeading={TrashIcon}
+                        isDisabled={isDeleting || isSubmitting}
+                        isLoading={isDeleting}
                         size="sm"
-                        onClick={handleClose}>
-                        {t('label.cancel')}
+                        onClick={handleDelete}>
+                        {t('label.delete')}
                       </Button>
-                      {showEditButton && (
-                        <Button
-                          color="primary"
-                          iconLeading={EditIcon}
-                          size="sm"
-                          onClick={handleSwitchToEdit}>
-                          {t('label.edit')}
-                        </Button>
-                      )}
-                      {showSubmitButton && (
-                        <Button
-                          color="primary"
-                          isDisabled={
-                            isSubmitDisabled || isSubmitting || isDeleting
-                          }
-                          isLoading={isSubmitting}
-                          size="sm"
-                          type="submit">
-                          {submitLabel}
-                        </Button>
-                      )}
-                    </div>
+                    )}
                   </div>
-                </HookForm>
-              </ConfigProvider>
-            </div>
-          </Dialog.Content>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+                  <div className="tw:flex tw:items-center tw:gap-3">
+                    <Button
+                      color="secondary"
+                      isDisabled={isSubmitting || isDeleting}
+                      size="sm"
+                      onClick={handleClose}>
+                      {t('label.cancel')}
+                    </Button>
+                    {showEditButton && (
+                      <Button
+                        color="primary"
+                        iconLeading={EditIcon}
+                        size="sm"
+                        onClick={handleSwitchToEdit}>
+                        {t('label.edit')}
+                      </Button>
+                    )}
+                    {showSubmitButton && (
+                      <Button
+                        color="primary"
+                        form="context-memory-form"
+                        isDisabled={
+                          isSubmitDisabled || isSubmitting || isDeleting
+                        }
+                        isLoading={isSubmitting}
+                        size="sm"
+                        type="submit">
+                        {submitLabel}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </FormDrawerActions>
+            </HookForm>
+          </ConfigProvider>
+        </div>
+      </Dialog.Content>
+    </Dialog>
   );
 };
 

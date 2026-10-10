@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Modal, Typography } from 'antd';
+import { Button, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +24,7 @@ import {
 } from '../../../utils/CSV/CSVPureUtils';
 import { DEFAULT_ENTITY_PERMISSION } from '../../../utils/PermissionsUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import { CustomPropertyTable } from '../../common/CustomPropertyTable/CustomPropertyTable';
 import { ExtentionEntities } from '../../common/CustomPropertyTable/CustomPropertyTable.interface';
 import { KeyDownStopPropagationWrapper } from '../../common/KeyDownStopPropagationWrapper/KeyDownStopPropagationWrapper';
@@ -90,10 +91,8 @@ export const ModalWithCustomPropertyEditor = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       className="description-markdown-editor"
-      closable={false}
       data-testid="custom-property-editor"
       footer={
         <KeyDownStopPropagationWrapper>
@@ -115,6 +114,7 @@ export const ModalWithCustomPropertyEditor = ({
           </Button>
         </KeyDownStopPropagationWrapper>
       }
+      isSubmitting={isSaveLoading}
       maskClosable={false}
       open={visible}
       title={<Typography.Text data-testid="header">{header}</Typography.Text>}

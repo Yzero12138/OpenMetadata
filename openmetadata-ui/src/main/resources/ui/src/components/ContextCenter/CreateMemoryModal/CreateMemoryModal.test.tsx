@@ -89,6 +89,7 @@ jest.mock('antd', () => ({
 }));
 
 jest.mock('@openmetadata/ui-core-components', () => ({
+  ...jest.requireActual('@openmetadata/ui-core-components'),
   Alert: jest.fn(({ title }: { title: string }) => (
     <div role="alert">{title}</div>
   )),

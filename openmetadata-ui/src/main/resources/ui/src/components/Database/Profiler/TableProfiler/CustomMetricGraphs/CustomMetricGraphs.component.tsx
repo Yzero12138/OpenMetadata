@@ -12,7 +12,7 @@
  */
 import { Button, Dropdown } from '@openmetadata/ui-core-components';
 import { DotsVertical } from '@untitledui/icons';
-import { Form, Modal } from 'antd';
+import { Form } from 'antd';
 import { AxiosError } from 'axios';
 import { isEmpty, isUndefined, last, omit, toPairs } from 'lodash';
 import { useMemo, useState } from 'react';
@@ -51,6 +51,7 @@ import {
   showErrorToast,
   showSuccessToast,
 } from '../../../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../../../common/atoms/drawer/LegacyFormDrawer';
 import DeleteModal from '../../../../common/DeleteModal/DeleteModal';
 import ErrorPlaceHolder from '../../../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import CustomMetricForm from '../../../../DataQuality/CustomMetricForm/CustomMetricForm.component';
@@ -321,10 +322,9 @@ const CustomMetricGraphs = ({
       />
       {isEditModalVisible && !isUndefined(selectedMetrics) && (
         <Modal
-          centered
           destroyOnClose
           cancelButtonProps={{ disabled: isActionLoading }}
-          closable={false}
+          isSubmitting={isActionLoading}
           okButtonProps={{ loading: isActionLoading }}
           okText={t('label.save')}
           open={isEditModalVisible}

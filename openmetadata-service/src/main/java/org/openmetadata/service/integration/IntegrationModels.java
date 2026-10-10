@@ -2,6 +2,7 @@ package org.openmetadata.service.integration;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -114,12 +115,82 @@ public final class IntegrationModels {
       @JsonIgnore int jdbcType,
       @JsonIgnore int size,
       @JsonIgnore int scale,
-      @JsonIgnore boolean hasDefault) {}
+      @JsonIgnore boolean hasDefault,
+      @JsonIgnore boolean unicodeSafeTarget,
+      @JsonIgnore int unicodeCapacity) {
+    /** Unverified character receivers fail closed; inspectors supply explicit capabilities. */
+    public ColumnDefinition(
+        String name,
+        String dataType,
+        boolean nullable,
+        boolean primaryKey,
+        int jdbcType,
+        int size,
+        int scale,
+        boolean hasDefault) {
+      this(name, dataType, nullable, primaryKey, jdbcType, size, scale, hasDefault, false, 0);
+    }
+  }
 
   public record TableDefinition(String schema, String name, List<ColumnDefinition> columns) {}
 
-  public record ConnectionDefinition(
-      String id, String displayName, String role, String databaseType, boolean synthetic) {}
+  public static class ConnectionInput {
+    public String name;
+    public String displayName;
+    public String role;
+    public String databaseType;
+    public String databaseVersion;
+    public String host;
+    public Integer port;
+    public String database;
+    public String username;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    public String password;
+
+    public List<String> schemas;
+    public String oracleConnectionType;
+    public String tlsMode;
+    public Boolean enabled = true;
+
+    protected void copyInput(ConnectionInput input) {
+      name = input.name;
+      displayName = input.displayName;
+      role = input.role;
+      databaseType = input.databaseType;
+      databaseVersion = input.databaseVersion;
+      host = input.host;
+      port = input.port;
+      database = input.database;
+      username = input.username;
+      schemas = input.schemas == null ? null : List.copyOf(input.schemas);
+      oracleConnectionType = input.oracleConnectionType;
+      tlsMode = input.tlsMode;
+      enabled = input.enabled;
+    }
+  }
+
+  public static final class ConnectionUpdate extends ConnectionInput {
+    public Long version;
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public static final class ConnectionDefinition extends ConnectionInput {
+    public String id;
+    public long version;
+    public boolean managed;
+    public boolean synthetic;
+    public boolean passwordSet;
+    public Long createdAt;
+    public Long updatedAt;
+    public String updatedBy;
+    public List<String> supportedModes;
+  }
+
+  public static final class StoredConnection {
+    public ConnectionDefinition definition;
+    public String encryptedPassword;
+  }
 
   public record ValidationError(String field, String code, String message) {}
 
@@ -145,6 +216,33 @@ public final class IntegrationModels {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
     return update ? read(input, UpdateInput.class) : read(input, TaskInput.class);
+  }
+
+  public static ConnectionInput readConnection(JsonNode input, boolean update) {
+    if (update
+        && (input == null
+            || !input.path("version").isIntegralNumber()
+            || !input.path("version").canConvertToLong()
+            || input.path("version").longValue() < 1)) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
+    return update ? read(input, ConnectionUpdate.class) : read(input, ConnectionInput.class);
+  }
+
+  public static String serializeConnection(StoredConnection connection) {
+    try {
+      return JSON.writeValueAsString(connection);
+    } catch (JsonProcessingException e) {
+      throw new IntegrationException("STORAGE_UNAVAILABLE", 503);
+    }
+  }
+
+  public static StoredConnection deserializeConnection(String json) {
+    try {
+      return JSON.readValue(json, StoredConnection.class);
+    } catch (JsonProcessingException e) {
+      throw new IntegrationException("STORAGE_UNAVAILABLE", 503);
+    }
   }
 
   public static JsonNode readBody(InputStream input) {

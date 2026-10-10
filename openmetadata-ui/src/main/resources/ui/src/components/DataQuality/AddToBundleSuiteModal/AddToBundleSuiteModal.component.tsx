@@ -10,13 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import {
-  Button,
-  Dialog,
-  Modal,
-  ModalOverlay,
-} from '@openmetadata/ui-core-components';
+import { Button } from '@openmetadata/ui-core-components';
 import { Select } from 'antd';
 import { AxiosError } from 'axios';
 import { debounce } from 'lodash';
@@ -35,6 +29,7 @@ import { getEntityName } from '../../../utils/EntityNameUtils';
 import { getPopupContainer } from '../../../utils/formPureUtils';
 import observabilityRouterClassBase from '../../../utils/ObservabilityRouterClassBase';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import { CoreFormDrawer as Dialog } from '../../common/atoms/drawer/CoreFormDrawer';
 import { AddToBundleSuiteModalProps } from './AddToBundleSuiteModal.interface';
 const AddToBundleSuiteModal: React.FC<AddToBundleSuiteModalProps> = ({
   open,
@@ -144,56 +139,55 @@ const AddToBundleSuiteModal: React.FC<AddToBundleSuiteModalProps> = ({
   };
 
   return (
-    <ModalOverlay isDismissable isOpen={open} onOpenChange={onCancel}>
-      <Modal>
-        <Dialog
-          showCloseButton
-          title={t('label.add-test-cases-to-bundle-suite')}
-          onClose={onCancel}>
-          <Dialog.Content className="tw:min-h-45">
-            <Select
-              allowClear
-              showSearch
-              className="w-full"
-              data-testid="bundle-suite-select"
-              disabled={submitting}
-              filterOption={false}
-              getPopupContainer={getPopupContainer}
-              listHeight={150}
-              loading={optionsLoading}
-              options={options}
-              placeholder={t('label.select-field', {
-                field: t('label.bundle-suite'),
-              })}
-              value={selectedSuiteId}
-              onChange={(value) => setSelectedSuiteId(value)}
-              onSearch={(value) => debouncedSearch(value)}
-            />
-          </Dialog.Content>
-          <Dialog.Footer>
-            <div className="tw:col-span-2 tw:flex tw:justify-end tw:gap-3">
-              <Button
-                color="secondary"
-                data-testid="cancel-button"
-                disabled={submitting}
-                onPress={onCancel}>
-                {t('label.cancel')}
-              </Button>
-              <Button
-                color="primary"
-                data-testid="add-button"
-                isDisabled={
-                  !selectedSuiteId || selectedIds.length === 0 || submitting
-                }
-                isLoading={submitting}
-                onPress={handleOk}>
-                {t('label.add')}
-              </Button>
-            </div>
-          </Dialog.Footer>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+    <Dialog
+      isDismissable
+      isOpen={open}
+      isSubmitting={submitting}
+      title={t('label.add-test-cases-to-bundle-suite')}
+      onClose={onCancel}
+      onOpenChange={onCancel}>
+      <Dialog.Content className="tw:min-h-45">
+        <Select
+          allowClear
+          showSearch
+          className="w-full"
+          data-testid="bundle-suite-select"
+          disabled={submitting}
+          filterOption={false}
+          getPopupContainer={getPopupContainer}
+          listHeight={150}
+          loading={optionsLoading}
+          options={options}
+          placeholder={t('label.select-field', {
+            field: t('label.bundle-suite'),
+          })}
+          value={selectedSuiteId}
+          onChange={(value) => setSelectedSuiteId(value)}
+          onSearch={(value) => debouncedSearch(value)}
+        />
+      </Dialog.Content>
+      <Dialog.Footer>
+        <div className="tw:col-span-2 tw:flex tw:justify-end tw:gap-3">
+          <Button
+            color="secondary"
+            data-testid="cancel-button"
+            disabled={submitting}
+            onPress={onCancel}>
+            {t('label.cancel')}
+          </Button>
+          <Button
+            color="primary"
+            data-testid="add-button"
+            isDisabled={
+              !selectedSuiteId || selectedIds.length === 0 || submitting
+            }
+            isLoading={submitting}
+            onPress={handleOk}>
+            {t('label.add')}
+          </Button>
+        </div>
+      </Dialog.Footer>
+    </Dialog>
   );
 };
 

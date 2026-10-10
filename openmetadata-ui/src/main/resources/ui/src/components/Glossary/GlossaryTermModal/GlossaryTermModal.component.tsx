@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Modal } from 'antd';
+import { Button } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { AxiosError } from 'axios';
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
@@ -19,6 +19,7 @@ import { EntityType, TabSpecificField } from '../../../enums/entity.enum';
 import { GlossaryTerm } from '../../../generated/entity/data/glossaryTerm';
 import { getGlossaryTermByFQN } from '../../../rest/glossaryAPI';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import { EntityAttachmentProvider } from '../../common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
 import Loader from '../../common/Loader/Loader';
 import AddGlossaryTermForm from '../AddGlossaryTermForm/AddGlossaryTermForm.component';
@@ -118,11 +119,9 @@ const GlossaryTermModal: FC<Props> = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       cancelText={t('label.cancel')}
       className="edit-glossary-modal"
-      closable={false}
       data-testid="edit-glossary-modal"
       footer={[
         <Button key="cancel-btn" type="link" onClick={onCancel}>
@@ -137,6 +136,7 @@ const GlossaryTermModal: FC<Props> = ({
           {t('label.save')}
         </Button>,
       ]}
+      isSubmitting={saving}
       maskClosable={false}
       okText={t('label.save')}
       open={visible}

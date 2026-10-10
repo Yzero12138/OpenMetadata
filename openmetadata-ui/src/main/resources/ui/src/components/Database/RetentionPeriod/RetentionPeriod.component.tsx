@@ -16,7 +16,6 @@ import {
   Form,
   FormProps,
   Input,
-  Modal,
   Space,
   Tooltip,
   Typography,
@@ -33,6 +32,7 @@ import {
   VALIDATION_MESSAGES,
 } from '../../../constants/constants';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import './retention-period.less';
 import { RetentionPeriodProps } from './RetentionPeriod.interface';
 // Helper function to detect and format ISO 8601 duration
@@ -150,12 +150,11 @@ const RetentionPeriod = ({
       </Space>
 
       <Modal
-        centered
         destroyOnClose
         cancelText={t('label.cancel')}
-        closable={false}
         confirmLoading={isLoading}
         data-testid="retention-period-modal"
+        isSubmitting={isLoading}
         maskClosable={false}
         okButtonProps={{
           form: 'retention-period-form',

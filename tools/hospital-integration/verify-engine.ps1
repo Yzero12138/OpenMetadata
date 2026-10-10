@@ -22,6 +22,9 @@ $secret = $null
 $sourcePassword = $null
 $targetPassword = $null
 $forwardProcess = $null
+$fullId=$null
+$cdcId=$null
+$mappedId=$null
 function Start-EngineForward {
     if ($script:forwardProcess -and -not $script:forwardProcess.HasExited) {
         Stop-Process -Id $script:forwardProcess.Id -Force
@@ -98,6 +101,22 @@ function Wait-Job([string]$JobId,[string[]]$Expected,[int]$Seconds=240) {
         Start-Sleep -Seconds 2
     } while([DateTimeOffset]::UtcNow -lt $deadline)
     throw "Job $JobId did not reach $($Expected -join '/') before the deadline; last state $($job.jobStatus)"
+}
+function Wait-RestartJob([string]$JobId,[int]$Seconds=60) {
+    # Cold startup can briefly expose the prior savepoint history before rehydrating a running job.
+    # Give the native scheduler its bounded recovery window before submitting the same ID again.
+    $deadline=[DateTimeOffset]::UtcNow.AddSeconds($Seconds)
+    $lastJob=$null
+    do {
+        $lastJob=Invoke-Engine GET "/job-info/$JobId"
+        if($lastJob.jobStatus -eq 'RUNNING'){return $lastJob}
+        if($lastJob.jobStatus -in @('FAILED','CANCELED')){
+            throw 'The synthetic job reached a failure state during engine recovery'
+        }
+        if([DateTimeOffset]::UtcNow -lt $deadline){Start-Sleep -Seconds 2}
+    }while([DateTimeOffset]::UtcNow -lt $deadline)
+    if($lastJob.jobStatus -eq 'SAVEPOINT_DONE'){return $lastJob}
+    throw 'The restarted synthetic job did not recover or expose a confirmed paused state'
 }
 function Get-TableDigest([string]$Database,[string]$Table) {
     if($Table -eq 'visit_events_mapped'){
@@ -207,7 +226,7 @@ try {
         }while([DateTimeOffset]::UtcNow -lt $deadline)
         if(-not $pod -or $pod.metadata.uid -eq $oldUid -or @($pod.status.conditions|Where-Object{$_.type -eq 'Ready' -and $_.status -eq 'True'}).Count -ne 1){throw 'A different ready engine Pod was not observed'}
         Start-EngineForward
-        $job=Wait-Job $cdcId @('RUNNING','SAVEPOINT_DONE')
+        $job=Wait-RestartJob $cdcId
         $restartResume='automatic-running'
         if($job.jobStatus -eq 'SAVEPOINT_DONE'){
             $persisted=Invoke-Engine GET "/jobs/checkpoints/$cdcId"
@@ -254,6 +273,21 @@ try {
     $evidence | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $evidencePath -Encoding utf8NoBOM
 }
 finally {
+    # IDs are generated only after the zero-active-job preflight. Never stop any other job.
+    if(-not $evidence.passed){
+        foreach($verificationId in @($mappedId,$cdcId,$fullId)){
+            if($verificationId -notmatch '^[0-9]{1,20}$'){continue}
+            try {
+                $verificationJob=Invoke-Engine GET "/job-info/$verificationId"
+                if($verificationJob.jobStatus -and $verificationJob.jobStatus -notin @('CANCELED','FINISHED','STOPPED','SAVEPOINT_DONE','FAILED')){
+                    $null=Invoke-Engine POST '/stop-job' @{jobId=$verificationId;isStopWithSavePoint=$true}
+                    $null=Wait-Job $verificationId @('CANCELED','FINISHED','STOPPED','SAVEPOINT_DONE','FAILED') 20
+                }
+            } catch {
+                Write-Warning "Synthetic verification job $verificationId could not be confirmed stopped; inspect its state before another fixture reset."
+            }
+        }
+    }
     if($forwardProcess -and -not $forwardProcess.HasExited){Stop-Process -Id $forwardProcess.Id -Force}
     $sourcePassword=$null
     $targetPassword=$null

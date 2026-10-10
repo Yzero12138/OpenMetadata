@@ -25,6 +25,7 @@ jest.mock('react-i18next', () => ({
 }));
 
 jest.mock('@openmetadata/ui-core-components', () => ({
+  ...jest.requireActual('@openmetadata/ui-core-components'),
   Badge: ({
     children,
     ...rest

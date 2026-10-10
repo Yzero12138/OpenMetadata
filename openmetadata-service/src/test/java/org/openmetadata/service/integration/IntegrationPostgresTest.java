@@ -114,6 +114,57 @@ class IntegrationPostgresTest {
   }
 
   @Test
+  void managedConnectionSurvivesDaoReopenAndDiscoversRealScopedTables() throws Exception {
+    org.openmetadata.service.fernet.Fernet.getInstance()
+        .setFernetKey(java.util.Base64.getUrlEncoder().encodeToString(new byte[32]));
+    String jdbcUrl = System.getenv("HOSPITAL_INTEGRATION_TEST_JDBC_URL");
+    java.net.URI uri = java.net.URI.create(jdbcUrl.substring(5));
+    var connectionStore =
+        new EntityExtensionConnectionStore(() -> database.onDemand(EntityExtensionDAO.class));
+    var tasks = new EntityExtensionTaskStore(database.onDemand(EntityExtensionDAO.class));
+    var registry = new IntegrationConnections(configuration, connectionStore, tasks);
+    var input = IntegrationConnectionsTest.input("Postgres");
+    input.name = "managed_" + UUID.randomUUID().toString().replace("-", "");
+    input.host = uri.getHost();
+    input.port = uri.getPort();
+    input.database = uri.getPath().substring(1);
+    input.username = "postgres";
+    input.password = PASSWORD;
+    input.schemas = List.of("restricted");
+    var created = registry.create(input, "synthetic-admin");
+    var reopened =
+        new IntegrationConnections(
+            configuration,
+            new EntityExtensionConnectionStore(() -> database.onDemand(EntityExtensionDAO.class)),
+            tasks);
+    var inspector = new JdbcInspector(reopened::endpoint);
+    assertTrue(inspector.test(created.id));
+    var options = inspector.tables(created.id, false);
+    assertTrue(options.stream().anyMatch(table -> "hidden_patient".equals(table.name())));
+    assertTrue(
+        options.stream()
+            .allMatch(table -> "restricted".equals(table.schema()) && table.columns().isEmpty()));
+    assertTrue(
+        inspector
+            .table(created.id, "restricted", "hidden_patient")
+            .columns()
+            .getFirst()
+            .primaryKey());
+    assertEquals(
+        "SCHEMA_NOT_ALLOWED",
+        assertThrows(
+                IntegrationException.class, () -> inspector.table(created.id, "public", "patient"))
+            .code());
+    String stored =
+        database
+            .onDemand(EntityExtensionDAO.class)
+            .getExtension(UUID.fromString(created.id), EntityExtensionConnectionStore.EXTENSION);
+    assertFalse(stored.contains(PASSWORD));
+    assertTrue(stored.contains("fernet:"));
+    reopened.delete(created.id, created.version);
+  }
+
+  @Test
   void inspectorRejectsUnknownConnectionsAndInjectedIdentifiers() {
     PostgresInspector inspector = new PostgresInspector(configuration);
     assertThrows(IntegrationException.class, () -> inspector.tables("production"));

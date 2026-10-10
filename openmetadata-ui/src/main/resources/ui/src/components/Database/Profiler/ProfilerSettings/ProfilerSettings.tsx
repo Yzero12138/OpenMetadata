@@ -14,7 +14,8 @@
 import Form, { FormProps, IChangeEvent } from '@rjsf/core';
 import { ValidatorType } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
-import { Modal } from 'antd';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
+
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { FC, useEffect, useMemo, useState } from 'react';
@@ -139,7 +140,6 @@ const ProfilerSettings: FC<ProfilerSettingsProps> = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       bodyStyle={{
         maxHeight: 600,
@@ -148,9 +148,9 @@ const ProfilerSettings: FC<ProfilerSettingsProps> = ({
       cancelButtonProps={{
         type: 'link',
       }}
-      closable={false}
       confirmLoading={isUpdating}
       data-testid="profiler-settings-modal"
+      isSubmitting={isUpdating}
       maskClosable={false}
       okButtonProps={{
         form: 'profiler-setting-form',

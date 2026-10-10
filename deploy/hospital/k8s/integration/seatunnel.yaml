@@ -138,7 +138,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: seatunnel
-          image: harbor.qcrmyy.local/coop/hospital-seatunnel:3.0.0-pg-v1@sha256:70e3b4cfa52f90783262539d9c08c5c2cc5458784c30561204a6e74172092c16
+          image: hospital-seatunnel:3.0.0-jdbc-v2
           ports:
             - name: http
               containerPort: 8080

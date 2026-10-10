@@ -10,9 +10,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Form, FormProps, Input, Modal } from 'antd';
+import { Form, FormProps, Input } from 'antd';
 import { FC } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 
 export interface LinkData {
   href: string;

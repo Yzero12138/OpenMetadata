@@ -11,13 +11,14 @@
  *  limitations under the License.
  */
 import Icon from '@ant-design/icons/lib/components/Icon';
-import { Button, Col, Form, Input, Modal, Row } from 'antd';
+import { Button, Col, Form, Input, Row } from 'antd';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconDelete } from '../../../assets/svg/ic-delete.svg';
 import { ReactComponent as PlusIcon } from '../../../assets/svg/plus-primary.svg';
 import { TermReference } from '../../../generated/entity/data/glossaryTerm';
 import { referenceURLValidator } from '../../../utils/GlossaryPureUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 interface GlossaryTermReferencesModalProps {
   references: TermReference[];
   isVisible: boolean;
@@ -77,6 +78,7 @@ const GlossaryTermReferencesModal = ({
           {t('label.save')}
         </Button>,
       ]}
+      isSubmitting={saving}
       open={isVisible}
       title={t('label.reference-plural')}
       onCancel={onClose}>

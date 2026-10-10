@@ -18,9 +18,11 @@ import {
 } from '../../rest/hospitalIntegrationAPI';
 import {
   canResumeIntegrationTask,
+  emptyIntegrationConnection,
   EMPTY_INTEGRATION_TASK,
   isIntegrationRunBusy,
   isIntegrationRunUncertain,
+  validateIntegrationConnectionInput,
   validateIntegrationInput,
 } from './HospitalIntegrationUtils';
 
@@ -131,5 +133,72 @@ describe('Hospital integration validation and run safety', () => {
     expect(canResumeIntegrationTask('CDC', { ...run, canResume: false })).toBe(
       false
     );
+  });
+
+  it('matches the server lowercase technical-name boundary', () => {
+    for (const name of ['UpperCase', 'a'.repeat(64), '1invalid']) {
+      expect(
+        validateIntegrationInput({ ...input, name }, [source], [target])
+      ).toContain('invalidName');
+    }
+
+    expect(
+      validateIntegrationInput(
+        { ...input, name: 'a'.repeat(63) },
+        [source],
+        [target]
+      )
+    ).not.toContain('invalidName');
+  });
+
+  it('defaults to verified TLS and requires a real version, credentials, and bounded schema scope', () => {
+    const value = {
+      ...emptyIntegrationConnection(),
+      name: 'synthetic_source',
+      displayName: 'Synthetic source',
+      host: 'example.invalid',
+      database: 'synthetic',
+      username: 'reader',
+      password: 'synthetic-test-password',
+    };
+
+    expect(value.tlsMode).toBe('VERIFY');
+    expect(validateIntegrationConnectionInput(value, false)).toContain(
+      'databaseVersionRequired'
+    );
+
+    const valid = { ...value, databaseVersion: '17.2' };
+
+    expect(validateIntegrationConnectionInput(valid, false)).toEqual([]);
+    expect(
+      validateIntegrationConnectionInput({ ...valid, password: '' }, false)
+    ).toContain('passwordRequired');
+    expect(
+      validateIntegrationConnectionInput({ ...valid, password: '' }, true)
+    ).not.toContain('passwordRequired');
+    expect(
+      validateIntegrationConnectionInput({ ...valid, schemas: [] }, true)
+    ).toContain('schemasInvalid');
+    expect(
+      validateIntegrationConnectionInput(
+        {
+          ...valid,
+          schemas: Array.from({ length: 9 }, (_, index) => 'scope_' + index),
+        },
+        true
+      )
+    ).toContain('schemasInvalid');
+    expect(
+      validateIntegrationConnectionInput(
+        { ...valid, schemas: ['public', 'public'] },
+        true
+      )
+    ).toContain('schemasInvalid');
+    expect(
+      validateIntegrationConnectionInput(
+        { ...valid, databaseType: 'Mysql' },
+        true
+      )
+    ).toContain('mysqlScopeHint');
   });
 });

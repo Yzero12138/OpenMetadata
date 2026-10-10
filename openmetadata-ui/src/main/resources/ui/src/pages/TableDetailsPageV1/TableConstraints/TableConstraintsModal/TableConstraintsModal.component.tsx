@@ -11,13 +11,14 @@
  *  limitations under the License.
  */
 import Icon from '@ant-design/icons/lib/components/Icon';
-import { Button, Empty, Form, Modal, Select, Space, Typography } from 'antd';
+import { Button, Empty, Form, Select, Space, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import { debounce, isEmpty } from 'lodash';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as IconDelete } from '../../../../assets/svg/ic-delete.svg';
 import { ReactComponent as PlusIcon } from '../../../../assets/svg/plus-primary.svg';
+import { LegacyFormDrawer as Modal } from '../../../../components/common/atoms/drawer/LegacyFormDrawer';
 import Loader from '../../../../components/common/Loader/Loader';
 import { PAGE_SIZE } from '../../../../constants/constants';
 import {
@@ -277,10 +278,8 @@ const TableConstraintsModal = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       open
-      closable={false}
       data-testid="table-constraint-modal"
       footer={[
         <Button
@@ -299,6 +298,7 @@ const TableConstraintsModal = ({
           {t('label.save')}
         </Button>,
       ]}
+      isSubmitting={isLoading}
       maskClosable={false}
       title={t(`label.${isEmpty(constraint) ? 'add' : 'update'}-entity`, {
         entity: t('label.table-constraint-plural'),

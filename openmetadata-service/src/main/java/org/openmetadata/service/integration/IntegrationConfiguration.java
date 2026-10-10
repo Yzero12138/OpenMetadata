@@ -2,9 +2,11 @@ package org.openmetadata.service.integration;
 
 import java.net.URI;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import org.openmetadata.service.integration.IntegrationModels.ConnectionDefinition;
 
 public final class IntegrationConfiguration {
   public static final String SOURCE_ID = "synthetic-source";
@@ -134,6 +136,9 @@ public final class IntegrationConfiguration {
     private final String username;
     private final String password;
     private final String database;
+    private final JdbcDialect dialect;
+    private final List<String> schemas;
+    private final String tlsMode;
 
     private JdbcEndpoint(
         String id, String jdbcUrl, String username, String password, String database) {
@@ -142,6 +147,20 @@ public final class IntegrationConfiguration {
       this.username = username;
       this.password = password;
       this.database = database;
+      this.dialect = JdbcDialect.Postgres;
+      this.schemas = List.of("public");
+      this.tlsMode = "DISABLED";
+    }
+
+    public JdbcEndpoint(ConnectionDefinition definition, String password) {
+      id = definition.id;
+      dialect = JdbcDialect.valueOf(definition.databaseType);
+      jdbcUrl = dialect.jdbcUrl(definition);
+      username = definition.username;
+      this.password = password;
+      database = definition.database;
+      schemas = List.copyOf(definition.schemas);
+      tlsMode = definition.tlsMode;
     }
 
     public String jdbcUrl() {
@@ -160,14 +179,24 @@ public final class IntegrationConfiguration {
       return database;
     }
 
+    public JdbcDialect dialect() {
+      return dialect;
+    }
+
+    public String driver() {
+      return dialect.driver();
+    }
+
+    public List<String> schemas() {
+      return schemas;
+    }
+
+    public String tlsMode() {
+      return tlsMode;
+    }
+
     public Properties connectionProperties() {
-      Properties properties = new Properties();
-      properties.setProperty("user", username);
-      properties.setProperty("password", password);
-      properties.setProperty("connectTimeout", "5");
-      properties.setProperty("socketTimeout", "15");
-      properties.setProperty("ApplicationName", "hospital-integration-inspector");
-      return properties;
+      return dialect.properties(username, password);
     }
 
     @Override

@@ -13,12 +13,37 @@
 import { isAxiosError } from 'axios';
 import APIClient from '.';
 
-export interface IntegrationConnection {
-  id: string;
+export type IntegrationDatabaseType = 'Oracle' | 'Mssql' | 'Mysql' | 'Postgres';
+export type IntegrationMode = 'FULL' | 'CDC';
+
+export interface IntegrationConnectionInput {
+  name: string;
   displayName: string;
   role: 'SOURCE' | 'TARGET';
-  databaseType: 'Postgres';
-  synthetic: true;
+  databaseType: IntegrationDatabaseType;
+  databaseVersion: string;
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password?: string;
+  schemas: string[];
+  oracleConnectionType?: 'SERVICE_NAME' | 'SID';
+  tlsMode: 'DISABLED' | 'VERIFY';
+  enabled: boolean;
+}
+
+export interface IntegrationConnection
+  extends Omit<IntegrationConnectionInput, 'password'> {
+  id: string;
+  version: number;
+  managed: boolean;
+  synthetic: boolean;
+  passwordSet: boolean;
+  supportedModes: IntegrationMode[];
+  createdAt?: number;
+  updatedAt?: number;
+  updatedBy?: string;
 }
 
 export interface IntegrationColumn {
@@ -37,8 +62,8 @@ export interface IntegrationTable {
 export interface IntegrationTaskInput {
   name: string;
   displayName: string;
-  sourceConnectionId: 'synthetic-source';
-  targetConnectionId: 'synthetic-ods';
+  sourceConnectionId: string;
+  targetConnectionId: string;
   sourceSchema: string;
   sourceTable: string;
   targetSchema: string;
@@ -116,6 +141,80 @@ export const getIntegrationConnections = async (signal?: AbortSignal) => {
   );
 
   return data.data;
+};
+
+export const getIntegrationConnection = async (
+  id: string,
+  signal?: AbortSignal
+) => {
+  const { data } = await APIClient.get<IntegrationConnection>(
+    `${PREFIX}/connections/${encodeURIComponent(id)}`,
+    { signal }
+  );
+
+  return data;
+};
+
+export const createIntegrationConnection = async (
+  input: IntegrationConnectionInput
+) => {
+  const { data } = await APIClient.post<IntegrationConnection>(
+    `${PREFIX}/connections`,
+    input
+  );
+
+  return data;
+};
+
+export const updateIntegrationConnection = async (
+  id: string,
+  input: IntegrationConnectionInput,
+  version: number
+) => {
+  const { password, ...definition } = input;
+  const { data } = await APIClient.put<IntegrationConnection>(
+    `${PREFIX}/connections/${encodeURIComponent(id)}`,
+    { ...definition, ...(password ? { password } : {}), version }
+  );
+
+  return data;
+};
+
+export const deleteIntegrationConnection = async (
+  id: string,
+  version: number
+) => {
+  await APIClient.delete(`${PREFIX}/connections/${encodeURIComponent(id)}`, {
+    params: { version },
+  });
+};
+
+export const getIntegrationTableOptions = async (
+  id: string,
+  signal?: AbortSignal
+) => {
+  const { data } = await APIClient.get<{ data: IntegrationTable[] }>(
+    `${PREFIX}/connections/${encodeURIComponent(id)}/table-options`,
+    { signal }
+  );
+
+  return data.data;
+};
+
+export const getIntegrationTable = async (
+  id: string,
+  schema: string,
+  table: string,
+  signal?: AbortSignal
+) => {
+  const { data } = await APIClient.get<IntegrationTable>(
+    `${PREFIX}/connections/${encodeURIComponent(
+      id
+    )}/tables/${encodeURIComponent(schema)}/${encodeURIComponent(table)}`,
+    { signal }
+  );
+
+  return data;
 };
 
 export const testIntegrationConnection = async (id: string) => {
@@ -229,6 +328,10 @@ export const getIntegrationFailure = (error: unknown): IntegrationFailure => {
       'VERSION_CONFLICT',
       'TASK_ACTIVE',
       'SAVEPOINT_UNAVAILABLE',
+      'CREDENTIALS_NOT_CONFIGURED',
+      'CONNECTION_UNAVAILABLE',
+      'CONNECTION_DISABLED',
+      'MODE_UNSUPPORTED',
     ]);
 
     return {

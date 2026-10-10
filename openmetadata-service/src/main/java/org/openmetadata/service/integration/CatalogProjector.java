@@ -5,6 +5,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.api.lineage.AddLineage;
@@ -41,10 +42,10 @@ import org.openmetadata.service.util.FullyQualifiedName;
 
 public final class CatalogProjector {
   private static final String PIPELINE_SERVICE = "hospital_seatunnel";
-  private final IntegrationConfiguration configuration;
+  private final IntegrationConnections connections;
 
-  public CatalogProjector(IntegrationConfiguration configuration) {
-    this.configuration = configuration;
+  public CatalogProjector(IntegrationConnections connections) {
+    this.connections = connections;
   }
 
   public CatalogSummary sync(
@@ -55,16 +56,16 @@ public final class CatalogProjector {
       String actor) {
     Table source =
         table(
-            "hospital_synthetic_source",
-            "合成业务源",
+            serviceName(task.sourceConnectionId),
+            connections.connection(task.sourceConnectionId).displayName,
             task.sourceConnectionId,
             sourceDefinition,
             uriInfo,
             actor);
     Table target =
         table(
-            "hospital_synthetic_ods",
-            "合成 ODS 目标",
+            serviceName(task.targetConnectionId),
+            connections.connection(task.targetConnectionId).displayName,
             task.targetConnectionId,
             targetDefinition,
             uriInfo,
@@ -78,7 +79,7 @@ public final class CatalogProjector {
                 .withName(PIPELINE_SERVICE)
                 .withDisplayName("医院 SeaTunnel 集成")
                 .withDescription(
-                    "Apache SeaTunnel 3.0.0 synthetic integration tasks. Runtime connections are managed outside the catalog.")
+                    "Apache SeaTunnel integration tasks. Runtime connections are managed outside the catalog.")
                 .withServiceType(PipelineServiceType.CustomPipeline),
             uriInfo,
             actor);
@@ -95,7 +96,7 @@ public final class CatalogProjector {
                         ? task.name
                         : task.displayName)
                 .withDescription(
-                    "Synthetic "
+                    "SeaTunnel "
                         + task.mode
                         + " integration from "
                         + source.getFullyQualifiedName()
@@ -156,9 +157,13 @@ public final class CatalogProjector {
             new DatabaseService()
                 .withName(serviceName)
                 .withDisplayName(displayName)
-                .withServiceType(DatabaseServiceType.Postgres)
+                .withServiceType(
+                    DatabaseServiceType.fromValue(
+                        connections.connection(connectionId).databaseType))
                 .withDescription(
-                    "Isolated synthetic PostgreSQL integration fixture. Runtime credentials are not stored in the catalog."),
+                    connections.connection(connectionId).synthetic
+                        ? "Isolated synthetic integration fixture. Runtime credentials are not stored in the catalog."
+                        : "Registered business integration connection. Runtime credentials are not stored in the catalog."),
             uriInfo,
             actor);
     DatabaseRepository databaseRepository =
@@ -167,7 +172,7 @@ public final class CatalogProjector {
         upsert(
             databaseRepository,
             new Database()
-                .withName(configuration.endpoint(connectionId).database())
+                .withName(connections.connection(connectionId).database)
                 .withService(service.getEntityReference()),
             uriInfo,
             actor);
@@ -217,7 +222,8 @@ public final class CatalogProjector {
                   field.primaryKey()
                       ? ColumnConstraint.PRIMARY_KEY
                       : field.nullable() ? ColumnConstraint.NULL : ColumnConstraint.NOT_NULL);
-      if (field.jdbcType() == Types.VARCHAR || field.jdbcType() == Types.CHAR) {
+      if (Set.of(Types.VARCHAR, Types.CHAR, Types.NVARCHAR, Types.NCHAR)
+          .contains(field.jdbcType())) {
         column.withDataLength(field.size());
       }
       if (field.jdbcType() == Types.NUMERIC || field.jdbcType() == Types.DECIMAL) {
@@ -237,9 +243,9 @@ public final class CatalogProjector {
       case Types.REAL -> ColumnDataType.FLOAT;
       case Types.FLOAT, Types.DOUBLE -> ColumnDataType.DOUBLE;
       case Types.BIT, Types.BOOLEAN -> ColumnDataType.BOOLEAN;
-      case Types.CHAR -> ColumnDataType.CHAR;
-      case Types.VARCHAR -> ColumnDataType.VARCHAR;
-      case Types.LONGVARCHAR -> ColumnDataType.TEXT;
+      case Types.CHAR, Types.NCHAR -> ColumnDataType.CHAR;
+      case Types.VARCHAR, Types.NVARCHAR -> ColumnDataType.VARCHAR;
+      case Types.LONGVARCHAR, Types.LONGNVARCHAR -> ColumnDataType.TEXT;
       case Types.DATE -> ColumnDataType.DATE;
       case Types.TIME, Types.TIME_WITH_TIMEZONE -> ColumnDataType.TIME;
       case Types.TIMESTAMP -> ColumnDataType.TIMESTAMP;
@@ -261,5 +267,13 @@ public final class CatalogProjector {
     entity.setUpdatedBy(actor);
     repository.prepareInternal(entity, true);
     return repository.createOrUpdate(uriInfo, entity, actor).getEntity();
+  }
+
+  private String serviceName(String id) {
+    return switch (id) {
+      case IntegrationConfiguration.SOURCE_ID -> "hospital_synthetic_source";
+      case IntegrationConfiguration.TARGET_ID -> "hospital_synthetic_ods";
+      default -> "hospital_connection_" + id.replace("-", "");
+    };
   }
 }

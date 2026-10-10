@@ -10,8 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Form, Input, Modal, Space } from 'antd';
+import { Form, Input, Space } from 'antd';
 import { AxiosError } from 'axios';
 import { DateTime } from 'luxon';
 import { FC, useMemo, useState } from 'react';
@@ -21,6 +20,7 @@ import { createAnnouncement } from '../../../rest/announcementsAPI';
 import { getTimeZone } from '../../../utils/date-time/DateTimeUtils';
 import { getEntityFeedLink } from '../../../utils/EntityPureUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 
 import { FieldProp, FieldTypes } from '../../../interface/FormUtils.interface';
 import { getField } from '../../../utils/formUtils';
@@ -103,11 +103,10 @@ const AddAnnouncementModal: FC<Props> = ({
 
   return (
     <Modal
-      centered
       className="announcement-modal"
-      closable={false}
       confirmLoading={isLoading}
       data-testid="add-announcement"
+      isSubmitting={isLoading}
       maskClosable={false}
       okButtonProps={{
         id: 'announcement-submit',

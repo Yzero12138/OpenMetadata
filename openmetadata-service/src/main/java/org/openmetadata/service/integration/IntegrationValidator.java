@@ -4,6 +4,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -17,11 +18,18 @@ import org.openmetadata.service.integration.IntegrationModels.ValidationError;
 import org.openmetadata.service.integration.IntegrationModels.ValidationResult;
 
 public final class IntegrationValidator {
-  private static final Pattern IDENTIFIER = Pattern.compile("[a-zA-Z_][a-zA-Z0-9_]{0,62}");
+  private static final Pattern IDENTIFIER = Pattern.compile("[\\p{L}_][\\p{L}\\p{N}_$#]{0,127}");
   private static final Pattern TASK_NAME = Pattern.compile("[a-z][a-z0-9_-]{0,62}");
   private static final List<Integer> INTEGERS =
       List.of(Types.SMALLINT, Types.INTEGER, Types.BIGINT);
-  private static final Set<Integer> STRINGS = Set.of(Types.CHAR, Types.VARCHAR, Types.LONGVARCHAR);
+  private static final Set<Integer> STRINGS =
+      Set.of(
+          Types.CHAR,
+          Types.VARCHAR,
+          Types.LONGVARCHAR,
+          Types.NCHAR,
+          Types.NVARCHAR,
+          Types.LONGNVARCHAR);
   private static final Set<Integer> DECIMALS = Set.of(Types.DECIMAL, Types.NUMERIC);
 
   private IntegrationValidator() {}
@@ -38,7 +46,7 @@ public final class IntegrationValidator {
   }
 
   public static void requireTable(String schema, String table) {
-    if (!"public".equals(schema) || !safeIdentifier(table)) {
+    if (!safeIdentifier(schema) || !safeIdentifier(table)) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
   }
@@ -65,26 +73,22 @@ public final class IntegrationValidator {
           "INVALID_NAME",
           "The display name must be at most 120 characters without control characters.");
     }
-    if (!IntegrationConfiguration.SOURCE_ID.equals(input.sourceConnectionId)) {
+    if (!connectionId(input.sourceConnectionId)) {
       error(
           errors,
           "sourceConnectionId",
           "CONNECTION_NOT_ALLOWED",
-          "Select the configured synthetic source.");
+          "Select a registered source connection.");
     }
-    if (!IntegrationConfiguration.TARGET_ID.equals(input.targetConnectionId)) {
+    if (!connectionId(input.targetConnectionId)) {
       error(
           errors,
           "targetConnectionId",
           "CONNECTION_NOT_ALLOWED",
-          "Select the configured synthetic ODS target.");
+          "Select a registered target connection.");
     }
-    if (!"public".equals(input.sourceSchema)) {
-      error(errors, "sourceSchema", "SCHEMA_NOT_ALLOWED", "Only the public schema is enabled.");
-    }
-    if (!"public".equals(input.targetSchema)) {
-      error(errors, "targetSchema", "SCHEMA_NOT_ALLOWED", "Only the public schema is enabled.");
-    }
+    identifier(errors, "sourceSchema", input.sourceSchema);
+    identifier(errors, "targetSchema", input.targetSchema);
     identifier(errors, "sourceTable", input.sourceTable);
     identifier(errors, "targetTable", input.targetTable);
     identifier(errors, "primaryKey", input.primaryKey);
@@ -186,10 +190,17 @@ public final class IntegrationValidator {
     int from = source.jdbcType();
     int to = target.jdbcType();
     if (INTEGERS.contains(from) && INTEGERS.contains(to)) {
-      return INTEGERS.indexOf(from) <= INTEGERS.indexOf(to);
+      boolean sourceUnsigned = source.dataType().toUpperCase(Locale.ROOT).contains("UNSIGNED");
+      boolean targetUnsigned = target.dataType().toUpperCase(Locale.ROOT).contains("UNSIGNED");
+      if (!sourceUnsigned && targetUnsigned) {
+        return false;
+      }
+      return sourceUnsigned && !targetUnsigned
+          ? INTEGERS.indexOf(from) < INTEGERS.indexOf(to)
+          : INTEGERS.indexOf(from) <= INTEGERS.indexOf(to);
     }
     if (STRINGS.contains(from) && STRINGS.contains(to)) {
-      return target.size() >= source.size();
+      return target.unicodeSafeTarget() && target.unicodeCapacity() >= source.size();
     }
     if (DECIMALS.contains(from) && DECIMALS.contains(to)) {
       return target.scale() >= source.scale()
@@ -198,7 +209,49 @@ public final class IntegrationValidator {
     if (from == Types.REAL && (to == Types.FLOAT || to == Types.DOUBLE)) {
       return true;
     }
+    if (DECIMALS.contains(from) && INTEGERS.contains(to) && source.scale() == 0) {
+      return source.size()
+          <= switch (to) {
+            case Types.SMALLINT -> 4;
+            case Types.INTEGER -> 9;
+            default -> 18;
+          };
+    }
+    if (from == to
+        && Set.of(Types.TIME, Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE).contains(from)) {
+      if (Set.of("datetime", "smalldatetime").contains(target.dataType().toLowerCase(Locale.ROOT))
+          && !source.dataType().equalsIgnoreCase(target.dataType())) {
+        return false;
+      }
+      return source.scale() <= target.scale();
+    }
+    if (from == to
+        && Set.of(
+                Types.DATE,
+                Types.TIME,
+                Types.TIMESTAMP,
+                Types.TIMESTAMP_WITH_TIMEZONE,
+                Types.BOOLEAN,
+                Types.BIT,
+                Types.BINARY,
+                Types.VARBINARY)
+            .contains(from)) {
+      return !Set.of(Types.BINARY, Types.VARBINARY).contains(from)
+          || target.size() >= source.size();
+    }
     return from == to && source.dataType().equalsIgnoreCase(target.dataType());
+  }
+
+  private static boolean connectionId(String id) {
+    if (IntegrationConfiguration.SOURCE_ID.equals(id)
+        || IntegrationConfiguration.TARGET_ID.equals(id)) {
+      return true;
+    }
+    try {
+      return java.util.UUID.fromString(id).toString().equals(id);
+    } catch (IllegalArgumentException | NullPointerException e) {
+      return false;
+    }
   }
 
   private static Map<String, ColumnDefinition> columns(TableDefinition table) {
@@ -212,7 +265,7 @@ public final class IntegrationValidator {
           errors,
           field,
           "INVALID_IDENTIFIER",
-          "Use an existing column or table name of at most 63 safe characters.");
+          "Use an existing column or table name of at most 128 safe characters.");
     }
   }
 

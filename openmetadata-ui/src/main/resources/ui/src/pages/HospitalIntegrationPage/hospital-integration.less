@@ -78,6 +78,41 @@
     align-items: center;
     flex-wrap: wrap;
   }
+  &--drawer {
+    width: auto;
+    margin: 0;
+    padding: 0;
+  }
+  &--drawer &__field-grid {
+    gap: 20px 24px;
+  }
+  &__field-wide {
+    grid-column: ~'1 / -1';
+  }
+  &__tabs {
+    margin-bottom: 24px;
+  }
+  &__connection-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    min-width: 180px;
+  }
+  &__delete-confirm {
+    margin-top: 16px;
+    min-width: 220px;
+  }
+  &__delete-confirm p {
+    margin-bottom: 12px;
+  }
+  &__table-tools {
+    margin-bottom: 20px;
+  }
+  &__route-fields {
+    display: grid;
+    align-content: start;
+    gap: 20px;
+  }
   &__connections {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

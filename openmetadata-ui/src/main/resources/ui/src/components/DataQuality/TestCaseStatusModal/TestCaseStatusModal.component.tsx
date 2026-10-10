@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Form, Modal, Select } from 'antd';
+import { Form, Select } from 'antd';
 import { AxiosError } from 'axios';
 import { startCase, unionBy } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -33,6 +33,7 @@ import {
   generateOptions,
 } from '../../../utils/TaskAssigneeUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 
 import {
   PAGE_SIZE_MEDIUM,
@@ -291,7 +292,7 @@ export const TestCaseStatusModal = ({
   return (
     <Modal
       cancelText={t('label.cancel')}
-      closable={false}
+      isSubmitting={isLoading}
       okButtonProps={{
         id: 'update-status-button',
         form: 'update-status-form',

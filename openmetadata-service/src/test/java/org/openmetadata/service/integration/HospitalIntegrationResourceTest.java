@@ -13,6 +13,12 @@ class HospitalIntegrationResourceTest {
     HospitalIntegrationResource resource = new HospitalIntegrationResource(new DefaultAuthorizer());
     assertThrows(AuthenticationException.class, () -> resource.status(null));
     assertThrows(AuthenticationException.class, () -> resource.connections(null));
+    assertThrows(AuthenticationException.class, () -> resource.connection(null, null));
+    assertThrows(AuthenticationException.class, () -> resource.createConnection(null, null));
+    assertThrows(AuthenticationException.class, () -> resource.updateConnection(null, null, null));
+    assertThrows(AuthenticationException.class, () -> resource.deleteConnection(null, null, 1));
+    assertThrows(AuthenticationException.class, () -> resource.tableOptions(null, null));
+    assertThrows(AuthenticationException.class, () -> resource.table(null, null, null, null));
     assertThrows(
         AuthenticationException.class, () -> resource.testConnection(null, "synthetic-source"));
     assertThrows(AuthenticationException.class, () -> resource.tables(null, "synthetic-source"));

@@ -12,9 +12,10 @@
  */
 
 import { Builder, Query } from '@react-awesome-query-builder/antd';
-import { Button, Modal, Space, Typography } from 'antd';
+import { Button, Space, Typography } from 'antd';
 import { FunctionComponent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LegacyFormDrawer as Modal } from '../common/atoms/drawer/LegacyFormDrawer';
 import './advanced-search-modal.less';
 import { useAdvanceSearch } from './AdvanceSearchProvider/AdvanceSearchProvider.component';
 
@@ -35,10 +36,8 @@ export const AdvancedSearchModal: FunctionComponent<Props> = ({
 
   return (
     <Modal
-      closable
       destroyOnClose
       className="advanced-search-modal"
-      closeIcon={null}
       data-testid="advanced-search-modal"
       footer={
         <Space className="justify-between w-full">

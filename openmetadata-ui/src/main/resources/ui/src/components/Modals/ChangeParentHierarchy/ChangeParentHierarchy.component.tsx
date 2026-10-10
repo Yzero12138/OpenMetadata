@@ -10,8 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Checkbox, Form, Modal } from 'antd';
+import { Checkbox, Form } from 'antd';
 import { DefaultOptionType } from 'antd/lib/select';
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -33,6 +32,7 @@ import { EntityStatusClass } from '../../../utils/EntityStatusUtils';
 import { Transi18next } from '../../../utils/i18next/LocalUtil';
 import { getGlossaryPath } from '../../../utils/RouterUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import Banner from '../../common/Banner/Banner';
 import StatusBadge from '../../common/StatusBadge/StatusBadge.component';
 import {
@@ -192,8 +192,8 @@ const ChangeParentHierarchy = ({
     <Modal
       open
       cancelText={t('label.cancel')}
-      closable={false}
       data-testid="change-parent-hierarchy-modal"
+      isSubmitting={loadingState.isSaving}
       maskClosable={false}
       okButtonProps={{
         form: 'change-parent-hierarchy-modal',

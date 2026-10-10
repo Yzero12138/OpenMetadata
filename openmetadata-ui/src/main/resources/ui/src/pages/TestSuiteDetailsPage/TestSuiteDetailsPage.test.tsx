@@ -408,8 +408,17 @@ jest.mock(
           excludeIds: string[];
         }) => void | Promise<void>;
         onCancel?: () => void;
+        onSubmittingChange?: (pending: boolean) => void;
       }) => {
-        const { onSubmit, onCancel } = props;
+        const { onSubmit, onCancel, onSubmittingChange } = props;
+        const submit = async (payload: Parameters<typeof onSubmit>[0]) => {
+          onSubmittingChange?.(true);
+          try {
+            await onSubmit(payload);
+          } finally {
+            onSubmittingChange?.(false);
+          }
+        };
 
         const MockAddTestCaseListPanel = () => {
           const [filtersApplied, setFiltersApplied] = React.useState(false);
@@ -430,7 +439,7 @@ jest.mock(
                 data-testid="submit-bulk-partial-single-id"
                 type="button"
                 onClick={() =>
-                  onSubmit({
+                  submit({
                     selectAll: false,
                     includeIds: ['test-case-1'],
                     excludeIds: [],
@@ -442,7 +451,7 @@ jest.mock(
                 data-testid="submit-bulk-select-all"
                 type="button"
                 onClick={() =>
-                  onSubmit({
+                  submit({
                     selectAll: true,
                     includeIds: [],
                     excludeIds: [],
@@ -454,7 +463,7 @@ jest.mock(
                 data-testid="submit-bulk-select-all-with-excludes"
                 type="button"
                 onClick={() =>
-                  onSubmit({
+                  submit({
                     selectAll: true,
                     includeIds: [],
                     excludeIds: ['test-case-1', 'test-case-2'],
@@ -805,6 +814,42 @@ describe('TestSuiteDetailsPage component', () => {
       });
       await screen.findByTestId('add-test-case-list');
     };
+
+    it('keeps assignment open during the request and restores dismissal after failure', async () => {
+      let failAssignment: ((error: Error) => void) | undefined;
+      mockAddTestCasesToLogicalTestSuiteBulk.mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            failAssignment = reject;
+          })
+      );
+      await openAddTestCaseModal();
+
+      fireEvent.click(screen.getByTestId('submit-bulk-partial-single-id'));
+
+      const dialog = screen.getByRole('dialog');
+
+      expect(
+        screen.getByRole('button', { name: 'label.close' })
+      ).toBeDisabled();
+
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      fireEvent.click(screen.getByTestId('cancel-test-cases-btn'));
+
+      expect(dialog).toBeInTheDocument();
+
+      await act(async () => failAssignment?.(new Error('Assignment failed')));
+
+      await waitFor(() =>
+        expect(
+          screen.getByRole('button', { name: 'label.close' })
+        ).not.toBeDisabled()
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'label.close' }));
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      );
+    });
 
     it('after filters, selecting one row calls bulk with IDS mode payload (selectAll false, includeIds)', async () => {
       await openAddTestCaseModal();

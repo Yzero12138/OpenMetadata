@@ -13,7 +13,8 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Form, Space } from 'antd';
 import { useForm } from 'antd/es/form/Form';
-import Modal from 'antd/lib/modal/Modal';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
+
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
 import { isEmpty } from 'lodash';
@@ -176,14 +177,12 @@ export const AddEditPersonaForm = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       open
       cancelText={t('label.cancel')}
-      closable={false}
-      closeIcon={null}
       confirmLoading={isSaving}
       data-testid="add-edit-persona-modal"
+      isSubmitting={isSaving}
       okText={isEditMode ? t('label.update') : t('label.create')}
       title={isEmpty(persona) ? 'Add Persona' : 'Edit Persona'}
       width={750}

@@ -9,7 +9,9 @@ import java.util.Set;
 import java.util.UUID;
 import org.openmetadata.service.integration.IntegrationModels.CatalogSummary;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionDefinition;
+import org.openmetadata.service.integration.IntegrationModels.ConnectionInput;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionStatus;
+import org.openmetadata.service.integration.IntegrationModels.ConnectionUpdate;
 import org.openmetadata.service.integration.IntegrationModels.EngineStatus;
 import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
 import org.openmetadata.service.integration.IntegrationModels.RunSummary;
@@ -20,7 +22,7 @@ import org.openmetadata.service.integration.IntegrationModels.ValidationError;
 import org.openmetadata.service.integration.IntegrationModels.ValidationResult;
 
 public final class IntegrationService {
-  private static final Object TASK_LOCK = new Object();
+  static final Object TASK_LOCK = new Object();
   private static final SecureRandom JOB_IDS = new SecureRandom();
   private static final int MAX_TASKS = 200;
   private static final int MAX_RUNS = 20;
@@ -32,18 +34,31 @@ public final class IntegrationService {
       Set.of("SUBMITTING", "SUBMISSION_UNKNOWN", "RESUMING", "RESUMPTION_UNKNOWN");
   private final IntegrationConfiguration configuration;
   private final IntegrationTaskStore store;
-  private final PostgresInspector inspector;
+  private final JdbcInspector inspector;
+  private final IntegrationConnections connections;
   private final SeaTunnelJobConfig jobs;
   private final CatalogProjector catalog;
   private SeaTunnelClient engine;
   private int listRefreshCursor;
 
   public IntegrationService(IntegrationConfiguration configuration, IntegrationTaskStore store) {
+    this(
+        configuration,
+        store,
+        new EntityExtensionConnectionStore(
+            () -> org.openmetadata.service.Entity.getCollectionDAO().entityExtensionDAO()));
+  }
+
+  public IntegrationService(
+      IntegrationConfiguration configuration,
+      IntegrationTaskStore store,
+      IntegrationConnectionStore connectionStore) {
     this.configuration = configuration;
     this.store = store;
-    inspector = new PostgresInspector(configuration);
-    jobs = new SeaTunnelJobConfig(configuration);
-    catalog = new CatalogProjector(configuration);
+    connections = new IntegrationConnections(configuration, connectionStore, store);
+    inspector = new JdbcInspector(connections::endpoint);
+    jobs = new SeaTunnelJobConfig(connections::endpoint);
+    catalog = new CatalogProjector(connections);
   }
 
   public EngineStatus status() {
@@ -61,16 +76,27 @@ public final class IntegrationService {
   }
 
   public List<ConnectionDefinition> connections() {
-    configuration.requireReady();
-    return List.of(
-        new ConnectionDefinition(
-            IntegrationConfiguration.SOURCE_ID, "合成业务源", "SOURCE", "Postgres", true),
-        new ConnectionDefinition(
-            IntegrationConfiguration.TARGET_ID, "合成 ODS 目标", "TARGET", "Postgres", true));
+    return connections.list();
+  }
+
+  public ConnectionDefinition connection(String id) {
+    return connections.connection(id);
+  }
+
+  public ConnectionDefinition createConnection(ConnectionInput input, String actor) {
+    return connections.create(input, actor);
+  }
+
+  public ConnectionDefinition updateConnection(String id, ConnectionUpdate input, String actor) {
+    return connections.update(id, input, actor);
+  }
+
+  public void deleteConnection(String id, long version) {
+    connections.delete(id, version);
   }
 
   public ConnectionStatus testConnection(String id) {
-    configuration.endpoint(id);
+    connections.connection(id);
     try {
       boolean connected = inspector.test(id);
       return new ConnectionStatus(connected, connected ? null : "CONNECTION_UNAVAILABLE");
@@ -83,6 +109,18 @@ public final class IntegrationService {
     return inspector.tables(id);
   }
 
+  public List<TableDefinition> tables(String id, boolean includeColumns) {
+    return inspector.tables(id, includeColumns);
+  }
+
+  public TableDefinition table(String id, String schema, String table) {
+    TableDefinition result = inspector.table(id, schema, table);
+    if (result == null) {
+      throw new IntegrationException("TABLE_NOT_FOUND", 404);
+    }
+    return result;
+  }
+
   public ValidationResult validate(TaskInput input) {
     configuration.requireReady();
     ValidationResult structure = IntegrationValidator.validateStructure(input);
@@ -90,6 +128,8 @@ public final class IntegrationService {
       return structure;
     }
     try {
+      connections.requireRole(input.sourceConnectionId, "SOURCE", input.mode);
+      connections.requireRole(input.targetConnectionId, "TARGET", input.mode);
       return IntegrationValidator.validateTables(
           input,
           inspector.table(input.sourceConnectionId, input.sourceSchema, input.sourceTable),
@@ -262,6 +302,8 @@ public final class IntegrationService {
     synchronized (TASK_LOCK) {
       IntegrationTask task = load(id);
       try {
+        connections.requireRole(task.sourceConnectionId, "SOURCE", task.mode);
+        connections.requireRole(task.targetConnectionId, "TARGET", task.mode);
         TableDefinition source =
             inspector.table(task.sourceConnectionId, task.sourceSchema, task.sourceTable);
         TableDefinition target =

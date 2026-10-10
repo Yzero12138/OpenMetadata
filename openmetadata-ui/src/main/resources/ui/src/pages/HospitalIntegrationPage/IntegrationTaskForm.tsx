@@ -12,16 +12,21 @@
  */
 import { Button, Input, Select } from '@openmetadata/ui-core-components';
 import { useTranslation } from 'react-i18next';
+import { FormDrawerActions } from '../../components/common/atoms/drawer/FormDrawerActions';
 import { IntegrationTable } from '../../rest/hospitalIntegrationAPI';
 import { IntegrationTaskFormProps } from './HospitalIntegrationPage.interface';
 import {
   findIntegrationTable,
   integrationTableKey,
 } from './HospitalIntegrationUtils';
+import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
 
 export const IntegrationTaskForm = ({
   value,
   sourceTables,
+  connections,
+  tablesLoading,
+  onReloadTables,
   targetTables,
   errors,
   disabled,
@@ -55,43 +60,42 @@ export const IntegrationTaskForm = ({
     if (!table) {
       return;
     }
-    const nextSource = role === 'source' ? table : source;
-    const nextTarget = role === 'target' ? table : target;
     onChange({
       ...value,
       [`${role}Schema`]: table.schema,
       [`${role}Table`]: table.name,
-      primaryKey:
-        role === 'source'
-          ? table.columns.find((column) => column.primaryKey)?.name ?? ''
-          : value.primaryKey,
-      fieldMappings:
-        nextSource?.columns
-          .filter((column) =>
-            nextTarget?.columns.some((item) => item.name === column.name)
-          )
-          .map((column) => ({ source: column.name, target: column.name })) ??
-        [],
+      primaryKey: role === 'source' ? '' : value.primaryKey,
+      fieldMappings: [],
     });
   };
+
+  const sourceConnection = connections.find(
+    (connection) =>
+      connection.id === value.sourceConnectionId &&
+      connection.enabled &&
+      connection.role === 'SOURCE'
+  );
+  const modes = sourceConnection?.supportedModes ?? [];
 
   return (
     <form
       noValidate
       className="hospital-integration__form"
+      data-testid="integration-task-form"
+      id="integration-task-form"
       onSubmit={(event) => {
         event.preventDefault();
         onSave();
       }}>
       {errors.length > 0 && (
-        <div className="hospital-integration__alert" role="alert">
+        <IntegrationDrawerAlert focusKey={errors}>
           <p>{t('hospitalIntegration.checkForm')}</p>
           <ul>
             {errors.map((error) => (
               <li key={error}>{t(`hospitalIntegration.${error}`)}</li>
             ))}
           </ul>
-        </div>
+        </IntegrationDrawerAlert>
       )}
       <section aria-labelledby="integration-basic-title">
         <h2 id="integration-basic-title">
@@ -101,13 +105,16 @@ export const IntegrationTaskForm = ({
           <Input
             isRequired
             hint={t('hospitalIntegration.nameHint')}
+            id="integration-task-name"
             isDisabled={disabled}
             label={t('label.name')}
+            maxLength={63}
             value={value.name}
             onChange={(name) => onChange({ ...value, name })}
           />
           <Input
             isRequired
+            id="integration-task-displayName"
             isDisabled={disabled}
             label={t('label.display-name')}
             value={value.displayName}
@@ -119,19 +126,66 @@ export const IntegrationTaskForm = ({
         <h2 id="integration-route-title">
           {t('hospitalIntegration.transferRoute')}
         </h2>
+        <div className="hospital-integration__actions hospital-integration__table-tools">
+          <Button
+            color="link-gray"
+            isDisabled={disabled || tablesLoading}
+            onClick={onReloadTables}>
+            {t('hospitalIntegration.reloadTables')}
+          </Button>
+          {tablesLoading && (
+            <p role="status">{t('hospitalIntegration.loading')}</p>
+          )}
+        </div>
         {tablesUnavailable && (
           <p className="hospital-integration__inline-error" role="alert">
             {t('hospitalIntegration.tablesUnavailable')}
           </p>
         )}
         <div className="hospital-integration__field-grid">
-          <div>
-            <p className="hospital-integration__connection-label">
-              {t('hospitalIntegration.sourceConnection')}
-            </p>
+          <div className="hospital-integration__route-fields">
+            <Select
+              isRequired
+              emptyState={t('hospitalIntegration.noConnections')}
+              id="integration-source-connection"
+              isDisabled={disabled}
+              items={connections
+                .filter(
+                  (connection) =>
+                    connection.enabled && connection.role === 'SOURCE'
+                )
+                .map((connection) => ({
+                  id: connection.id,
+                  label: connection.displayName,
+                }))}
+              label={t('hospitalIntegration.sourceConnection')}
+              placeholder={t('hospitalIntegration.chooseConnection')}
+              selectedKey={value.sourceConnectionId || null}
+              onSelectionChange={(key) => {
+                const connection = connections.find((item) => item.id === key);
+                if (!connection || connection.id === value.sourceConnectionId) {
+                  return;
+                }
+                onChange({
+                  ...value,
+                  sourceConnectionId: connection.id,
+                  sourceSchema: '',
+                  sourceTable: '',
+                  targetSchema: '',
+                  targetTable: '',
+                  primaryKey: '',
+                  fieldMappings: [],
+                  mode: connection.supportedModes.includes(value.mode)
+                    ? value.mode
+                    : 'FULL',
+                });
+              }}>
+              {(item) => <Select.Item {...item} />}
+            </Select>
             <Select
               isRequired
               emptyState={t('hospitalIntegration.noTables')}
+              id="integration-source-table"
               isDisabled={disabled || sourceTables.length === 0}
               items={tableItems(sourceTables)}
               label={t('hospitalIntegration.sourceTable')}
@@ -141,13 +195,42 @@ export const IntegrationTaskForm = ({
               {(item) => <Select.Item {...item} />}
             </Select>
           </div>
-          <div>
-            <p className="hospital-integration__connection-label">
-              {t('hospitalIntegration.targetConnection')}
-            </p>
+          <div className="hospital-integration__route-fields">
+            <Select
+              isRequired
+              emptyState={t('hospitalIntegration.noConnections')}
+              id="integration-target-connection"
+              isDisabled={disabled}
+              items={connections
+                .filter(
+                  (connection) =>
+                    connection.enabled && connection.role === 'TARGET'
+                )
+                .map((connection) => ({
+                  id: connection.id,
+                  label: connection.displayName,
+                }))}
+              label={t('hospitalIntegration.targetConnection')}
+              placeholder={t('hospitalIntegration.chooseConnection')}
+              selectedKey={value.targetConnectionId || null}
+              onSelectionChange={(key) => {
+                if (!key || key === value.targetConnectionId) {
+                  return;
+                }
+                onChange({
+                  ...value,
+                  targetConnectionId: String(key),
+                  targetSchema: '',
+                  targetTable: '',
+                  fieldMappings: [],
+                });
+              }}>
+              {(item) => <Select.Item {...item} />}
+            </Select>
             <Select
               isRequired
               emptyState={t('hospitalIntegration.noTables')}
+              id="integration-target-table"
               isDisabled={disabled || targetTables.length === 0}
               items={tableItems(targetTables)}
               label={t('hospitalIntegration.targetTable')}
@@ -163,15 +246,21 @@ export const IntegrationTaskForm = ({
                 value.mode === 'CDC' ? 'cdcHint' : 'fullHint'
               }`
             )}
-            isDisabled={disabled}
-            items={[
-              { id: 'FULL', label: t('hospitalIntegration.full') },
-              { id: 'CDC', label: t('hospitalIntegration.cdc') },
-            ]}
+            id="integration-mode"
+            isDisabled={disabled || !sourceConnection}
+            items={modes.map((mode) => ({
+              id: mode,
+              label: t(
+                mode === 'CDC'
+                  ? 'hospitalIntegration.cdc'
+                  : 'hospitalIntegration.full'
+              ),
+            }))}
             label={t('label.mode')}
-            selectedKey={value.mode}
+            placeholder={t('label.mode')}
+            selectedKey={modes.includes(value.mode) ? value.mode : null}
             onSelectionChange={(key) => {
-              if (key === 'FULL' || key === 'CDC') {
+              if ((key === 'FULL' || key === 'CDC') && modes.includes(key)) {
                 onChange({ ...value, mode: key });
               }
             }}>
@@ -179,6 +268,7 @@ export const IntegrationTaskForm = ({
           </Select>
           <Select
             hint={t('hospitalIntegration.primaryKeyHint')}
+            id="integration-primary-key"
             isDisabled={disabled || !source}
             isRequired={value.mode === 'CDC'}
             items={(
@@ -194,12 +284,14 @@ export const IntegrationTaskForm = ({
           </Select>
         </div>
       </section>
-      <section aria-labelledby="integration-mapping-title">
+      <section
+        aria-labelledby="integration-mapping-title"
+        data-testid="integration-field-mappings">
         <h2 id="integration-mapping-title">
           {t('hospitalIntegration.fieldMappings')}
         </h2>
         <p>{t('hospitalIntegration.mappingHint')}</p>
-        {!source || !target ? (
+        {!source?.columns.length || !target?.columns.length ? (
           <p className="hospital-integration__mapping-empty">
             {t('hospitalIntegration.chooseTablesFirst')}
           </p>
@@ -260,21 +352,27 @@ export const IntegrationTaskForm = ({
           </div>
         )}
       </section>
-      <div className="hospital-integration__form-actions">
-        <Button
-          color="secondary"
-          isDisabled={disabled}
-          isLoading={validating}
-          onClick={onValidate}>
-          {t('label.validate')}
-        </Button>
-        <Button isDisabled={disabled} isLoading={saving} type="submit">
-          {t('label.save')}
-        </Button>
-        <Button color="tertiary" isDisabled={disabled} onClick={onCancel}>
-          {t('label.cancel')}
-        </Button>
-      </div>
+      <FormDrawerActions>
+        <div className="hospital-integration__actions">
+          <Button
+            color="secondary"
+            isDisabled={disabled || tablesLoading}
+            isLoading={validating}
+            onClick={onValidate}>
+            {t('label.validate')}
+          </Button>
+          <Button
+            form="integration-task-form"
+            isDisabled={disabled || tablesLoading}
+            isLoading={saving}
+            type="submit">
+            {t('label.save')}
+          </Button>
+          <Button color="tertiary" isDisabled={disabled} onClick={onCancel}>
+            {t('label.cancel')}
+          </Button>
+        </div>
+      </FormDrawerActions>
     </form>
   );
 };

@@ -11,6 +11,8 @@
  *  limitations under the License.
  */
 import {
+  IntegrationConnection,
+  IntegrationConnectionInput,
   IntegrationTable,
   IntegrationTask,
   IntegrationTaskInput,
@@ -22,6 +24,9 @@ export interface HospitalIntegrationWorkspaceProps {
 
 export interface IntegrationTaskFormProps {
   value: IntegrationTaskInput;
+  connections: IntegrationConnection[];
+  tablesLoading: boolean;
+  onReloadTables: () => void;
   sourceTables: IntegrationTable[];
   targetTables: IntegrationTable[];
   errors: string[];
@@ -37,6 +42,8 @@ export interface IntegrationTaskFormProps {
 
 export interface IntegrationTaskDetailProps {
   task: IntegrationTask;
+  sourceConnectionName?: string;
+  targetConnectionName?: string;
   busy: boolean;
   uncertain: boolean;
   engineAvailable: boolean;
@@ -46,4 +53,23 @@ export interface IntegrationTaskDetailProps {
   onRun: (resume: boolean) => void;
   onStop: () => void;
   onCatalog: () => void;
+}
+
+export interface IntegrationConnectionsProps {
+  connections: IntegrationConnection[];
+  loading: boolean;
+  createRequest: number;
+  onChange: (connections: IntegrationConnection[]) => void;
+  onBusyChange: (busy: boolean) => void;
+}
+
+export interface IntegrationConnectionFormProps {
+  value: IntegrationConnectionInput;
+  schemasText: string;
+  editing: boolean;
+  disabled: boolean;
+  errors: string[];
+  onChange: (value: IntegrationConnectionInput) => void;
+  onSchemasChange: (value: string) => void;
+  onSave: () => void;
 }

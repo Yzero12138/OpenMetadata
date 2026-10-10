@@ -350,6 +350,70 @@ describe('AddTestCaseList', () => {
     });
   });
 
+  it('reports assignment pending and protects standalone cancel and repeated submit', async () => {
+    let finishAssignment: (() => void) | undefined;
+    const onSubmit = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishAssignment = resolve;
+        })
+    );
+    const onSubmittingChange = jest.fn();
+    const onCancel = jest.fn();
+
+    await act(async () => {
+      renderWithRouter({
+        ...mockProps,
+        onSubmit,
+        onCancel,
+        onSubmittingChange,
+      });
+    });
+
+    fireEvent.click(screen.getByTestId('submit'));
+    fireEvent.click(screen.getByTestId('submit'));
+    fireEvent.click(screen.getByTestId('cancel'));
+
+    expect(onSubmittingChange).toHaveBeenLastCalledWith(true);
+    expect(screen.getByTestId('cancel')).toBeDisabled();
+    expect(screen.getByTestId('submit')).toBeDisabled();
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    await act(async () => finishAssignment?.());
+
+    expect(onSubmittingChange.mock.calls).toEqual([[true], [false]]);
+    expect(screen.getByTestId('cancel')).not.toBeDisabled();
+    expect(screen.getByTestId('submit')).not.toBeDisabled();
+  });
+
+  it('clears assignment pending after failure and permits retry', async () => {
+    let failAssignment: ((error: Error) => void) | undefined;
+    const saveError = new Error('Assignment failed');
+    const onSubmit = jest.fn().mockImplementationOnce(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          failAssignment = reject;
+        })
+    );
+    const onSubmittingChange = jest.fn();
+
+    await act(async () => {
+      renderWithRouter({ ...mockProps, onSubmit, onSubmittingChange });
+    });
+
+    fireEvent.click(screen.getByTestId('submit'));
+    await act(async () => failAssignment?.(saveError));
+
+    expect(showErrorToast).toHaveBeenCalledWith(saveError);
+    expect(onSubmittingChange.mock.calls).toEqual([[true], [false]]);
+    expect(screen.getByTestId('cancel')).not.toBeDisabled();
+
+    await act(async () => fireEvent.click(screen.getByTestId('submit')));
+
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
   it('does not render submit and cancel buttons when showButton is false', async () => {
     await act(async () => {
       renderWithRouter({ ...mockProps, showButton: false });

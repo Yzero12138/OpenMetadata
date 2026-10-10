@@ -13,14 +13,11 @@
 import {
   Autocomplete,
   Button,
-  Dialog,
   FieldProp,
   FieldTypes,
   FormSelectItem,
   getField,
   HookForm,
-  Modal,
-  ModalOverlay,
 } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
@@ -66,6 +63,7 @@ import { getFilterTags } from '../../../utils/TableTags/TableTags.utils';
 import tagClassBase from '../../../utils/TagClassBase';
 import { getTagDisplay } from '../../../utils/TagsPureUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
+import { CoreFormDrawer as Dialog } from '../../common/atoms/drawer/CoreFormDrawer';
 
 export interface QuickLinkFormModalFormData
   extends Pick<CreateKnowledgePage, 'description' | 'displayName'> {
@@ -541,46 +539,41 @@ export const QuickLinkFormModal: FC<QuickLinkFormModalProps> = ({
       }`;
 
   return (
-    <ModalOverlay
+    <Dialog
       isDismissable
+      className="quick-link-form-modal"
       isOpen={isOpen}
-      style={{ zIndex: 999 }}
+      isSubmitting={isUpdating}
+      width={600}
+      onClose={handleCancel}
       onOpenChange={(open) => !open && handleCancel()}>
-      <Modal>
-        <Dialog
-          showCloseButton
-          className="quick-link-form-modal"
-          width={600}
-          onClose={handleCancel}>
-          <Dialog.Header title={title} />
-          <Dialog.Content>
-            <HookForm
-              className="tw:flex tw:flex-col tw:gap-6"
-              data-testid="quick-link-form"
-              form={form}
-              onSubmit={form.handleSubmit(handleFormSubmit)}>
-              {getField(displayNameField)}
-              <div>{getField(urlField)}</div>
-              {getField(descriptionField)}
-              {getField(tagsField)}
-              {getField(glossaryTermsField)}
-              {getField(relatedEntitiesField)}
-            </HookForm>
-          </Dialog.Content>
+      <Dialog.Header title={title} />
+      <Dialog.Content>
+        <HookForm
+          className="tw:flex tw:flex-col tw:gap-6"
+          data-testid="quick-link-form"
+          form={form}
+          onSubmit={form.handleSubmit(handleFormSubmit)}>
+          {getField(displayNameField)}
+          <div>{getField(urlField)}</div>
+          {getField(descriptionField)}
+          {getField(tagsField)}
+          {getField(glossaryTermsField)}
+          {getField(relatedEntitiesField)}
+        </HookForm>
+      </Dialog.Content>
 
-          <Dialog.Footer className="quick-link-modal-footer">
-            <Button color="secondary" onClick={handleCancel}>
-              {t('label.cancel')}
-            </Button>
-            <Button
-              color="primary"
-              isLoading={isUpdating}
-              onClick={() => form.handleSubmit(handleFormSubmit)()}>
-              {t('label.save')}
-            </Button>
-          </Dialog.Footer>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+      <Dialog.Footer className="quick-link-modal-footer">
+        <Button color="secondary" onClick={handleCancel}>
+          {t('label.cancel')}
+        </Button>
+        <Button
+          color="primary"
+          isLoading={isUpdating}
+          onClick={() => form.handleSubmit(handleFormSubmit)()}>
+          {t('label.save')}
+        </Button>
+      </Dialog.Footer>
+    </Dialog>
   );
 };

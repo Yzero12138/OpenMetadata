@@ -20,7 +20,7 @@ import {
   Typography,
 } from '@openmetadata/ui-core-components';
 import { SearchLg, XClose } from '@untitledui/icons';
-import { Modal, Progress } from 'antd';
+import { Progress } from 'antd';
 import { AxiosError } from 'axios';
 import { debounce, isString } from 'lodash';
 import { DateTime } from 'luxon';
@@ -28,6 +28,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as ExportIcon } from '../../assets/svg/ic-download.svg';
 import { AuditLogFilters, AuditLogList } from '../../components/AuditLog';
+import { LegacyFormDrawer as Modal } from '../../components/common/atoms/drawer/LegacyFormDrawer';
 import '../../components/common/atoms/filters/FilterSelection.less';
 import Banner from '../../components/common/Banner/Banner';
 import DatePicker from '../../components/common/DatePicker/DatePicker';
@@ -563,11 +564,10 @@ const AuditLogsPage = () => {
       </div>
 
       <Modal
-        centered
         cancelButtonProps={{ disabled: isExporting }}
         cancelText={t('label.cancel')}
-        closable={!isExporting}
         data-testid="export-audit-logs-modal"
+        isSubmitting={isExporting}
         maskClosable={!isExporting}
         okButtonProps={{
           disabled: isExporting || !exportDateRange,

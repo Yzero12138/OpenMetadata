@@ -10,13 +10,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Button, Modal, Typography } from 'antd';
+import { Button, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import { FunctionComponent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { removeAttachmentsWithoutUrl } from '../../../utils/StringUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import { KeyDownStopPropagationWrapper } from '../../common/KeyDownStopPropagationWrapper/KeyDownStopPropagationWrapper';
 import RichTextEditor from '../../common/RichTextEditor/RichTextEditor';
 import { EditorContentRef } from '../../common/RichTextEditor/RichTextEditor.interface';
@@ -54,10 +54,8 @@ export const ModalWithMarkdownEditor: FunctionComponent<
 
   return (
     <Modal
-      centered
       destroyOnClose
       className="description-markdown-editor"
-      closable={false}
       data-testid="markdown-editor"
       footer={
         <KeyDownStopPropagationWrapper>
@@ -79,8 +77,8 @@ export const ModalWithMarkdownEditor: FunctionComponent<
           </Button>
         </KeyDownStopPropagationWrapper>
       }
+      isSubmitting={isLoading}
       maskClosable={false}
-      modalRender={(node) => <div data-react-aria-top-layer>{node}</div>}
       open={visible}
       title={<Typography.Text data-testid="header">{header}</Typography.Text>}
       width="90%"

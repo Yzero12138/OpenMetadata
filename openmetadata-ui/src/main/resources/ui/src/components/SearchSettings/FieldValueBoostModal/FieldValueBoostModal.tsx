@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Form, Input, Modal, Select, Slider, Typography } from 'antd';
+import { Form, Input, Select, Slider, Typography } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,7 @@ import {
   Modifier,
 } from '../../../generated/configuration/searchSettings';
 import { modifierOptions } from '../../../utils/SearchSettingsUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 
 interface FieldValueBoostModalProps {
   open: boolean;
@@ -97,7 +98,6 @@ const FieldValueBoostModal: React.FC<FieldValueBoostModalProps> = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       className="field-value-boost-modal"
       data-testid="field-value-boost-modal"

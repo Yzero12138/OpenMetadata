@@ -10,10 +10,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Form, InputNumber, Modal } from 'antd';
+import { Form, InputNumber } from 'antd';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { VALIDATION_MESSAGES } from '../../../constants/constants';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import { LineageConfigModalProps } from './EntityLineage.interface';
 
 const LineageConfigModal: React.FC<LineageConfigModalProps> = ({

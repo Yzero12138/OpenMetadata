@@ -10,10 +10,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Button, Input, Modal } from 'antd';
+import { Button, Input } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
 
 import { debounce, isUndefined } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -145,6 +145,7 @@ const AddPipeLineModal = ({
           {t('label.save')}
         </Button>,
       ]}
+      isSubmitting={loading}
       maskClosable={false}
       open={showAddEdgeModal}
       title={t(`label.${isUndefined(selectedEdge) ? 'add' : 'edit'}-entity`, {

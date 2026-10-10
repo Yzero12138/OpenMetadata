@@ -1,37 +1,45 @@
+---
+version: 1
+slug: hospital-data-integration
+primary_target: "openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/HospitalIntegrationPage.tsx"
+related_targets: ["openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/IntegrationConnections.tsx", "openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/IntegrationConnectionForm.tsx", "openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/hospital-integration.less"]
+---
 # Hospital data integration
 
-Mode: Operate. Code-led extension of the confirmed Integrate hospital workbench. Route: `/hospital/integration`. Administrator operations only in the first stage; ordinary employees receive a permission explanation without loading protected data.
+Mode: Operate. Code-led extension of the confirmed Integrate hospital workbench, route /hospital/integration. PC only, administrator operations; other employees see the permission explanation without loading protected data.
 
 ## THESIS
 
-Make a synthetic PostgreSQL transfer understandable from its source and ODS target through validation, execution, savepoint recovery and catalog registration. Each control has a concrete operational result. No claim of production HIS connectivity or exactly-once delivery.
+Maintain reusable source/target definitions, then configure extraction using registered IDs, real tables and explicit field mappings. The four requested database families are Oracle 11g/19c, SQL Server 2016/2019, MySQL 8 and PostgreSQL. Offer FULL for all four and CDC only for the verified PostgreSQL path. Real hospital endpoints and credentials have not been supplied.
 
 ## OWN-WORLD
 
-Preserve the incumbent Chinese system font, restrained green accent, native core controls, semantic tokens, thin rules and flat regions. The native OpenMetadata shell remains authoritative. No new component library, decorative illustration or global design-system change.
+Keep the incumbent Chinese system typography, restrained hospital green, native core controls, semantic tokens, thin rules and flat regions. Native OpenMetadata shell remains authoritative. This is an extension, with no replacement component library or global design-system changes. Keep DESIGN.md and design.json unchanged.
 
 ## STORY
 
-The task list establishes the synthetic scope, SeaTunnel connectivity and available connections. Creating a task moves to a page form with technical and display names, real tables, FULL/CDC mode, a source primary key and explicit field mappings. Detail separates transfer state from catalog state, then provides actual run history and audit facts.
+Parallel task/data-source tabs share one context-specific create action. The data-source table exposes family/version, role, endpoint/schema, environment-managed or synthetic truth, connection-test state and permitted edit/delete actions. Definition save does not establish connectivity. Task detail separates transfer and catalog status and retains the exact string job ID, available counters, recovery permission, history and audit facts.
 
 ## FIRST VIEWPORT
 
-The user confirmed PC-only delivery. At desktop 1440 and 1920, show the heading, one create action, engine connectivity, source/target connection tests and the task list. Native desktop keyboard behavior and clear configuration/detail layouts are the acceptance scope. Never invent totals or an empty numeric result for unavailable counters.
+At 1440 and 1920 desktop widths, show heading, create action, tabs, engine connectivity and list. Preserve underlying lists/detail while configuring in a full-height right drawer. Use 720px for source create/edit, 880px for task create and 960px for task edit. Pin header and footer while long configuration/mapping content scrolls in the body. PC keyboard and focus behavior are in scope; mobile and dark-theme acceptance are not asserted.
 
 ## FORM
 
-Core Input, Select and Button primitives own keyboard interaction and disabled/loading states. Validation blocks invalid submission. A 409 preserves the typed form: VERSION_CONFLICT requires reloading and reconciling the current task, DUPLICATE_TASK requires renaming, and DUPLICATE_ROUTE requires using the existing task or choosing another target table. Exact 64-bit job identifiers remain strings. Unknown/uncertain submissions block another run. CDC resume requires explicit backend `canResume: true`. Polling requests are aborted or ignored on task switch and unmount.
+Native Input, Select and Button controls own keyboard, disabled and pending behavior. Passwords never return in responses and an unchanged edit omits the password. Validation and rejected saves retain drafts. Bring error summaries into view and keyboard focus; connection version conflict uses data-source wording and explicit reload, task conflict retains its existing recovery. Guard closing while saving, including Escape, while nested Select Escape closes the select first. On source/target changes clear dependent table/mappings and reject stale discovery responses. Show only server-advertised modes. Preserve active-task and uncertain-submission restrictions.
 
 ## FINISH
 
-Verify meaningful behavior with Jest: invalid submission, preserved conflict form, absent versus zero counters, exact job ID, active and uncertain controls, stop failure retry, catalog failure independent of FINISHED transfer and stale task requests. Format changed UI files with organize-imports, ESLint and Prettier in that order. Parent implementation thread owns the batched PC browser inspection, production build and finish handoffs. This surface extends the incumbent design; DESIGN.md and design.json remain unchanged.
+Verify focused UI/API behavior, all 20 actual locale translations, and no additional owned TypeScript diagnostics over the recorded baseline. Parent owns one batched PC inspection plus at most one confirmation after the batch fixes, the production build, one detector pass and fresh finish/documentation handoffs. Screenshots use actual React with an explicitly synthetic local HTTP boundary; engine/database/native catalog tests are separate evidence. No claim of employee login, real hospital collection, all-family CDC, or exactly-once delivery.
 
-## IMPLEMENTED EXTENSION RECORD
+## Implemented — 2026-10-10
 
-Recorded on 2026-10-09 from the implemented React workspace, local stylesheet, typed API boundary, authenticated router, native sidebar registration and English/Chinese locale entries. The source-backed [design extension note](../../docs/hospital/data-integration-design-extension.md) describes this surface without adding global tokens or replacing the incumbent identity. Global DESIGN.md and `.impeccable/design.json` are preserved.
+Task/data-source tabs and context-specific creation now use registered reusable definitions for Oracle 11g/19c, SQL Server 2016/2019, MySQL 8 and PostgreSQL. The source table exposes role, family/version, endpoint/scope, managed/synthetic truth and connection-test state. FULL is available across the four families; CDC remains the server-advertised verified PostgreSQL path. Passwords are not returned, unchanged edits omit them, and definition save is separate from connectivity.
 
-The task list, create/edit form and detail are views within `/hospital/integration`. The source uses native core Button, Input and Select controls; an administrator check prevents the employee view from loading protected integration data. Detail gives the exact string job ID a full-width row, keeps other run facts in two columns, and presents catalog registration in a separate section with its own retry. Local styles retain semantic surfaces, visible focus and reduced-motion handling.
+The native shared FormDrawer provides 720px source create/edit, 880px task create and 960px task edit, with fixed header/footer, independently scrolling mappings and retained underlying list/detail. Pending state protects closing and submission. Error summaries focus and scroll into view without refocusing during typing; validation/409 preserve drafts, source conflicts use definition-specific copy and explicit reload, and synchronous generation guards reject stale source reloads. Incumbent system files remain unchanged.
 
-The [capture packet](../review/integration/report.json), captured at `2026-10-09T09:23:38.066Z`, records eight states at both 1440 × 1000 and 1920 × 1080: empty, configure, conflict, run with catalog error, stop failed, paused, permission and engine unavailable. The implementation pass opened all 16 captures; the [fresh finish review](../review/integration/finish-review.md) reopened the replacement packet and marks its two scored fixes resolved: the LESS grid span and semantic token resolution. Its ship verdict covers those fixes, not an unrestricted audit of the whole surface.
+## Evidence — 2026-10-10
 
-These captures exercise actual React components through explicitly synthetic local HTTP fixtures. They do not demonstrate a genuine employee login, real engine execution or real catalog writes. Real Kubernetes engine/database and native-catalog checks are recorded in the separate [implementation verification track](../../docs/hospital/data-integration-verification.md). PC is the delivery and acceptance scope. Existing narrow-width source rules do not add mobile acceptance, and this packet does not establish dark-theme acceptance. The documenter ran no browser, detector, build or backend tests.
+The [current design record](../../docs/hospital/data-integration-design-extension.md) separates this scope from the 2026-10-09 history. The [final packet](../review/integration/report.json) contains 30 actual-React synthetic-HTTP captures, 15 states at each required PC viewport, plus two passing recorded interaction checks. The [fresh finish review](../review/integration/finish-managed-sources.md) returns `disposition: ship`, all five required sections, no material fixes. Two screenshot rounds are complete; the formal single [detector output](../../.logs/impeccable-managed-sources-detector.json) is `[]`.
+
+Parent verification records 55/55 integration UI tests, shared groups of 287 + 97 + 14 tests, and 550 baseline TypeScript diagnostics with zero owned diagnostics. Final UI build/package and local application/engine images passed; subsequent publication and test-deployment evidence belongs to the [implementation verification track](../../docs/hospital/data-integration-verification.md). Independent four-database 100-row/native-catalog tests are recorded in [data-source maintenance](../../docs/hospital/data-source-maintenance.md), not established by screenshots or rerun by this documenter. No employee-login, real hospital endpoint, all-family CDC, mobile or dark-theme acceptance claim.

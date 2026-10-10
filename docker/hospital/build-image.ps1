@@ -1,5 +1,5 @@
 param(
-    [string]$Image = 'harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v5',
+    [string]$Image = 'hospital-openmetadata:2.0.4-integrate-v6',
     [switch]$Push
 )
 $ErrorActionPreference = 'Stop'
@@ -22,6 +22,7 @@ if (-not (Test-Path -LiteralPath $release)) {
 Copy-Item -LiteralPath $release -Destination (Join-Path $context 'openmetadata-2.0.4.tar.gz')
 Copy-Item -LiteralPath $serviceJar -Destination (Join-Path $context 'openmetadata-service-2.0.4.jar')
 Copy-Item -LiteralPath $uiJar -Destination (Join-Path $context 'openmetadata-ui-2.0.4.jar')
+& (Join-Path $PSScriptRoot 'seatunnel/prepare-drivers.ps1') -Destination (Join-Path $context 'jdbc-drivers')
 & docker build --file (Join-Path $PSScriptRoot 'Dockerfile') --tag $Image $context
 if ($LASTEXITCODE -ne 0) { throw 'Hospital image build failed' }
 if ($Push) {

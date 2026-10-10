@@ -12,7 +12,7 @@
  */
 
 import { EyeFilled, MoreOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Col, Dropdown, Input, Modal, Space } from 'antd';
+import { Button, Card, Col, Dropdown, Input, Space } from 'antd';
 import { cloneDeep, isEmpty, isNil, isUndefined, uniqueId } from 'lodash';
 import { lazy, useCallback, useMemo, useState } from 'react';
 import RGL, { Layout, WidthProvider } from 'react-grid-layout';
@@ -48,6 +48,7 @@ import {
 } from '../../../utils/CustomizePage/CustomizePageWidgetUtils';
 import { getEntityName } from '../../../utils/EntityNameUtils';
 import withSuspenseFallback from '../../AppRouter/withSuspenseFallback';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import { TabItem } from '../../common/DraggableTabs/DraggableTabs';
 
 const EmptyWidgetPlaceholder = withSuspenseFallback(
@@ -504,9 +505,7 @@ export const CustomizeTabWidget = () => {
       )}
       {showAddTabModal && (
         <Modal
-          closable
           cancelText={t('label.cancel')}
-          closeIcon={null}
           okText={t('label.add')}
           open={showAddTabModal}
           title={t('label.add-entity', {

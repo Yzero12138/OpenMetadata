@@ -26,6 +26,7 @@ jest.mock('rest/assetAPI', () => ({
 }));
 
 jest.mock('@openmetadata/ui-core-components', () => ({
+  ...jest.requireActual('@openmetadata/ui-core-components'),
   Button: jest.fn(
     ({
       children,
@@ -121,14 +122,13 @@ describe('CreateFolderModal', () => {
   it('renders when isOpen is true', () => {
     render(<CreateFolderModal {...defaultProps} />);
 
-    expect(screen.getByTestId('modal-overlay')).toBeInTheDocument();
-    expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('does not render when isOpen is false', () => {
     render(<CreateFolderModal {...defaultProps} isOpen={false} />);
 
-    expect(screen.queryByTestId('modal-overlay')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('renders the folder name input', () => {
@@ -264,7 +264,7 @@ describe('CreateFolderModal', () => {
   it('calls onClose when dialog close button is clicked', () => {
     render(<CreateFolderModal {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('dialog-close'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.close' }));
 
     expect(defaultProps.onClose).toHaveBeenCalled();
   });

@@ -10,13 +10,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Form, FormProps, Input, Modal } from 'antd';
+import { Form, FormProps, Input } from 'antd';
 import { AxiosError } from 'axios';
 import { FunctionComponent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User } from '../../../generated/entity/teams/user';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 
 interface ProfileEditModalProps {
   userData: User;
@@ -53,12 +53,11 @@ export const ProfileEditModal: FunctionComponent<ProfileEditModalProps> = ({
 
   return (
     <Modal
-      centered
       open
       cancelText={t('label.cancel')}
-      closable={false}
       confirmLoading={isLoading}
       data-testid="profile-edit-modal"
+      isSubmitting={isLoading}
       maskClosable={false}
       okButtonProps={{
         form: 'profile-edit-form',

@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Form, Modal, Typography } from 'antd';
+import { Form, Typography } from 'antd';
 import { isUndefined, uniq } from 'lodash';
 import { FC, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +29,7 @@ import {
   FormItemLayout,
 } from '../../../../interface/FormUtils.interface';
 import { generateFormFields } from '../../../../utils/formUtils';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
 import Banner from '../../../common/Banner/Banner';
 import { EntityAttachmentProvider } from '../../../common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
 
@@ -203,11 +204,10 @@ const EditCustomPropertyModal: FC<EditCustomPropertyModalProps> = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       cancelButtonProps={{ disabled: isSaving }}
-      closable={false}
       data-testid="edit-custom-property-modal"
+      isSubmitting={isSaving}
       maskClosable={false}
       okButtonProps={{
         htmlType: 'submit',

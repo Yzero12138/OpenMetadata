@@ -10,8 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-import { Button, Form, Input, Modal, Typography } from 'antd';
+import { Button, Form, Input, Typography } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty, isUndefined } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -23,6 +22,7 @@ import {
   CuratedAssetsFormSelectedAssetsInfo,
   getSelectedResourceCount,
 } from '../../../../../utils/CuratedAssetsUtils';
+import { LegacyFormDrawer as Modal } from '../../../../common/atoms/drawer/LegacyFormDrawer';
 import { AdvancedAssetsFilterField } from '../AdvancedAssetsFilterField/AdvancedAssetsFilterField.component';
 import { SelectAssetTypeField } from '../SelectAssetTypeField/SelectAssetTypeField.component';
 import './curated-assets-modal.less';
@@ -120,7 +120,7 @@ const CuratedAssetsModal = ({
     () => (
       <div className="flex items-center">
         <PlusSquare className="text-xl" />
-        <Typography.Text strong className="m-l-xs text-white">
+        <Typography.Text strong className="m-l-xs tw:text-primary">
           {!isEmpty(curatedAssetsConfig)
             ? t('label.edit-widget')
             : t('label.create-widget')}
@@ -153,8 +153,6 @@ const CuratedAssetsModal = ({
 
   return (
     <Modal
-      centered
-      closable
       destroyOnClose
       className="curated-assets-modal"
       data-testid="curated-assets-modal-container"

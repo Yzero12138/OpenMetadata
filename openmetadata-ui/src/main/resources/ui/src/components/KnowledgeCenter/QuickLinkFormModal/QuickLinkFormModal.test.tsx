@@ -44,6 +44,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
   }) => <div data-testid={testId}>{label}</div>;
 
   return {
+    ...jest.requireActual('@openmetadata/ui-core-components'),
     Autocomplete,
     Button: ({
       children,

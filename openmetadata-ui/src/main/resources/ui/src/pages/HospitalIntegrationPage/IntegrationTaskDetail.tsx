@@ -23,6 +23,8 @@ import {
 
 export const IntegrationTaskDetail = ({
   task,
+  sourceConnectionName,
+  targetConnectionName,
   busy,
   uncertain,
   engineAvailable,
@@ -79,12 +81,16 @@ export const IntegrationTaskDetail = ({
         <div>
           <dt>{t('hospitalIntegration.sourceTable')}</dt>
           <dd>{`${task.sourceSchema}.${task.sourceTable}`}</dd>
-          <small>{t('hospitalIntegration.sourceConnection')}</small>
+          <small>
+            {sourceConnectionName ?? t('hospitalIntegration.sourceConnection')}
+          </small>
         </div>
         <div>
           <dt>{t('hospitalIntegration.targetTable')}</dt>
           <dd>{`${task.targetSchema}.${task.targetTable}`}</dd>
-          <small>{t('hospitalIntegration.targetConnection')}</small>
+          <small>
+            {targetConnectionName ?? t('hospitalIntegration.targetConnection')}
+          </small>
         </div>
         <div>
           <dt>{t('label.mode')}</dt>

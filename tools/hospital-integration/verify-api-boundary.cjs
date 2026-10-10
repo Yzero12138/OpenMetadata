@@ -8,6 +8,12 @@ const task = '00000000-0000-4000-8000-000000000001';
 const cases = [
   ['GET', '/status'],
   ['GET', '/connections'],
+  ['POST', '/connections', {}],
+  ['GET', '/connections/synthetic-source'],
+  ['PUT', '/connections/synthetic-source', { version: 1 }],
+  ['DELETE', '/connections/synthetic-source?version=1'],
+  ['GET', '/connections/synthetic-source/table-options'],
+  ['GET', '/connections/synthetic-source/tables/public/example'],
   ['POST', '/connections/synthetic-source/test', {}],
   ['GET', '/connections/synthetic-source/tables'],
   ['GET', '/tasks'],
@@ -32,7 +38,7 @@ const cases = [
     });
     assert.equal(response.status, 401, `${method} ${route} must use native authentication`);
     const result = await response.text();
-    assert.ok(!/jdbc:postgresql|HOSPITAL_SOURCE|HOSPITAL_TARGET|password\s*[=:]/i.test(result));
+    assert.ok(!/jdbc:|fernet:|HOSPITAL_SOURCE|HOSPITAL_TARGET|password\s*[=:]/i.test(result));
     checks.push({ name: `${method} ${route}`, status: response.status, passed: true });
   }
   const invalidBearer = await fetch(`${base}/api/v1/hospital/integration/status`, {

@@ -10,10 +10,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button } from '@openmetadata/ui-core-components';
+import { Button, Tabs } from '@openmetadata/ui-core-components';
 import { ArrowLeft, ArrowRight, Plus, RefreshCw01 } from '@untitledui/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import FormDrawer from '../../components/common/atoms/drawer/FormDrawer';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import {
@@ -21,18 +22,15 @@ import {
   getIntegrationConnections,
   getIntegrationFailure,
   getIntegrationStatus,
-  getIntegrationTables,
   getIntegrationTask,
   getIntegrationTasks,
   IntegrationConnection,
   IntegrationEngineStatus,
-  IntegrationTable,
   IntegrationTask,
   IntegrationTaskInput,
   runIntegrationTask,
   stopIntegrationTask,
   syncIntegrationCatalog,
-  testIntegrationConnection,
   updateIntegrationTask,
   validateIntegrationTask,
 } from '../../rest/hospitalIntegrationAPI';
@@ -48,8 +46,11 @@ import {
   toIntegrationTaskInput,
   validateIntegrationInput,
 } from './HospitalIntegrationUtils';
+import { IntegrationConnections } from './IntegrationConnections';
+import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
 import { IntegrationTaskDetail } from './IntegrationTaskDetail';
 import { IntegrationTaskForm } from './IntegrationTaskForm';
+import { useIntegrationTables } from './useIntegrationTables';
 
 type IntegrationView = 'list' | 'create' | 'detail' | 'edit';
 
@@ -60,11 +61,10 @@ export const HospitalIntegrationWorkspace = ({
   const [tasks, setTasks] = useState<IntegrationTask[]>([]);
   const [connections, setConnections] = useState<IntegrationConnection[]>([]);
   const [engine, setEngine] = useState<IntegrationEngineStatus>();
-  const [tables, setTables] = useState<Record<string, IntegrationTable[]>>({});
-  const [tableErrors, setTableErrors] = useState<Record<string, boolean>>({});
-  const [connectionStates, setConnectionStates] = useState<
-    Record<string, boolean>
-  >({});
+  const [activeTab, setActiveTab] = useState<'tasks' | 'connections'>('tasks');
+  const [connectionCreateRequest, setConnectionCreateRequest] = useState(0);
+  const [connectionBusy, setConnectionBusy] = useState(false);
+  const [tablesReload, setTablesReload] = useState(0);
   const [selected, setSelected] = useState<IntegrationTask>();
   const [view, setView] = useState<IntegrationView>('list');
   const [form, setForm] = useState<IntegrationTaskInput>({
@@ -83,12 +83,39 @@ export const HospitalIntegrationWorkspace = ({
   const [reload, setReload] = useState(0);
   const epoch = useRef(0);
   const mutation = useRef(false);
+  const connectionEpoch = useRef(0);
+  const connectionMutation = useRef(false);
   const mounted = useRef(true);
   const selectedRequest = useRef<AbortController>();
-  const sourceTables = tables['synthetic-source'] ?? [];
-  const targetTables = tables['synthetic-ods'] ?? [];
+  const taskEditorOpen = view === 'create' || view === 'edit';
+  const sourceData = useIntegrationTables(
+    form.sourceConnectionId,
+    form.sourceSchema,
+    form.sourceTable,
+    taskEditorOpen,
+    tablesReload
+  );
+  const targetData = useIntegrationTables(
+    form.targetConnectionId,
+    form.targetSchema,
+    form.targetTable,
+    taskEditorOpen,
+    tablesReload
+  );
+  const sourceTables = sourceData.tables;
+  const targetTables = targetData.tables;
+  const tablesLoading = sourceData.loading || targetData.loading;
+  const autoMappedRoute = useRef<string>();
   const busy = Object.values(loading).some(Boolean);
   const engineAvailable = engine?.enabled === true && engine.reachable;
+
+  const handleConnectionBusyChange = useCallback((busy: boolean) => {
+    connectionEpoch.current += 1;
+    connectionMutation.current = busy;
+    if (mounted.current) {
+      setConnectionBusy(busy);
+    }
+  }, []);
 
   const acceptTask = useCallback((task: IntegrationTask) => {
     setSelected(task);
@@ -108,46 +135,34 @@ export const HospitalIntegrationWorkspace = ({
       return;
     }
     const controller = new AbortController();
+    const requestConnectionEpoch = connectionEpoch.current;
     setLoading((current) => ({ ...current, initial: true }));
     const load = async () => {
       const results = await Promise.allSettled([
         getIntegrationStatus(controller.signal),
         getIntegrationConnections(controller.signal),
         getIntegrationTasks(controller.signal),
-        getIntegrationTables('synthetic-source', controller.signal),
-        getIntegrationTables('synthetic-ods', controller.signal),
       ]);
       if (controller.signal.aborted) {
         return;
       }
-      const [
-        engineResult,
-        connectionResult,
-        taskResult,
-        sourceResult,
-        targetResult,
-      ] = results;
+      const [engineResult, connectionResult, taskResult] = results;
       setEngine(
         engineResult.status === 'fulfilled' ? engineResult.value : undefined
       );
-      setConnections(
-        connectionResult.status === 'fulfilled' ? connectionResult.value : []
-      );
+      if (
+        !connectionMutation.current &&
+        requestConnectionEpoch === connectionEpoch.current
+      ) {
+        setConnections(
+          connectionResult.status === 'fulfilled' ? connectionResult.value : []
+        );
+      }
       if (taskResult.status === 'fulfilled') {
         setTasks(taskResult.value);
       } else {
         setErrorCode(getIntegrationFailure(taskResult.reason).code);
       }
-      setTables({
-        'synthetic-source':
-          sourceResult.status === 'fulfilled' ? sourceResult.value : [],
-        'synthetic-ods':
-          targetResult.status === 'fulfilled' ? targetResult.value : [],
-      });
-      setTableErrors({
-        'synthetic-source': sourceResult.status === 'rejected',
-        'synthetic-ods': targetResult.status === 'rejected',
-      });
       setLoading((current) => ({ ...current, initial: false }));
     };
     void load();
@@ -203,6 +218,62 @@ export const HospitalIntegrationWorkspace = ({
     };
   }, [acceptTask, isAdmin, selected, tasks, uncertainTasks]);
 
+  useEffect(() => {
+    if (!taskEditorOpen) {
+      autoMappedRoute.current = undefined;
+
+      return;
+    }
+    const source = sourceData.detail;
+    const target = targetData.detail;
+    if (
+      !source ||
+      !target ||
+      source.schema !== form.sourceSchema ||
+      source.name !== form.sourceTable ||
+      target.schema !== form.targetSchema ||
+      target.name !== form.targetTable
+    ) {
+      return;
+    }
+    const route = JSON.stringify([
+      form.sourceConnectionId,
+      form.sourceSchema,
+      form.sourceTable,
+      form.targetConnectionId,
+      form.targetSchema,
+      form.targetTable,
+    ]);
+    if (autoMappedRoute.current === route) {
+      return;
+    }
+    autoMappedRoute.current = route;
+    setForm((current) => ({
+      ...current,
+      primaryKey:
+        current.primaryKey ||
+        source.columns.find((column) => column.primaryKey)?.name ||
+        '',
+      fieldMappings: current.fieldMappings.length
+        ? current.fieldMappings
+        : source.columns
+            .filter((column) =>
+              target.columns.some((item) => item.name === column.name)
+            )
+            .map((column) => ({ source: column.name, target: column.name })),
+    }));
+  }, [
+    taskEditorOpen,
+    sourceData.detail,
+    targetData.detail,
+    form.sourceConnectionId,
+    form.sourceSchema,
+    form.sourceTable,
+    form.targetConnectionId,
+    form.targetSchema,
+    form.targetTable,
+  ]);
+
   const changeView = (next: IntegrationView) => {
     epoch.current += 1;
     selectedRequest.current?.abort();
@@ -254,7 +325,26 @@ export const HospitalIntegrationWorkspace = ({
   };
 
   const validateOrSave = async (save: boolean) => {
+    if (tablesLoading || mutation.current) {
+      return;
+    }
     const errors = validateIntegrationInput(form, sourceTables, targetTables);
+    if (
+      !connections.some(
+        (connection) =>
+          connection.id === form.sourceConnectionId &&
+          connection.enabled &&
+          connection.role === 'SOURCE'
+      ) ||
+      !connections.some(
+        (connection) =>
+          connection.id === form.targetConnectionId &&
+          connection.enabled &&
+          connection.role === 'TARGET'
+      )
+    ) {
+      errors.push('connectionsRequired');
+    }
     setFormErrors(errors);
     if (errors.length > 0) {
       return;
@@ -350,23 +440,30 @@ export const HospitalIntegrationWorkspace = ({
     });
   };
 
-  const testConnection = async (id: string) => {
+  const reloadCurrentTask = async () => {
+    if (!selected) {
+      return;
+    }
     const requestEpoch = epoch.current;
-    await perform(id, async () => {
+    const controller = new AbortController();
+    selectedRequest.current?.abort();
+    selectedRequest.current = controller;
+    await perform('reloadTask', async () => {
       try {
-        const result = await testIntegrationConnection(id);
-        if (requestEpoch === epoch.current) {
-          setConnectionStates((current) => ({
-            ...current,
-            [id]: result.connected,
-          }));
-          if (!result.connected) {
-            setErrorCode(result.errorCode ?? 'REQUEST_FAILED');
-          }
+        const current = await getIntegrationTask(
+          selected.id,
+          controller.signal
+        );
+        if (!controller.signal.aborted && requestEpoch === epoch.current) {
+          acceptTask(current);
+          setForm(toIntegrationTaskInput(current));
+          setEditingVersion(current.version);
+          setErrorCode(undefined);
+          setConflict(false);
+          setFormErrors([]);
         }
       } catch (error) {
-        if (requestEpoch === epoch.current) {
-          setConnectionStates((current) => ({ ...current, [id]: false }));
+        if (!controller.signal.aborted && requestEpoch === epoch.current) {
           setErrorCode(getIntegrationFailure(error).code);
         }
       }
@@ -380,18 +477,44 @@ export const HospitalIntegrationWorkspace = ({
           <h1>{t('hospitalIntegration.title')}</h1>
           <p>{t('hospitalIntegration.description')}</p>
         </div>
-        {isAdmin && view === 'list' && (
-          <Button
-            iconLeading={Plus}
-            isDisabled={busy}
-            onClick={() => {
-              setSelected(undefined);
-              setForm({ ...EMPTY_INTEGRATION_TASK, fieldMappings: [] });
-              changeView('create');
-            }}>
-            {t('hospitalIntegration.createTask')}
-          </Button>
-        )}
+        {isAdmin &&
+          (activeTab === 'connections' ||
+            view === 'list' ||
+            view === 'create') && (
+            <Button
+              data-testid="integration-create-action"
+              iconLeading={Plus}
+              isDisabled={busy || connectionBusy}
+              onClick={() => {
+                if (activeTab === 'connections') {
+                  setConnectionCreateRequest((current) => current + 1);
+
+                  return;
+                }
+                setSelected(undefined);
+                setForm({
+                  ...EMPTY_INTEGRATION_TASK,
+                  fieldMappings: [],
+                  sourceConnectionId:
+                    connections.find(
+                      (connection) =>
+                        connection.enabled && connection.role === 'SOURCE'
+                    )?.id ?? '',
+                  targetConnectionId:
+                    connections.find(
+                      (connection) =>
+                        connection.enabled && connection.role === 'TARGET'
+                    )?.id ?? '',
+                });
+                changeView('create');
+              }}>
+              {t(
+                activeTab === 'connections'
+                  ? 'hospitalIntegration.createConnection'
+                  : 'hospitalIntegration.createTask'
+              )}
+            </Button>
+          )}
       </header>
       {!isAdmin ? (
         <section className="hospital-integration__empty" role="status">
@@ -400,7 +523,7 @@ export const HospitalIntegrationWorkspace = ({
         </section>
       ) : (
         <>
-          {view !== 'list' && (
+          {activeTab === 'tasks' && (view === 'detail' || view === 'edit') && (
             <Button
               className="hospital-integration__back"
               color="link-gray"
@@ -410,222 +533,296 @@ export const HospitalIntegrationWorkspace = ({
               {t('hospitalIntegration.backToTasks')}
             </Button>
           )}
-          {errorCode && (
+          {errorCode && !taskEditorOpen && (
             <div className="hospital-integration__alert" role="alert">
               <p>{t(integrationErrorKey(errorCode))}</p>
               {conflict && <p>{t('hospitalIntegration.conflictHint')}</p>}
             </div>
           )}
-          <section
-            aria-label={t('hospitalIntegration.engine')}
-            className="hospital-integration__engine">
-            <div>
-              <strong>{t('hospitalIntegration.engine')}</strong>
-              <span
-                className="hospital-integration__status"
-                data-status={engineAvailable ? 'SYNCED' : 'UNKNOWN'}>
-                {loading.initial
-                  ? t('hospitalIntegration.loading')
-                  : t(
-                      `hospitalIntegration.${
-                        engineAvailable
-                          ? 'reachable'
-                          : engine?.enabled === false
-                          ? 'disabled'
-                          : 'unreachable'
-                      }`
-                    )}
-              </span>
-              {engine?.engineVersion && <small>{engine.engineVersion}</small>}
-            </div>
-            <Button
-              aria-label={t('hospitalIntegration.refreshConnections')}
-              color="link-gray"
-              iconLeading={RefreshCw01}
-              isDisabled={busy}
-              onClick={() => {
-                setErrorCode(undefined);
-                setReload((current) => current + 1);
-              }}>
-              {t('label.refresh')}
-            </Button>
-          </section>
-          {view === 'list' && (
-            <>
-              <div className="hospital-integration__connections">
-                {connections.map((connection) => (
-                  <div key={connection.id}>
-                    <div>
-                      <span>
-                        {t(
-                          connection.role === 'SOURCE'
-                            ? 'label.source'
-                            : 'label.target'
-                        )}
-                      </span>
-                      <strong>{connection.displayName}</strong>
-                      <small>
-                        {connection.databaseType} ·{' '}
-                        {t('hospitalIntegration.synthetic')}
-                      </small>
-                      {connectionStates[connection.id] !== undefined && (
-                        <small role="status">
-                          {t(
-                            `hospitalIntegration.${
-                              connectionStates[connection.id]
-                                ? 'connectionPassed'
-                                : 'connectionFailed'
-                            }`
-                          )}
-                        </small>
-                      )}
-                    </div>
-                    <Button
-                      color="secondary"
-                      isDisabled={busy}
-                      isLoading={loading[connection.id]}
-                      onClick={() => void testConnection(connection.id)}>
-                      {t('hospitalIntegration.testConnection')}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <section
-                aria-busy={loading.initial}
-                aria-labelledby="integration-tasks-title">
-                <div className="hospital-integration__section-heading">
-                  <h2 id="integration-tasks-title">
-                    {t('hospitalIntegration.tasks')}
-                  </h2>
-                </div>
-                {loading.initial ? (
-                  <p role="status">{t('hospitalIntegration.loading')}</p>
-                ) : tasks.length === 0 ? (
-                  <div className="hospital-integration__empty">
-                    <h3>{t('hospitalIntegration.noTasks')}</h3>
-                    <p>{t('hospitalIntegration.noTasksHint')}</p>
-                  </div>
-                ) : (
-                  <div className="hospital-integration__table-scroll">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th scope="col">{t('label.name')}</th>
-                          <th scope="col">
-                            {t('hospitalIntegration.transferRoute')}
-                          </th>
-                          <th scope="col">{t('label.mode')}</th>
-                          <th scope="col">{t('label.status')}</th>
-                          <th scope="col">
-                            {t('hospitalIntegration.catalogSync')}
-                          </th>
-                          <th scope="col">{t('label.updated-at')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tasks.map((task) => (
-                          <tr key={task.id}>
-                            <td>
-                              <Button
-                                color="link-color"
-                                onClick={() => void openTask(task)}>
-                                {task.displayName || task.name}
-                              </Button>
-                              <small>{task.name}</small>
-                            </td>
-                            <td>
-                              <span>
-                                {task.sourceSchema}.{task.sourceTable}
-                              </span>
-                              <ArrowRight
-                                aria-hidden="true"
-                                className="hospital-integration__route-arrow"
-                              />
-                              <span>
-                                {task.targetSchema}.{task.targetTable}
-                              </span>
-                            </td>
-                            <td>{task.mode}</td>
-                            <td>
-                              <span
-                                className="hospital-integration__status"
-                                data-status={task.latestRun?.status}>
-                                {task.latestRun
-                                  ? t(
-                                      `hospitalIntegration.runStatus.${task.latestRun.status}`,
-                                      { defaultValue: task.latestRun.status }
-                                    )
-                                  : t('hospitalIntegration.notRun')}
-                              </span>
-                            </td>
-                            <td>
-                              {t(
-                                `hospitalIntegration.catalogStatus.${task.catalog.status}`
-                              )}
-                            </td>
-                            <td>
-                              {new Date(task.updatedAt).toLocaleString(
-                                i18n.language
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </section>
-            </>
-          )}
-          {(view === 'create' || view === 'edit') && (
-            <>
-              <h2 className="hospital-integration__editor-title">
-                {t(
-                  view === 'create'
-                    ? 'hospitalIntegration.createTask'
-                    : 'hospitalIntegration.editTask'
-                )}
-              </h2>
-              <IntegrationTaskForm
-                disabled={busy}
-                errors={formErrors}
-                saving={loading.save}
-                sourceTables={sourceTables}
-                tablesUnavailable={Object.values(tableErrors).some(Boolean)}
-                targetTables={targetTables}
-                validating={loading.validate}
-                value={form}
-                onCancel={() => changeView(selected ? 'detail' : 'list')}
-                onChange={(value) => {
-                  setForm(value);
-                  setFormErrors([]);
-                }}
-                onSave={() => void validateOrSave(true)}
-                onValidate={() => void validateOrSave(false)}
-              />
-            </>
-          )}
-          {view === 'detail' && selected && (
-            <IntegrationTaskDetail
-              busy={busy}
-              engineAvailable={engineAvailable}
-              loading={loading}
-              task={selected}
-              uncertain={
-                Boolean(uncertainTasks[selected.id]) ||
-                isIntegrationRunUncertain(selected.latestRun)
+          <Tabs
+            className="hospital-integration__tabs"
+            selectedKey={activeTab}
+            onSelectionChange={(key) => {
+              if (key === 'tasks' || key === 'connections') {
+                setActiveTab(key);
               }
-              onCatalog={() => void taskAction('catalog')}
-              onEdit={() => {
-                setForm(toIntegrationTaskInput(selected));
-                setEditingVersion(selected.version);
-                changeView('edit');
-              }}
-              onRefresh={() => void taskAction('refresh')}
-              onRun={(resume) => void taskAction(resume ? 'resume' : 'run')}
-              onStop={() => void taskAction('stop')}
-            />
-          )}
+            }}>
+            <Tabs.List
+              aria-label={t('hospitalIntegration.title')}
+              type="underline">
+              <Tabs.Item
+                data-testid="integration-tasks-tab"
+                id="tasks"
+                isDisabled={busy || connectionBusy}
+                label={t('hospitalIntegration.tasks')}
+              />
+              <Tabs.Item
+                data-testid="integration-connections-tab"
+                id="connections"
+                isDisabled={busy || connectionBusy}
+                label={t('hospitalIntegration.dataSources')}
+              />
+            </Tabs.List>
+            <section
+              aria-label={t('hospitalIntegration.engine')}
+              className="hospital-integration__engine">
+              <div>
+                <strong>{t('hospitalIntegration.engine')}</strong>
+                <span
+                  className="hospital-integration__status"
+                  data-status={engineAvailable ? 'SYNCED' : 'UNKNOWN'}>
+                  {loading.initial
+                    ? t('hospitalIntegration.loading')
+                    : t(
+                        `hospitalIntegration.${
+                          engineAvailable
+                            ? 'reachable'
+                            : engine?.enabled === false
+                            ? 'disabled'
+                            : 'unreachable'
+                        }`
+                      )}
+                </span>
+                {engine?.engineVersion && <small>{engine.engineVersion}</small>}
+              </div>
+              <Button
+                aria-label={t('hospitalIntegration.refreshConnections')}
+                color="link-gray"
+                iconLeading={RefreshCw01}
+                isDisabled={busy || connectionBusy}
+                onClick={() => {
+                  setErrorCode(undefined);
+                  setReload((current) => current + 1);
+                }}>
+                {t('label.refresh')}
+              </Button>
+            </section>
+            <Tabs.Panel
+              shouldForceMount
+              hidden={activeTab !== 'connections'}
+              id="connections">
+              <IntegrationConnections
+                connections={connections}
+                createRequest={connectionCreateRequest}
+                loading={loading.initial}
+                onBusyChange={handleConnectionBusyChange}
+                onChange={setConnections}
+              />
+            </Tabs.Panel>
+            <Tabs.Panel
+              shouldForceMount
+              hidden={activeTab !== 'tasks'}
+              id="tasks">
+              <div
+                data-testid="integration-tasks-list"
+                hidden={
+                  activeTab !== 'tasks' ||
+                  (view !== 'list' && view !== 'create')
+                }>
+                <section
+                  aria-busy={loading.initial}
+                  aria-labelledby="integration-tasks-title">
+                  <div className="hospital-integration__section-heading">
+                    <h2 id="integration-tasks-title">
+                      {t('hospitalIntegration.tasks')}
+                    </h2>
+                  </div>
+                  {loading.initial ? (
+                    <p role="status">{t('hospitalIntegration.loading')}</p>
+                  ) : tasks.length === 0 ? (
+                    <div className="hospital-integration__empty">
+                      <h3>{t('hospitalIntegration.noTasks')}</h3>
+                      <p>{t('hospitalIntegration.noTasksHint')}</p>
+                    </div>
+                  ) : (
+                    <div className="hospital-integration__table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">{t('label.name')}</th>
+                            <th scope="col">
+                              {t('hospitalIntegration.transferRoute')}
+                            </th>
+                            <th scope="col">{t('label.mode')}</th>
+                            <th scope="col">{t('label.status')}</th>
+                            <th scope="col">
+                              {t('hospitalIntegration.catalogSync')}
+                            </th>
+                            <th scope="col">{t('label.updated-at')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tasks.map((task) => (
+                            <tr key={task.id}>
+                              <td>
+                                <Button
+                                  color="link-color"
+                                  onClick={() => void openTask(task)}>
+                                  {task.displayName || task.name}
+                                </Button>
+                                <small>{task.name}</small>
+                              </td>
+                              <td>
+                                <span>
+                                  {task.sourceSchema}.{task.sourceTable}
+                                </span>
+                                <ArrowRight
+                                  aria-hidden="true"
+                                  className="hospital-integration__route-arrow"
+                                />
+                                <span>
+                                  {task.targetSchema}.{task.targetTable}
+                                </span>
+                              </td>
+                              <td>{task.mode}</td>
+                              <td>
+                                <span
+                                  className="hospital-integration__status"
+                                  data-status={task.latestRun?.status}>
+                                  {task.latestRun
+                                    ? t(
+                                        `hospitalIntegration.runStatus.${task.latestRun.status}`,
+                                        { defaultValue: task.latestRun.status }
+                                      )
+                                    : t('hospitalIntegration.notRun')}
+                                </span>
+                              </td>
+                              <td>
+                                {t(
+                                  `hospitalIntegration.catalogStatus.${task.catalog.status}`
+                                )}
+                              </td>
+                              <td>
+                                {new Date(task.updatedAt).toLocaleString(
+                                  i18n.language
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              <FormDrawer
+                destroyOnClose
+                className="hospital-integration hospital-integration--drawer"
+                data-testid="integration-task-drawer"
+                isOpen={taskEditorOpen}
+                isSubmitting={busy}
+                title={t(
+                  view === 'edit'
+                    ? 'hospitalIntegration.editTask'
+                    : 'hospitalIntegration.createTask'
+                )}
+                width={view === 'edit' ? 960 : 880}
+                onClose={() => {
+                  if (!mutation.current) {
+                    changeView(selected ? 'detail' : 'list');
+                  }
+                }}>
+                {errorCode && (
+                  <IntegrationDrawerAlert focusKey={errorCode}>
+                    <p>{t(integrationErrorKey(errorCode))}</p>
+                    {conflict && (
+                      <>
+                        <p>{t('hospitalIntegration.conflictHint')}</p>
+                        <Button
+                          color="link-color"
+                          data-testid="integration-task-reload"
+                          isDisabled={busy}
+                          isLoading={loading.reloadTask}
+                          onClick={() => void reloadCurrentTask()}>
+                          {t('hospitalIntegration.reloadCurrent')}
+                        </Button>
+                      </>
+                    )}
+                  </IntegrationDrawerAlert>
+                )}
+                {(sourceData.errorCode || targetData.errorCode) && (
+                  <div className="hospital-integration__alert" role="alert">
+                    {t(
+                      integrationErrorKey(
+                        sourceData.errorCode ?? targetData.errorCode
+                      )
+                    )}
+                  </div>
+                )}
+                <IntegrationTaskForm
+                  connections={connections}
+                  disabled={busy}
+                  errors={formErrors}
+                  saving={loading.save}
+                  sourceTables={sourceTables}
+                  tablesLoading={tablesLoading}
+                  tablesUnavailable={Boolean(
+                    sourceData.errorCode || targetData.errorCode
+                  )}
+                  targetTables={targetTables}
+                  validating={loading.validate}
+                  value={form}
+                  onCancel={() => {
+                    if (!mutation.current) {
+                      changeView(selected ? 'detail' : 'list');
+                    }
+                  }}
+                  onChange={(value) => {
+                    setForm(value);
+                    setFormErrors([]);
+                  }}
+                  onReloadTables={() =>
+                    setTablesReload((current) => current + 1)
+                  }
+                  onSave={() => void validateOrSave(true)}
+                  onValidate={() => void validateOrSave(false)}
+                />
+              </FormDrawer>
+              {selected && (
+                <div
+                  data-testid="integration-task-detail"
+                  hidden={
+                    activeTab !== 'tasks' ||
+                    (view !== 'detail' && view !== 'edit')
+                  }>
+                  <IntegrationTaskDetail
+                    busy={busy}
+                    engineAvailable={engineAvailable}
+                    loading={loading}
+                    sourceConnectionName={
+                      connections.find(
+                        (connection) =>
+                          connection.id === selected.sourceConnectionId
+                      )?.displayName
+                    }
+                    targetConnectionName={
+                      connections.find(
+                        (connection) =>
+                          connection.id === selected.targetConnectionId
+                      )?.displayName
+                    }
+                    task={selected}
+                    uncertain={
+                      Boolean(uncertainTasks[selected.id]) ||
+                      isIntegrationRunUncertain(selected.latestRun)
+                    }
+                    onCatalog={() => void taskAction('catalog')}
+                    onEdit={() => {
+                      setForm(toIntegrationTaskInput(selected));
+                      setEditingVersion(selected.version);
+                      changeView('edit');
+                    }}
+                    onRefresh={() => void taskAction('refresh')}
+                    onRun={(resume) =>
+                      void taskAction(resume ? 'resume' : 'run')
+                    }
+                    onStop={() => void taskAction('stop')}
+                  />
+                </div>
+              )}
+            </Tabs.Panel>
+          </Tabs>
         </>
       )}
     </main>

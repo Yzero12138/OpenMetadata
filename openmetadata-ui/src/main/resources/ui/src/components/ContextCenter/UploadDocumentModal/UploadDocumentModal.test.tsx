@@ -35,6 +35,7 @@ let mockOnDropFiles: ((files: FileList) => void) | undefined;
 let mockOnSizeLimitExceed: ((files: FileList) => void) | undefined;
 
 jest.mock('@openmetadata/ui-core-components', () => ({
+  ...jest.requireActual('@openmetadata/ui-core-components'),
   Button: jest.fn(
     ({
       children,
@@ -188,14 +189,13 @@ describe('UploadDocumentModal', () => {
   it('renders the modal when isOpen is true', () => {
     render(<UploadDocumentModal {...defaultProps} />);
 
-    expect(screen.getByTestId('modal-overlay')).toBeInTheDocument();
-    expect(screen.getByTestId('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('does not render modal content when isOpen is false', () => {
     render(<UploadDocumentModal {...defaultProps} isOpen={false} />);
 
-    expect(screen.queryByTestId('modal-overlay')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('renders the drop zone', () => {
@@ -266,7 +266,7 @@ describe('UploadDocumentModal', () => {
   it('calls onClose when dialog close button is clicked', () => {
     render(<UploadDocumentModal {...defaultProps} />);
 
-    fireEvent.click(screen.getByTestId('dialog-close'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.close' }));
 
     expect(defaultProps.onClose).toHaveBeenCalled();
   });

@@ -68,6 +68,7 @@ import { getEntityDetailsPath } from '../../../utils/RouterUtils';
 import { isNearScrollBottom } from '../../../utils/ScrollUtils';
 import { replacePlus } from '../../../utils/StringUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { FormDrawerActions } from '../../common/atoms/drawer/FormDrawerActions';
 import Loader from '../../common/Loader/Loader';
 import Searchbar from '../../common/SearchBarComponent/SearchBar.component';
 import { SearchDropdownOption } from '../../SearchDropdown/SearchDropdown.interface';
@@ -82,6 +83,7 @@ import {
 export const AddTestCaseList = ({
   onCancel,
   onSubmit,
+  onSubmittingChange,
   cancelText,
   submitText,
   testCaseFilters,
@@ -105,6 +107,8 @@ export const AddTestCaseList = ({
   const [pageNumber, setPageNumber] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionPending = useRef(false);
   const [filterStatus, setFilterStatus] = useState<
     TestCaseStatus | undefined
   >();
@@ -401,15 +405,27 @@ export const AddTestCaseList = ({
   }, [selectAll, excludedIds, selectedItems, activeFilter]);
 
   const handleSubmit = async () => {
-    setIsLoading(true);
-    const {
-      selectAll: sa,
-      includeIds,
-      excludeIds: excl,
-      filter,
-    } = buildSubmitPayload();
-    await onSubmit?.({ selectAll: sa, includeIds, excludeIds: excl, filter });
-    setIsLoading(false);
+    if (submissionPending.current) {
+      return;
+    }
+    submissionPending.current = true;
+    setIsSubmitting(true);
+    onSubmittingChange?.(true);
+    try {
+      const {
+        selectAll: sa,
+        includeIds,
+        excludeIds: excl,
+        filter,
+      } = buildSubmitPayload();
+      await onSubmit?.({ selectAll: sa, includeIds, excludeIds: excl, filter });
+    } catch (error) {
+      showErrorToast(error as AxiosError);
+    } finally {
+      submissionPending.current = false;
+      setIsSubmitting(false);
+      onSubmittingChange?.(false);
+    }
   };
 
   const onScroll: UIEventHandler<HTMLElement> = useCallback(
@@ -884,18 +900,27 @@ export const AddTestCaseList = ({
       )}
       {renderList}
       {showButton && (
-        <Col className="d-flex justify-end items-center p-y-sm gap-4" span={24}>
-          <Button data-testid="cancel" type="link" onClick={onCancel}>
-            {cancelText ?? t('label.cancel')}
-          </Button>
-          <Button
-            data-testid="submit"
-            loading={isLoading}
-            type="primary"
-            onClick={handleSubmit}>
-            {submitText ?? t('label.create')}
-          </Button>
-        </Col>
+        <FormDrawerActions>
+          <Col
+            className="d-flex justify-end items-center p-y-sm gap-4"
+            span={24}>
+            <Button
+              data-testid="cancel"
+              disabled={isSubmitting}
+              type="link"
+              onClick={() => !submissionPending.current && onCancel?.()}>
+              {cancelText ?? t('label.cancel')}
+            </Button>
+            <Button
+              data-testid="submit"
+              disabled={isSubmitting}
+              loading={isLoading || isSubmitting}
+              type="primary"
+              onClick={handleSubmit}>
+              {submitText ?? t('label.create')}
+            </Button>
+          </Col>
+        </FormDrawerActions>
       )}
     </Row>
   );

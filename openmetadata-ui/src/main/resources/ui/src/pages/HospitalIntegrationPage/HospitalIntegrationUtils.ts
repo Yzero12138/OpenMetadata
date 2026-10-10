@@ -11,6 +11,9 @@
  *  limitations under the License.
  */
 import {
+  IntegrationConnection,
+  IntegrationConnectionInput,
+  IntegrationDatabaseType,
   IntegrationRun,
   IntegrationTable,
   IntegrationTask,
@@ -20,8 +23,8 @@ import {
 export const EMPTY_INTEGRATION_TASK: IntegrationTaskInput = {
   name: '',
   displayName: '',
-  sourceConnectionId: 'synthetic-source',
-  targetConnectionId: 'synthetic-ods',
+  sourceConnectionId: '',
+  targetConnectionId: '',
   sourceSchema: '',
   sourceTable: '',
   targetSchema: '',
@@ -100,7 +103,7 @@ export const validateIntegrationInput = (
   targetTables: IntegrationTable[]
 ): string[] => {
   const errors: string[] = [];
-  if (!/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(input.name)) {
+  if (!/^[a-z][a-z0-9_-]{0,62}$/.test(input.name)) {
     errors.push('invalidName');
   }
   if (!input.displayName.trim()) {
@@ -159,9 +162,124 @@ export const integrationErrorKey = (code?: string) => {
     'TASK_ACTIVE',
     'SAVEPOINT_UNAVAILABLE',
     'CATALOG_SYNC_FAILED',
+    'CONNECTION_NOT_FOUND',
+    'CONNECTION_DISABLED',
+    'CONNECTION_MANAGED',
+    'CONNECTION_IN_USE',
+    'CONNECTION_ROLE_MISMATCH',
+    'DUPLICATE_CONNECTION',
+    'CREDENTIALS_NOT_CONFIGURED',
+    'CONNECTION_UNAVAILABLE',
+    'MODE_UNSUPPORTED',
+    'SCHEMA_NOT_ALLOWED',
+    'TABLE_NOT_FOUND',
+    'TABLE_LIMIT_EXCEEDED',
   ]);
 
   return `hospitalIntegration.errors.${
     code && knownCodes.has(code) ? code : 'REQUEST_FAILED'
   }`;
+};
+
+export const INTEGRATION_DATABASE_DEFAULTS: Record<
+  IntegrationDatabaseType,
+  { port: number; schemas: string[] }
+> = {
+  Postgres: { port: 5432, schemas: ['public'] },
+  Oracle: { port: 1521, schemas: [] },
+  Mssql: { port: 1433, schemas: ['dbo'] },
+  Mysql: { port: 3306, schemas: [] },
+};
+
+export const emptyIntegrationConnection = (): IntegrationConnectionInput => ({
+  name: '',
+  displayName: '',
+  role: 'SOURCE',
+  databaseType: 'Postgres',
+  databaseVersion: '',
+  host: '',
+  port: 5432,
+  database: '',
+  username: '',
+  password: '',
+  schemas: ['public'],
+  tlsMode: 'VERIFY',
+  enabled: true,
+});
+
+export const toIntegrationConnectionInput = (
+  connection: IntegrationConnection
+): IntegrationConnectionInput => ({
+  name: connection.name,
+  displayName: connection.displayName,
+  role: connection.role,
+  databaseType: connection.databaseType,
+  databaseVersion: connection.databaseVersion,
+  host: connection.host,
+  port: connection.port,
+  database: connection.database,
+  username: connection.username,
+  schemas: [...connection.schemas],
+  ...(connection.databaseType === 'Oracle'
+    ? {
+        oracleConnectionType: connection.oracleConnectionType ?? 'SERVICE_NAME',
+      }
+    : {}),
+  tlsMode: connection.tlsMode,
+  enabled: connection.enabled,
+});
+
+export const validateIntegrationConnectionInput = (
+  input: IntegrationConnectionInput,
+  editing: boolean
+): string[] => {
+  const errors: string[] = [];
+  if (!/^[a-z][a-z0-9_-]{0,62}$/.test(input.name)) {
+    errors.push('invalidName');
+  }
+  if (!input.displayName.trim() || input.displayName.length > 120) {
+    errors.push('displayNameRequired');
+  }
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._ -]{0,29}$/.test(input.databaseVersion)) {
+    errors.push('databaseVersionRequired');
+  }
+  if (
+    !/^(?=.{1,253}$)[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?$/.test(
+      input.host
+    ) ||
+    input.host.includes('..')
+  ) {
+    errors.push('hostInvalid');
+  }
+  if (!Number.isInteger(input.port) || input.port < 1 || input.port > 65535) {
+    errors.push('portInvalid');
+  }
+  if (
+    !/^[a-zA-Z_][a-zA-Z0-9_.-]{0,126}$/.test(input.database) ||
+    !input.username.trim() ||
+    input.username.length > 128
+  ) {
+    errors.push('connectionFieldsRequired');
+  }
+  if (!editing && !input.password) {
+    errors.push('passwordRequired');
+  }
+  if (
+    input.schemas.length < 1 ||
+    input.schemas.length > 8 ||
+    new Set(input.schemas).size !== input.schemas.length ||
+    input.schemas.some(
+      (schema) => !/^[\p{L}_][\p{L}\p{N}_$#]{0,127}$/u.test(schema)
+    )
+  ) {
+    errors.push('schemasInvalid');
+  }
+  if (
+    input.databaseType === 'Mysql' &&
+    (input.schemas.length !== 1 || input.schemas[0] !== input.database)
+  ) {
+    errors.push('mysqlScopeHint');
+  }
+
+  return errors;
 };

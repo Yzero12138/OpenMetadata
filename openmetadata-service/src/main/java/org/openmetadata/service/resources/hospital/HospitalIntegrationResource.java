@@ -3,12 +3,14 @@ package org.openmetadata.service.resources.hospital;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -22,6 +24,7 @@ import org.openmetadata.service.integration.EntityExtensionTaskStore;
 import org.openmetadata.service.integration.IntegrationConfiguration;
 import org.openmetadata.service.integration.IntegrationException;
 import org.openmetadata.service.integration.IntegrationModels;
+import org.openmetadata.service.integration.IntegrationModels.ConnectionUpdate;
 import org.openmetadata.service.integration.IntegrationModels.RunInput;
 import org.openmetadata.service.integration.IntegrationModels.StopInput;
 import org.openmetadata.service.integration.IntegrationModels.UpdateInput;
@@ -31,7 +34,9 @@ import org.openmetadata.service.security.Authorizer;
 
 @Path("/v1/hospital/integration")
 @Collection(name = "hospitalIntegration", order = 9)
-@Tag(name = "Hospital Integration", description = "Admin-only isolated synthetic data integration")
+@Tag(
+    name = "Hospital Integration",
+    description = "Admin-only registered data sources and integration tasks")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public final class HospitalIntegrationResource {
@@ -61,6 +66,58 @@ public final class HospitalIntegrationResource {
   }
 
   @POST
+  @Path("/connections")
+  public Response createConnection(@Context SecurityContext securityContext, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.status(Response.Status.CREATED)
+                .entity(
+                    service.createConnection(
+                        IntegrationModels.readConnection(IntegrationModels.readBody(input), false),
+                        actor(securityContext)))
+                .build());
+  }
+
+  @GET
+  @Path("/connections/{id}")
+  public Response connection(@Context SecurityContext securityContext, @PathParam("id") String id) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(() -> Response.ok(service.connection(id)).build());
+  }
+
+  @PUT
+  @Path("/connections/{id}")
+  public Response updateConnection(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.updateConnection(
+                        id,
+                        (ConnectionUpdate)
+                            IntegrationModels.readConnection(
+                                IntegrationModels.readBody(input), true),
+                        actor(securityContext)))
+                .build());
+  }
+
+  @DELETE
+  @Path("/connections/{id}")
+  public Response deleteConnection(
+      @Context SecurityContext securityContext,
+      @PathParam("id") String id,
+      @QueryParam("version") long version) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () -> {
+          service.deleteConnection(id, version);
+          return Response.noContent().build();
+        });
+  }
+
+  @POST
   @Path("/connections/{id}/test")
   public Response testConnection(
       @Context SecurityContext securityContext, @PathParam("id") String id) {
@@ -71,8 +128,31 @@ public final class HospitalIntegrationResource {
   @GET
   @Path("/connections/{id}/tables")
   public Response tables(@Context SecurityContext securityContext, @PathParam("id") String id) {
+    return discoverTables(securityContext, id, true);
+  }
+
+  @GET
+  @Path("/connections/{id}/table-options")
+  public Response tableOptions(
+      @Context SecurityContext securityContext, @PathParam("id") String id) {
+    return discoverTables(securityContext, id, false);
+  }
+
+  private Response discoverTables(
+      SecurityContext securityContext, String id, boolean includeColumns) {
     authorizer.authorizeAdmin(securityContext);
-    return respond(() -> Response.ok(Map.of("data", service.tables(id))).build());
+    return respond(() -> Response.ok(Map.of("data", service.tables(id, includeColumns))).build());
+  }
+
+  @GET
+  @Path("/connections/{id}/tables/{schema}/{table}")
+  public Response table(
+      @Context SecurityContext securityContext,
+      @PathParam("id") String id,
+      @PathParam("schema") String schema,
+      @PathParam("table") String table) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(() -> Response.ok(service.table(id, schema, table)).build());
   }
 
   @GET

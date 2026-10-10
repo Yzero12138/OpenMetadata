@@ -19,7 +19,29 @@ public final class IntegrationException extends RuntimeException {
           Map.entry(
               "CATALOG_SYNC_FAILED",
               "Catalog synchronization failed. It can be retried separately."),
-          Map.entry("CONNECTION_UNAVAILABLE", "The synthetic database connection is unavailable."),
+          Map.entry(
+              "CONNECTION_UNAVAILABLE",
+              "The database connection is unavailable. Check connectivity and credentials."),
+          Map.entry("CONNECTION_NOT_FOUND", "The data source does not exist."),
+          Map.entry("CONNECTION_DISABLED", "The data source is disabled."),
+          Map.entry("CONNECTION_MANAGED", "This data source is managed by server configuration."),
+          Map.entry("CONNECTION_IN_USE", "This data source is referenced by an integration task."),
+          Map.entry(
+              "CONNECTION_ROLE_MISMATCH",
+              "Select a data source with the required source or target role."),
+          Map.entry(
+              "DUPLICATE_CONNECTION", "A data source with this technical name already exists."),
+          Map.entry(
+              "CREDENTIALS_NOT_CONFIGURED",
+              "Credential encryption is unavailable. Contact the administrator."),
+          Map.entry(
+              "MODE_UNSUPPORTED",
+              "This data source does not support the selected collection mode."),
+          Map.entry("SCHEMA_NOT_ALLOWED", "Select a schema in the configured collection scope."),
+          Map.entry("TABLE_NOT_FOUND", "The selected table does not exist or is not accessible."),
+          Map.entry(
+              "TABLE_LIMIT_EXCEEDED",
+              "There are too many tables. Narrow the configured schema scope."),
           Map.entry("TASK_NOT_FOUND", "The integration task does not exist."),
           Map.entry("DUPLICATE_TASK", "A task with this name already exists."),
           Map.entry(

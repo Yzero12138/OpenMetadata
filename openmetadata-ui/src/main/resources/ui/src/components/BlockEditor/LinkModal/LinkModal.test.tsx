@@ -10,7 +10,16 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import { useRef, useState } from 'react';
+import FormDrawer from '../../common/atoms/drawer/FormDrawer';
 import LinkModal from './LinkModal';
 
 const onSave = jest.fn();
@@ -31,14 +40,18 @@ describe('LinkModal', () => {
   it('should render the "Add link" title and the link input when href is empty', () => {
     render(<LinkModal {...defaultProps} />);
 
-    expect(screen.getByText('Add link')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'label.add-entity' })
+    ).toBeInTheDocument();
     expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
 
   it('should render the "Edit link" title when an href is provided', () => {
     render(<LinkModal {...defaultProps} data={{ href: 'https://x.com' }} />);
 
-    expect(screen.getByText('Edit link')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'label.edit-entity' })
+    ).toBeInTheDocument();
   });
 
   it('should call onSave with the entered href on submit', async () => {
@@ -47,19 +60,21 @@ describe('LinkModal', () => {
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: '{{buildEntityUrl event.entityType entity}}' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'label.save' }));
 
     await waitFor(() =>
       expect(onSave).toHaveBeenCalledWith({
         href: '{{buildEntityUrl event.entityType entity}}',
       })
     );
+
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
   it('should call onCancel when the cancel button is clicked', () => {
     render(<LinkModal {...defaultProps} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'label.cancel' }));
 
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
@@ -69,10 +84,91 @@ describe('LinkModal', () => {
     host.setAttribute('data-testid', 'dialog-host');
     document.body.appendChild(host);
 
-    render(<LinkModal {...defaultProps} getContainer={() => host} />);
+    const { unmount } = render(
+      <LinkModal {...defaultProps} getContainer={() => host} />
+    );
 
     expect(host.querySelector('.block-editor-link-modal')).toBeInTheDocument();
 
-    document.body.removeChild(host);
+    unmount();
+    host.remove();
+  });
+
+  it('edits and submits a link inside its parent editor dialog, then restores focus', async () => {
+    const EditorDialog = () => {
+      const [open, setOpen] = useState(false);
+      const editorRef = useRef<HTMLDivElement>(null);
+
+      const getContainer = () => {
+        const dialog =
+          editorRef.current?.closest<HTMLElement>('[role="dialog"]');
+        if (!dialog) {
+          throw new Error('The editor dialog must be mounted');
+        }
+
+        return dialog;
+      };
+
+      return (
+        <FormDrawer isOpen title="Editor dialog" onClose={jest.fn()}>
+          <div ref={editorRef}>
+            <button onClick={() => setOpen(true)}>Insert link</button>
+            {open && (
+              <LinkModal
+                {...defaultProps}
+                getContainer={getContainer}
+                isOpen={open}
+                onCancel={() => setOpen(false)}
+                onSave={(data) => {
+                  onSave(data);
+                  setOpen(false);
+                }}
+              />
+            )}
+          </div>
+        </FormDrawer>
+      );
+    };
+    render(<EditorDialog />);
+    const editorDialog = screen.getByRole('dialog', { name: 'Editor dialog' });
+    const launcher = screen.getByRole('button', { name: 'Insert link' });
+    launcher.focus();
+    fireEvent.click(launcher);
+    await act(async () => jest.runOnlyPendingTimers());
+
+    const linkDialog = screen.getByRole('dialog', { name: 'label.add-entity' });
+
+    expect(
+      linkDialog.closest('[data-form-drawer-overlay]')?.parentElement
+    ).toBe(editorDialog);
+
+    const input = within(linkDialog).getByRole('textbox');
+
+    expect(input).toHaveFocus();
+
+    fireEvent.change(input, {
+      target: { value: 'https://hospital.example/catalog' },
+    });
+    fireEvent.click(
+      within(linkDialog).getByRole('button', { name: 'label.save' })
+    );
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({
+        href: 'https://hospital.example/catalog',
+      })
+    );
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    await act(async () => jest.runOnlyPendingTimers());
+    await waitFor(() => expect(launcher).toHaveFocus());
+
+    expect(
+      screen.getByRole('dialog', { name: 'Editor dialog' })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('dialog', { name: 'label.add-entity' })
+    ).not.toBeInTheDocument();
   });
 });

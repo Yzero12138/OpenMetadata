@@ -10,12 +10,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Form, Input, Modal, Typography } from 'antd';
+import { Button, Form, Input, Typography } from 'antd';
 import { FormProps, useForm } from 'antd/lib/form/Form';
 import { AxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { LegacyFormDrawer as Modal } from '../../common/atoms/drawer/LegacyFormDrawer';
 import Loader from '../../common/Loader/Loader';
 import { ModalWithFunctionEditorProps } from './ModalWithFunctionEditor.interface';
 
@@ -25,7 +26,6 @@ export const ModalWithFunctionEditor = ({
   onSave,
   onCancel,
   visible,
-  getContainer,
 }: ModalWithFunctionEditorProps) => {
   const { t } = useTranslation();
   const [form] = useForm();
@@ -52,10 +52,8 @@ export const ModalWithFunctionEditor = ({
 
   return (
     <Modal
-      centered
       destroyOnClose
       className="function-editor"
-      closable={false}
       data-testid="function-editor-modal"
       footer={[
         <Button
@@ -74,7 +72,7 @@ export const ModalWithFunctionEditor = ({
           {isSaving ? <Loader size="small" type="white" /> : t('label.save')}
         </Button>,
       ]}
-      getContainer={getContainer}
+      isSubmitting={isSaving || isLoading}
       maskClosable={false}
       open={visible}
       title={<Typography.Text data-testid="header">{header}</Typography.Text>}

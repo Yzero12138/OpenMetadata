@@ -12,19 +12,25 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Statement;
+import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jdbi.v3.core.Jdbi;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.openmetadata.schema.service.configuration.elasticsearch.ElasticSearchConfiguration;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.search.IndexMappingLoader;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.fernet.Fernet;
 import org.openmetadata.service.integration.IntegrationModels.FieldMapping;
 import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
 import org.openmetadata.service.integration.IntegrationModels.TaskInput;
@@ -52,8 +58,11 @@ import org.openmetadata.service.util.jdbi.JdbiUtils;
  * database, optionally set HOSPITAL_INTEGRATION_TEST_CATALOG_SCHEMA_PATH to a local PostgreSQL
  * schema-only export produced with pg_dump --schema-only --no-owner --no-privileges. This explicit
  * local test input is not a repository or CI dependency; no data, users, or credentials are loaded.
+ * The optional four-family catalog case also requires the loopback fixtures populated by
+ * IntegrationJdbcEngineTest; run that test first when opting into both environment variables.
  */
 @EnabledIfEnvironmentVariable(named = "HOSPITAL_INTEGRATION_TEST_CATALOG_JDBC_URL", matches = ".+")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class IntegrationCatalogTest {
   private static final String PASSWORD = "integration-test-only";
   private static final String ACTOR = "synthetic-catalog-test";
@@ -151,6 +160,7 @@ class IntegrationCatalogTest {
   }
 
   @Test
+  @Order(1)
   void nativeCatalogAndMappedColumnLineageAreDurableAndIdempotent() throws Exception {
     EntityExtensionTaskStore store =
         new EntityExtensionTaskStore(Entity.getCollectionDAO().entityExtensionDAO());
@@ -208,6 +218,72 @@ class IntegrationCatalogTest {
     assertEquals(1, count("pipeline_entity"));
     assertEquals(lineage.path("columnsLineage"), lineage(source, target).path("columnsLineage"));
     assertEquals("SYNCED", store.get(UUID.fromString(task.id)).catalog.status);
+  }
+
+  @Test
+  @Order(2)
+  @EnabledIfEnvironmentVariable(named = "HOSPITAL_INTEGRATION_TEST_JDBC_ENGINE_URL", matches = ".+")
+  void registeredBusinessFamiliesKeepNativeTypesAndMappedLineageAfterReopening() throws Exception {
+    Fernet.getInstance().setFernetKey(Base64.getUrlEncoder().encodeToString(new byte[32]));
+    var store = new EntityExtensionTaskStore(Entity.getCollectionDAO().entityExtensionDAO());
+    var connections =
+        new EntityExtensionConnectionStore(() -> Entity.getCollectionDAO().entityExtensionDAO());
+    var service = new IntegrationService(configuration, store, connections);
+    for (String type : List.of("Postgres", "Mysql", "Oracle", "Mssql")) {
+      String suffix = type.toLowerCase(Locale.ROOT);
+      var sourceInput = IntegrationJdbcEngineTest.source(type);
+      sourceInput.name = "catalog_source_" + suffix;
+      sourceInput.displayName = "Registered " + type + " business source";
+      var sourceConnection = service.createConnection(sourceInput, ACTOR);
+      var targetInput = IntegrationJdbcEngineTest.source("Postgres");
+      targetInput.name = "catalog_target_" + suffix;
+      targetInput.role = "TARGET";
+      targetInput.database = "integration_catalog_test";
+      var targetConnection = service.createConnection(targetInput, ACTOR);
+      var input = new TaskInput();
+      input.name = "catalog_business_" + suffix;
+      input.sourceConnectionId = sourceConnection.id;
+      input.targetConnectionId = targetConnection.id;
+      input.sourceSchema = sourceInput.schemas.getFirst();
+      input.sourceTable = type.equals("Oracle") ? "HOSPITAL_JDBC_VISIT" : "hospital_jdbc_visit";
+      input.targetSchema = "public";
+      input.targetTable = "integration_target_rows";
+      input.mode = "FULL";
+      input.primaryKey = type.equals("Oracle") ? "ID" : "id";
+      input.fieldMappings =
+          List.of(
+              new FieldMapping(input.primaryKey, "event_id"),
+              new FieldMapping(type.equals("Oracle") ? "PATIENT_NAME" : "patient_name", "label"));
+      var task = service.create(input, ACTOR);
+      var first = service.syncCatalog(task.id, null, ACTOR);
+      assertEquals("SYNCED", first.catalog.status, type + ": " + first.catalog.errorCode);
+      String serviceName = "hospital_connection_" + sourceConnection.id.replace("-", "");
+      assertTrue(first.catalog.sourceFqn.startsWith(serviceName + "."));
+      JsonNode nativeService = row("dbservice_entity", serviceName);
+      assertEquals(type, nativeService.path("serviceType").asText());
+      assertEquals(sourceInput.displayName, nativeService.path("displayName").asText());
+      assertTrue(nativeService.path("description").asText().contains("Registered business"));
+      assertFalse(nativeService.path("description").asText().contains("synthetic"));
+      JsonNode source = row("table_entity", first.catalog.sourceFqn);
+      JsonNode target = row("table_entity", first.catalog.targetFqn);
+      JsonNode pipeline = row("pipeline_entity", first.catalog.pipelineFqn);
+      JsonNode edge = lineage(source, target);
+      assertEquals(2, edge.path("columnsLineage").size());
+      assertEquals(pipeline.path("id").asText(), edge.path("pipeline").path("id").asText());
+      assertTrue(edge.toString().contains(first.catalog.sourceFqn + "." + input.primaryKey));
+      var reopened = new IntegrationService(configuration, store, connections);
+      var second = reopened.syncCatalog(task.id, null, ACTOR);
+      assertEquals("SYNCED", second.catalog.status);
+      assertEquals(source.path("id"), row("table_entity", second.catalog.sourceFqn).path("id"));
+      assertEquals(target.path("id"), row("table_entity", second.catalog.targetFqn).path("id"));
+      assertEquals(
+          pipeline.path("id"), row("pipeline_entity", second.catalog.pipelineFqn).path("id"));
+      assertEquals(edge.path("columnsLineage"), lineage(source, target).path("columnsLineage"));
+      System.out.println(
+          "Verified registered " + type + " native catalog, stable IDs and mapped column lineage");
+    }
+    assertServiceCredentialsAbsent("dbservice_entity");
+    assertServiceCredentialsAbsent("pipeline_service_entity");
   }
 
   private JsonNode row(String table, String fqn) throws Exception {

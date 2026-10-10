@@ -26,7 +26,8 @@ import {
   Typography,
 } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
-import Modal from 'antd/lib/modal/Modal';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
+
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import {
@@ -126,6 +127,7 @@ import {
   fetchOptions,
   generateOptions,
 } from '../../../../utils/TaskAssigneeUtils';
+import { resolveCommentPermissions } from '../../../../utils/TaskCommentUtils';
 import {
   applyTaskFormSchemaDefaults,
   getDefaultTaskFormSchema,
@@ -144,7 +146,6 @@ import {
   isTaskPendingFurtherApproval,
   isTaskTerminalStatus,
 } from '../../../../utils/TaskNavigationUtils';
-import { resolveCommentPermissions } from '../../../../utils/TaskCommentUtils';
 import { getNormalizedTaskPayload } from '../../../../utils/TaskPayloadUtils';
 import { showErrorToast, showSuccessToast } from '../../../../utils/ToastUtils';
 import TaskCommentCard from '../../../ActivityFeed/ActivityFeedCardNew/TaskCommentCard.component';
@@ -1927,8 +1928,7 @@ export const TaskTabNew = ({
       {isTaskTestCaseResult && !isWorkflowDrivenTask ? (
         <Modal
           destroyOnClose
-          closable={false}
-          closeIcon={null}
+          isSubmitting={isActionLoading}
           maskClosable={false}
           okButtonProps={{
             loading: isActionLoading,
@@ -1956,10 +1956,9 @@ export const TaskTabNew = ({
       ) : (
         <Modal
           destroyOnClose
-          closable={false}
-          closeIcon={null}
           data-testid="suggestion-edit-task-modal"
           footer={editTaskModalFooter}
+          isSubmitting={isActionLoading}
           maskClosable={false}
           open={showEditTaskModel}
           title={
@@ -1995,8 +1994,7 @@ export const TaskTabNew = ({
       {isTaskTestCaseResult && (
         <Modal
           maskClosable
-          closable={false}
-          closeIcon={null}
+          isSubmitting={isActionLoading}
           okButtonProps={{
             loading: isActionLoading,
           }}

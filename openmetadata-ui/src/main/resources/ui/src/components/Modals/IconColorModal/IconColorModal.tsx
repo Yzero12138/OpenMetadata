@@ -10,22 +10,19 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 import {
   Button,
-  Dialog,
   FieldProp,
   FieldTypes,
   getField,
   HelperTextType,
   HookForm,
-  Modal,
-  ModalOverlay,
 } from '@openmetadata/ui-core-components';
 import { FC, useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Style } from '../../../generated/type/schema';
+import { CoreFormDrawer as Dialog } from '../../common/atoms/drawer/CoreFormDrawer';
 import { AVAILABLE_ICONS, DEFAULT_TAG_ICON } from '../../common/IconPicker';
 import { StyleModalProps } from '../StyleModal/StyleModal.interface';
 
@@ -99,43 +96,42 @@ const IconColorModal: FC<StyleModalProps> = ({
   };
 
   return (
-    <ModalOverlay
+    <Dialog
+      data-testid="icon-color-modal"
       isDismissable={!isSaving}
       isOpen={open}
+      isSubmitting={isSaving}
+      title={t('label.edit-entity', { entity: t('label.style') })}
       onOpenChange={(v) => !v && !isSaving && onCancel()}>
-      <Modal data-testid="icon-color-modal">
-        <Dialog title={t('label.edit-entity', { entity: t('label.style') })}>
-          <Dialog.Content>
-            <HookForm
-              form={form}
-              id="style-modal-new"
-              onSubmit={form.handleSubmit(handleSubmit)}>
-              <div className="tw:mb-6">{getField(iconField)}</div>
-              <div className="tw:mb-6">{getField(colorField)}</div>
-            </HookForm>
-          </Dialog.Content>
+      <Dialog.Content>
+        <HookForm
+          form={form}
+          id="style-modal-new"
+          onSubmit={form.handleSubmit(handleSubmit)}>
+          <div className="tw:mb-6">{getField(iconField)}</div>
+          <div className="tw:mb-6">{getField(colorField)}</div>
+        </HookForm>
+      </Dialog.Content>
 
-          <Dialog.Footer>
-            <Button
-              color="secondary"
-              data-testid="cancel-button"
-              isDisabled={isSaving}
-              onPress={onCancel}>
-              {t('label.cancel')}
-            </Button>
-            <Button
-              showTextWhileLoading
-              color="primary"
-              data-testid="save-button"
-              isDisabled={isSaving}
-              isLoading={isSaving}
-              onPress={() => form.handleSubmit(handleSubmit)()}>
-              {t('label.save')}
-            </Button>
-          </Dialog.Footer>
-        </Dialog>
-      </Modal>
-    </ModalOverlay>
+      <Dialog.Footer>
+        <Button
+          color="secondary"
+          data-testid="cancel-button"
+          isDisabled={isSaving}
+          onPress={onCancel}>
+          {t('label.cancel')}
+        </Button>
+        <Button
+          showTextWhileLoading
+          color="primary"
+          data-testid="save-button"
+          isDisabled={isSaving}
+          isLoading={isSaving}
+          onPress={() => form.handleSubmit(handleSubmit)()}>
+          {t('label.save')}
+        </Button>
+      </Dialog.Footer>
+    </Dialog>
   );
 };
 

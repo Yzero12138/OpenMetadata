@@ -12,12 +12,13 @@
  */
 
 import { CheckOutlined, SearchOutlined } from '@ant-design/icons';
-import { Col, Input, Modal, Row } from 'antd';
+import { Col, Input, Row } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
 import { FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LegacyFormDrawer as Modal } from '../../../components/common/atoms/drawer/LegacyFormDrawer';
 import ErrorPlaceHolder from '../../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../../components/common/Loader/Loader';
 import RichTextEditorPreviewerV1 from '../../../components/common/RichTextEditor/RichTextEditorPreviewerV1';
@@ -132,11 +133,10 @@ const AddAttributeModal: FC<Props> = ({
 
   return (
     <Modal
-      centered
       className="ant-attribute-modal"
-      closable={false}
       confirmLoading={isModalLoading}
       data-testid="modal-container"
+      isSubmitting={isModalLoading}
       maskClosable={false}
       okText="Submit"
       open={isOpen}

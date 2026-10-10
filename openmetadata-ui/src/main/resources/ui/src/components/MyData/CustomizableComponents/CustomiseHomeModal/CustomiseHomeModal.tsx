@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 import Icon, { CheckOutlined } from '@ant-design/icons';
-import { Button, Col, Divider, Modal, Row, Typography } from 'antd';
+import { Button, Col, Divider, Row, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { startCase } from 'lodash';
@@ -28,6 +28,8 @@ import { Document } from '../../../../generated/entity/docStore/document';
 import { getAllKnowledgePanels } from '../../../../rest/DocStoreAPI';
 import customizeMyDataPageClassBase from '../../../../utils/CustomizeMyDataPageClassBase';
 import { showErrorToast } from '../../../../utils/ToastUtils';
+import { FormDrawerActions } from '../../../common/atoms/drawer/FormDrawerActions';
+import { LegacyFormDrawer as Modal } from '../../../common/atoms/drawer/LegacyFormDrawer';
 import Loader from '../../../common/Loader/Loader';
 import HeaderTheme from '../../HeaderTheme/HeaderTheme';
 import AllWidgetsContent from '../AllWidgetsContent/AllWidgetsContent';
@@ -285,9 +287,9 @@ const CustomiseHomeModal = ({
 
   return (
     <Modal
-      centered
       className="customise-home-modal"
       footer={null}
+      isSubmitting={isLoading}
       open={open}
       title={
         <div className="customise-home-modal-header p-box d-flex items-center gap-3">
@@ -320,25 +322,27 @@ const CustomiseHomeModal = ({
           )}
         </Col>
       </Row>
-      <Row className="customise-home-modal-footer p-box d-flex justify-end gap-3 bg-white sticky bottom-0">
-        <Col className="d-flex items-center gap-4">
-          <Button
-            className="cancel-btn border-radius-xs font-medium text-md bg-white"
-            data-testid="cancel-btn"
-            onClick={onClose}>
-            {t('label.cancel')}
-          </Button>
-          <Button
-            className="apply-btn border-radius-xs font-semibold text-white text-md"
-            data-testid="apply-btn"
-            disabled={!hasChanges}
-            loading={isLoading}
-            type="primary"
-            onClick={handleApply}>
-            {t('label.apply')}
-          </Button>
-        </Col>
-      </Row>
+      <FormDrawerActions>
+        <Row className="customise-home-modal-footer d-flex justify-end gap-3">
+          <Col className="d-flex items-center gap-4">
+            <Button
+              className="cancel-btn border-radius-xs font-medium text-md bg-white"
+              data-testid="cancel-btn"
+              onClick={onClose}>
+              {t('label.cancel')}
+            </Button>
+            <Button
+              className="apply-btn border-radius-xs font-semibold text-white text-md"
+              data-testid="apply-btn"
+              disabled={!hasChanges}
+              loading={isLoading}
+              type="primary"
+              onClick={handleApply}>
+              {t('label.apply')}
+            </Button>
+          </Col>
+        </Row>
+      </FormDrawerActions>
     </Modal>
   );
 };
