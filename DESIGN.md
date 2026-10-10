@@ -321,7 +321,7 @@ The sidecar records the exact `--tw-*` and retained `--ant-*` relationships. It 
 - **Section titles:** `title-portal` for the entry action region and `title-workbench` for workbench sections.
 - **Descriptions:** `body-intro` for the entry purpose and `body-description` for capability detail.
 - **PC page and section titles:** `headline-page` and `title-section` preserve the compact integration hierarchy.
-- **Native drawer title and sidebar brand:** `title-drawer` follows core large text with semibold weight; `title-brand` serves the inherited Integrate wordmark text.
+- **Native drawer title and sidebar brand:** `title-drawer` follows core large text with semibold weight; `title-brand` serves the 数据中台 product wordmark.
 - **Controls:** native small controls and labels use `label`; the primary large controls use `button-lg`. Selected navigation uses `label-selected`.
 - **Dense data and status:** `body-table` and `label-status` record recurring integration roles without inferring new global line heights.
 - **Totals:** `metric` with tabular numerals. Unavailable values use ordinary text at reduced size and weight.
@@ -389,6 +389,10 @@ The workbench action rail uses ordinary native routes to business definitions, d
 ### Shared PC Navigation
 
 The sidebar uses compact rounded rows, native outline SVG icons, neutral resting/hover treatments and a semantic green selected state with semibold text. The main menu scrolls above fixed lower actions. Collapsed navigation retains labelled native submenus. URL-backed active ancestry, menu customization and permission paths remain implementation authority. The exact six Chinese groups and lower entries stay in the Hospital PC contract.
+
+### Product Mark
+
+The product wordmark is 数据中台 in every locale, following the user’s exact naming request. The sidebar pairs it with an original three-input convergence and layered-base SVG: 24px artwork, 1.7px round strokes, inside the existing 32px Integrate-green mark. Expanded navigation shows icon and wordmark; collapsed navigation keeps the icon and accessible product name. White icon foreground uses the core foreground token with prefixed white-token and native-white fallbacks, so a missing unprefixed token cannot inherit dark title ink. Custom-logo settings retain their existing priority. Integrate remains the identity portal name.
 
 ### Integration Tables and Status
 

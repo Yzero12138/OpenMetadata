@@ -30,7 +30,7 @@ The existing Kubernetes test environment was inspected. Integrate is in `coop-de
 
 ## Brand Commitments
 
-Use the user-requested default `design-taste-frontend` and the latest Impeccable with its complete companion files. Integrate has an established hospital workbench identity in `F:/my/Integrate/DESIGN.md`; this adaptation follows that identity. The user selected direct code implementation instead of image-first mockups.
+Use the user-requested default `design-taste-frontend` and the latest Impeccable with its complete companion files. Integrate has an established hospital workbench identity in `F:/my/Integrate/DESIGN.md`; this adaptation follows that identity. The user selected direct code implementation instead of image-first mockups. On 2026-10-10, the user named the application 数据中台 and requested a new data-convergence sidebar mark. Integrate remains the identity portal.
 
 ## Evidence on Hand
 

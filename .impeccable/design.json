@@ -1000,6 +1000,22 @@
       ],
       "surfaceContract": ".impeccable/surfaces/hospital-pc-navigation.md",
       "delivery": "PC only; retained narrow source fallbacks do not establish mobile acceptance."
+    },
+    "productBrand": {
+      "name": "数据中台",
+      "namePolicy": "Fixed product name across all 20 interface locales; Integrate remains the identity portal.",
+      "surface": "sidebar",
+      "icon": {
+        "source": "openmetadata-ui/src/main/resources/ui/src/assets/svg/data-platform.svg",
+        "provenance": "Original geometric SVG authored for the user request on 2026-10-10.",
+        "artworkSize": "24px",
+        "strokeWidth": "1.7px",
+        "containerSize": "32px",
+        "foreground": "var(--color-fg-white, var(--tw-text-color-white, #fff))",
+        "background": "var(--color-bg-brand-solid)"
+      },
+      "collapsed": "Icon only; accessible link name preserved.",
+      "customLogoPriority": "Existing configured logo remains authoritative."
     }
   },
   "components": [

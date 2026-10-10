@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import Icon from '@ant-design/icons/lib/components/Icon';
-import { RefreshCw01 } from '@untitledui/icons';
 import { Button, Layout, Menu, MenuProps, Typography } from 'antd';
 import Modal from 'antd/lib/modal/Modal';
 import classNames from 'classnames';
@@ -20,6 +19,7 @@ import { MenuInfo } from 'rc-menu/lib/interface';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { ReactComponent as DataPlatformMark } from '../../../assets/svg/data-platform.svg';
 import {
   LOGOUT_ITEM,
   SETTING_ITEM,
@@ -146,7 +146,7 @@ const LeftSidebar = () => {
       width={240}>
       <div className="logo-container">
         <Link
-          aria-label={t('hospitalNavigation.workbench')}
+          aria-label={t('hospitalNavigation.brand')}
           className="hospital-workspace__brand"
           id="openmetadata_logo"
           to="/">
@@ -163,7 +163,7 @@ const LeftSidebar = () => {
               <span
                 className="hospital-workspace__brand-mark"
                 data-testid="image">
-                <RefreshCw01 aria-hidden="true" size={20} strokeWidth={1.7} />
+                <DataPlatformMark aria-hidden="true" height={24} width={24} />
               </span>
               {!isSidebarCollapsed && (
                 <span>{t('hospitalNavigation.brand')}</span>
