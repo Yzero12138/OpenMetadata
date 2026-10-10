@@ -29,7 +29,6 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 Capture actual React shell and pages with explicitly synthetic HTTP fixtures, at 1366/1440/1920 PC widths plus reduced available width for scaling. One batched inspection and at most one confirmation round. Employee SSO and live engine are not established by UI fixtures. Phase two through four pages retain incumbent behavior apart from the approved navigation/frame styling; do not assert full redesign of those pages.
 
-
 ## Shipped scope and interaction contract
 
 Phase one implements the shared PC navigation/frame and the source, task-list and task-detail pages. The exact six groups are 工作台 / 数据集成 / 数据资产 / 数据质量 / 数据治理 / 知识中心. The lower fixed menu contains 系统管理 and 退出; account controls remain in the top bar. Asset, quality, governance and knowledge interiors retain incumbent behavior and page composition.
@@ -48,6 +47,6 @@ The actual React shell/pages manifest [report.json](../review/pc-navigation/repo
 
 The [finish review](../review/pc-navigation/finish-review.md) records `disposition: ship` for its scored contrast and test-timing corrections. Computed directed observations are success state text at 5.41:1 and error text at 6.05:1 on the captured light backgrounds. These apply to the affected captures rather than the whole application or both themes. Shared utility success/error-700 semantics invert through the existing core dark mapping.
 
-The combined Jest evidence passes 13 suites / 190 tests. The TypeScript comparison retains 550 pre-existing diagnostics, so it is not a clean typecheck. The final production Vite rebuild completed successfully after the directed correction (exit 0, built in 8m 2s); [production-build.txt](../review/pc-navigation/production-build.txt) is its release-gate evidence. This later build result resolves the gate that was still pending when the finish review was written.
+The combined Jest evidence passes 13 suites / 190 tests. The TypeScript comparison retains 550 pre-existing diagnostics, so it is not a clean typecheck. The final production Vite rebuild completed successfully after the directed correction (exit 0, built in 8m 2s); [production-build.txt](../review/pc-navigation/production-build.txt) is its release-gate evidence. The finish review includes this successful release-gate result.
 
 UI evidence uses explicit synthetic HTTP fixtures and synthetic/example.invalid hosts. It establishes UI navigation and interaction within that boundary; employee SSO, JDBC/CDC extraction and live catalog writes are not established. No new raster assets ship with phase one. Existing logos, native SVG icons and upstream assets retain their incumbent provenance.
