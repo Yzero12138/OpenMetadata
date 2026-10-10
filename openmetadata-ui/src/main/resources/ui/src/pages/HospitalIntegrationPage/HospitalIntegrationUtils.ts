@@ -160,6 +160,7 @@ export const integrationErrorKey = (code?: string) => {
     'DUPLICATE_TASK',
     'VERSION_CONFLICT',
     'TASK_ACTIVE',
+    'TASK_NOT_FOUND',
     'SAVEPOINT_UNAVAILABLE',
     'CATALOG_SYNC_FAILED',
     'CONNECTION_NOT_FOUND',

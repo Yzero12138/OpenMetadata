@@ -23,6 +23,7 @@ import useCustomLocation from '../../hooks/useCustomLocation/useCustomLocation';
 import { useLineageStore } from '../../hooks/useLineageStore';
 import { getLimitConfig } from '../../rest/limitsAPI';
 import { getSettingsByType } from '../../rest/settingConfigAPI';
+import '../../styles/hospital-workspace.less';
 import applicationRoutesClass from '../../utils/ApplicationRoutesClassBase';
 import { isNewLayoutRoute } from '../../utils/LayoutUtils';
 import AppSidebar from '../AppSidebar/AppSidebar.component';
@@ -99,14 +100,14 @@ const AppContainer = () => {
       <LimitBanner />
       <Layout
         hasSider
-        className={classNames('app-container', {
+        className={classNames('app-container hospital-workspace', {
           ['extra-banner']: Boolean(bannerDetails),
         })}>
         {/* Render left side navigation */}
         <AppSidebar />
 
         {/* Render main content */}
-        <Layout>
+        <Layout className="hospital-workspace__main">
           {/* Render Appbar */}
           {applicationRoutesClass.isProtectedRoute(location.pathname) &&
           isAuthenticated
@@ -114,7 +115,7 @@ const AppContainer = () => {
             : null}
 
           {/* Render main content */}
-          <Content>
+          <Content className="hospital-workspace__content">
             <AuthenticatedRouter />
             {ApplicationExtras && <ApplicationExtras />}
           </Content>

@@ -10,328 +10,238 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-@import (reference) '../../../styles/variables.less';
-@selected-color: @primary-color;
-@hover-color: @primary-1;
-@active-color: @primary-7;
-@left-sidebar-icon-size: 28px;
+.app-container > .hospital-workspace__sidebar {
+  height: 100%;
+  overflow: hidden;
+  border-inline-end: 1px solid var(--color-border-secondary);
+  background: var(--color-bg-secondary);
 
-.logo-container {
-  height: 40px;
-  text-align: left;
-  padding: 0 28px;
-  margin: 20px 0;
-}
-
-.app-container {
-  & > .ant-layout-sider {
-    height: 100vh;
-    overflow-y: auto;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-}
-
-.left-sidebar-menu {
-  &:not(.ant-menu-submenu-hidden) {
+  .ant-layout-sider-children {
     display: flex;
     flex-direction: column;
+    height: 100%;
+    min-height: 0;
   }
 
-  .ant-menu-item,
-  .ant-menu-submenu {
-    color: @grey-600;
-  }
-
-  &.ant-menu.ant-menu-vertical[dir='rtl'] {
-    padding: 0 @padding-md 0 0;
-  }
-
-  &.ant-menu.ant-menu-vertical,
-  &.ant-menu.ant-menu-inline {
-    border: none;
-    padding: 0 0 0 @padding-md;
-    overflow: hidden;
-
-    .ant-menu-submenu-vertical {
-      &.ant-menu-submenu-active {
-        border: none;
-      }
-    }
-
-    .ant-menu-submenu.ant-menu-submenu-inline {
-      &.ant-menu-submenu-active:not(.ant-menu-submenu-open):not(
-          .ant-menu-submenu-selected
-        ) {
-        .ant-menu-submenu-title {
-          background: @hover-color;
-        }
-      }
-
-      .anticon {
-        svg {
-          fill: transparent;
-        }
-      }
-
-      .ant-menu-submenu-title {
-        .ant-menu-title-content {
-          line-height: 16px;
-          font-weight: 500;
-        }
-      }
-
-      .ant-menu-item,
-      .ant-menu-submenu-title {
-        display: flex;
-        align-items: center;
-        padding: 14px !important;
-        height: auto !important;
-        margin-bottom: 0px;
-        margin-top: 0px;
-        border-radius: 12px;
-
-        &.ant-menu-item-selected {
-          background: @selected-color;
-          color: var(--tw-color-text-white);
-
-          .ant-menu-title-content {
-            line-height: 16px;
-            font-weight: 500;
-          }
-
-          .anticon {
-            color: inherit;
-          }
-        }
-
-        &.ant-menu-item-active:not(.ant-menu-item-selected) {
-          background: @hover-color;
-        }
-
-        .ant-menu-title-content {
-          line-height: 16px;
-          font-weight: 500;
-        }
-
-        .left-panel-label {
-          font-weight: 500;
-          color: inherit;
-        }
-      }
-    }
-
-    .ant-menu-item {
-      display: flex;
-      align-items: center;
-      padding: 14px !important;
-      height: auto !important;
-      margin-bottom: 8px;
-      margin-top: 0px;
-      border-radius: 12px;
-
-      &.ant-menu-item-active:not(.ant-menu-item-selected) {
-        background: @hover-color;
-
-        .anticon {
-          color: @active-color;
-        }
-
-        .ant-menu-title-content {
-          .left-panel-label {
-            color: @active-color;
-          }
-        }
-      }
-
-      .ant-menu-title-content {
-        line-height: 16px;
-        font-weight: 500;
-      }
-
-      .left-panel-label {
-        font-weight: 500;
-        color: inherit;
-      }
-
-      a {
-        line-height: 20px;
-        font-size: 14px;
-        font-weight: 500;
-
-        a:hover {
-          color: @active-color;
-        }
-      }
-
-      &.ant-menu-item-selected {
-        background-color: @selected-color;
-        color: var(--tw-color-text-white);
-
-        svg {
-          fill: transparent;
-        }
-
-        a,
-        a:hover {
-          color: var(--tw-color-text-white);
-          font-weight: 600;
-          line-height: 20px;
-          font-size: 14px;
-        }
-      }
-    }
-
-    .ant-menu-item-selected::after {
-      content: '';
-      border: none;
-    }
-  }
-
-  .anticon {
-    line-height: 0 !important;
-    font-size: @left-sidebar-icon-size !important;
-
-    svg {
-      fill: transparent;
-    }
-  }
-
-  .ant-menu-submenu.ant-menu-submenu-open {
-    border-width: 0px 1px 1px 1px;
-    border-style: solid;
-    border-color: @primary-4;
-    color: var(--tw-color-text-white);
-    border-radius: 12px;
-    overflow: hidden;
-
-    .ant-menu-submenu-title {
-      background-color: @active-color;
-      font-weight: 600;
-      line-height: 20px;
-      font-size: 14px;
-      border-radius: 12px 12px 0 0 !important;
-      color: var(--tw-color-text-white);
-      padding: 14px !important;
-
-      .ant-menu-title-content {
-        font-weight: 500;
-        line-height: 16px;
-      }
-
-      &:hover {
-        .left-panel-label {
-          color: @active-color;
-        }
-      }
-
-      .ant-menu-title-content {
-        line-height: 16px;
-
-        .left-panel-label {
-          color: var(--tw-color-text-white);
-          font-weight: 600;
-          line-height: 20px;
-          font-size: 14px;
-        }
-      }
-
-      .ant-menu-submenu-arrow {
-        color: var(--tw-color-text-white);
-      }
-    }
-
-    .ant-menu.ant-menu-sub.ant-menu-inline {
-      border-radius: 12px;
-
-      .ant-menu-item {
-        margin: 0;
-        padding: 10px 16px !important;
-        border-radius: 0;
-        width: calc(100% - 0.01px);
-
-        .anticon {
-          font-size: @left-sidebar-icon-size !important;
-        }
-
-        &:last-child {
-          border-radius: 0 0 12px 12px;
-        }
-      }
-    }
-  }
-
-  .ant-menu-submenu {
-    width: 100%;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    padding-bottom: 0 !important;
-
-    &.ant-menu-submenu-selected:not(.ant-menu-submenu-open) {
-      color: @active-color;
-
-      .ant-menu-submenu-title {
-        background: @active-color;
-        color: var(--tw-color-text-white);
-        border-radius: 12px;
-
-        .ant-menu-submenu-arrow {
-          color: var(--tw-color-text-white);
-        }
-      }
-    }
-  }
-
-  .ant-menu-submenu > .ant-menu-submenu-title {
+  .logo-container {
     display: flex;
     align-items: center;
-    padding: 14px !important;
-    height: auto !important;
-    line-height: 0 !important;
-    margin-bottom: 0px;
-    margin-top: 0px;
-    border-radius: 12px;
-
-    .ant-menu-title-content {
-      .anticon {
-        font-size: @left-sidebar-icon-size !important;
-      }
-    }
+    flex: 0 0 64px;
+    height: 64px;
+    margin: 0;
+    padding-inline: 20px;
   }
 
-  .ant-menu-sub {
-    .ant-menu-item {
-      display: flex;
-      align-items: center;
-    }
+  .hospital-workspace__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--color-text-primary);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
   }
-}
 
-.left-sidebar-layout {
-  height: calc(
-    100vh - @layout-header-height
-  ); // Adjust based on your header height
+  .hospital-workspace__brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: var(--color-fg-white, var(--tw-text-color-white, #fff));
+    background: var(--color-bg-brand-solid);
+  }
+
+  .left-sidebar-layout {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+  }
 
   .menu-container {
-    height: 100%;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .top-menu {
-    flex-grow: 1;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-block: 12px;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    scrollbar-color: var(--color-border-secondary) var(--color-bg-secondary);
   }
 
   .bottom-menu {
-    flex-shrink: 0;
+    flex: 0 0 auto;
+    padding-block: 8px 12px;
+    border-top: 1px solid var(--color-border-secondary);
+    background: var(--color-bg-secondary);
+  }
+
+  &.ant-layout-sider-collapsed .logo-container {
+    justify-content: center;
+    padding-inline: 0;
+  }
+}
+
+.left-sidebar-menu.ant-menu,
+.hospital-workspace__submenu .ant-menu {
+  border: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  font-family: inherit;
+
+  .ant-menu-item,
+  .ant-menu-submenu {
+    color: var(--color-text-secondary);
+  }
+
+  .ant-menu-item,
+  .ant-menu-submenu-title {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    min-height: 40px;
+    margin: 2px 0;
+    padding-inline: 12px !important;
+    border-radius: 6px;
+    line-height: 20px;
+    font-size: 14px;
+  }
+
+  .ant-menu-item-icon,
+  .anticon {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    color: inherit;
+    font-size: 20px;
+    line-height: 0;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+    }
+  }
+
+  .ant-menu-title-content {
+    line-height: 20px;
+  }
+
+  .left-panel-label {
+    display: block;
+    color: inherit;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  .ant-menu-item-active,
+  .ant-menu-submenu-title:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-secondary_hover);
+  }
+
+  .ant-menu-submenu-open,
+  .ant-menu-submenu-selected {
+    border: 0;
+    border-radius: 0;
+    color: var(--color-text-primary);
+
+    > .ant-menu-submenu-title {
+      color: var(--color-text-primary);
+      background: transparent;
+    }
+  }
+
+  .ant-menu-sub.ant-menu-inline {
+    padding-inline-start: 20px;
+    background: transparent;
+
+    .ant-menu-item {
+      width: 100%;
+      margin-inline: 0;
+    }
+  }
+
+  .ant-menu-item-selected,
+  .ant-menu-item-selected:hover {
+    color: var(--color-text-brand-secondary);
+    background: var(--hospital-nav-selected-bg, var(--color-bg-brand-primary));
+
+    .left-panel-label {
+      color: inherit;
+      font-weight: 600;
+    }
+  }
+
+  .ant-menu-item::after {
+    display: none;
+  }
+
+  .ant-menu-submenu-arrow {
+    color: inherit;
+  }
+
+  .ant-menu-item:focus-visible,
+  .ant-menu-submenu-title:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--color-border-brand);
+    outline-offset: -2px;
+  }
+}
+
+.left-sidebar-menu.ant-menu-inline,
+.left-sidebar-menu.ant-menu-vertical {
+  padding-inline: 12px;
+}
+
+.hospital-workspace__sidebar
+  .left-sidebar-menu.ant-menu.ant-menu-inline-collapsed {
+  width: 72px;
+  padding-inline: 12px;
+
+  > .ant-menu-item,
+  > .ant-menu-submenu > .ant-menu-submenu-title {
+    width: 48px;
+    justify-content: center;
+    padding-inline: 14px !important;
+
+    > .ant-menu-title-content {
+      display: none;
+    }
+
+    > .anticon {
+      flex: 0 0 20px;
+      width: 20px;
+      height: 20px;
+      margin-inline: 0;
+    }
+  }
+}
+
+.hospital-workspace__submenu {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC', system-ui,
+    sans-serif;
+  --hospital-nav-selected-bg: color-mix(
+    in srgb,
+    var(--color-bg-brand-solid) 10%,
+    var(--color-bg-primary)
+  );
+
+  .ant-menu {
+    min-width: 180px;
+    padding: 6px;
+    border: 1px solid var(--color-border-secondary);
+    border-radius: 8px;
+    background: var(--color-bg-primary);
   }
 }

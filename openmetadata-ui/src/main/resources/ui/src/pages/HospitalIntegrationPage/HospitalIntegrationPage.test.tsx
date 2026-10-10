@@ -13,8 +13,10 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../constants/constants';
 import * as api from '../../rest/hospitalIntegrationAPI';
+import { HospitalDataSourcesWorkspace } from './HospitalDataSourcesPage';
 import { HospitalIntegrationWorkspace } from './HospitalIntegrationPage';
 
 jest.mock('../../components/PageLayoutV1/PageLayoutV1', () => ({
@@ -145,11 +147,49 @@ const withRun = (run: api.IntegrationRun): api.IntegrationTask => ({
   latestRun: run,
 });
 
-const renderWorkspace = async (isAdmin = true) => {
+const LocationProbe = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <span hidden data-testid="integration-location">
+        {location.pathname}
+        {location.search}
+      </span>
+      <button
+        data-testid="integration-history-back"
+        onClick={() => navigate(-1)}>
+        Back fixture
+      </button>
+      <button
+        data-testid="integration-history-forward"
+        onClick={() => navigate(1)}>
+        Forward fixture
+      </button>
+    </>
+  );
+};
+const renderWorkspace = async (
+  isAdmin = true,
+  path = ROUTES.HOSPITAL_INTEGRATION_TASKS
+) => {
   await act(async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <HospitalIntegrationWorkspace isAdmin={isAdmin} />
+        <LocationProbe />
+      </MemoryRouter>
+    );
+  });
+};
+const renderSources = async (isAdmin = true, search = '') => {
+  await act(async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[ROUTES.HOSPITAL_INTEGRATION_SOURCES + search]}>
+        <HospitalDataSourcesWorkspace isAdmin={isAdmin} />
+        <LocationProbe />
       </MemoryRouter>
     );
   });
@@ -207,6 +247,25 @@ describe('Hospital integration workbench behavior', () => {
     mockApi.runIntegrationTask.mockResolvedValue(
       withRun({ ...finished, status: 'RUNNING', finishedAt: undefined })
     );
+  });
+
+  it('gives integration tasks their own page heading', async () => {
+    await renderWorkspace();
+
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'hospitalIntegration.tasks',
+      })
+    ).toBeInTheDocument();
+  });
+
+  it('does not use tabs to switch between tasks and data sources', async () => {
+    await renderWorkspace();
+
+    expect(
+      screen.queryByRole('tab', { name: 'hospitalIntegration.dataSources' })
+    ).not.toBeInTheDocument();
   });
 
   it('explains ordinary employee access without requesting protected data', async () => {
@@ -463,7 +522,9 @@ describe('Hospital integration workbench behavior', () => {
     await renderWorkspace();
 
     expect(
-      screen.getByText('hospitalIntegration.runStatus.SUBMITTED')
+      within(screen.getByRole('table')).getByText(
+        'hospitalIntegration.runStatus.SUBMITTED'
+      )
     ).toBeInTheDocument();
 
     await act(async () => {
@@ -471,7 +532,9 @@ describe('Hospital integration workbench behavior', () => {
     });
 
     expect(
-      screen.getByText('hospitalIntegration.runStatus.FINISHED')
+      within(screen.getByRole('table')).getByText(
+        'hospitalIntegration.runStatus.FINISHED'
+      )
     ).toBeInTheDocument();
     expect(mockApi.getIntegrationTasks).toHaveBeenCalledTimes(2);
     expect(mockApi.getIntegrationTask).not.toHaveBeenCalled();
@@ -577,13 +640,7 @@ describe('Hospital integration workbench behavior', () => {
     expect(screen.queryByTestId('integration-job-id')).not.toBeInTheDocument();
   });
 
-  const openConnections = async () => {
-    await click(
-      screen.getByRole('tab', { name: 'hospitalIntegration.dataSources' })
-    );
-  };
   const editBusinessConnection = async () => {
-    await openConnections();
     await click(
       within(
         screen.getByTestId('integration-connection-row-business-source')
@@ -613,9 +670,8 @@ describe('Hospital integration workbench behavior', () => {
     );
   });
 
-  it('has one create action per tab and keeps environment seeds immutable', async () => {
-    await renderWorkspace();
-    await openConnections();
+  it('has one create action on the sources page and keeps environment seeds immutable', async () => {
+    await renderSources();
 
     expect(
       screen.queryByRole('button', { name: 'hospitalIntegration.createTask' })
@@ -660,8 +716,7 @@ describe('Hospital integration workbench behavior', () => {
       displayName: 'New synthetic source',
     };
     mockApi.createIntegrationConnection.mockResolvedValue(created);
-    await renderWorkspace();
-    await openConnections();
+    await renderSources();
     await click(
       screen.getByRole('button', {
         name: 'hospitalIntegration.createConnection',
@@ -716,7 +771,7 @@ describe('Hospital integration workbench behavior', () => {
       isAxiosError: true,
       response: { status: 400, data: { errorCode: 'INVALID_CONFIGURATION' } },
     });
-    await renderWorkspace();
+    await renderSources();
     await editBusinessConnection();
     const name = document.getElementById('connection-displayName')!;
 
@@ -757,7 +812,7 @@ describe('Hospital integration workbench behavior', () => {
       version: 4,
       displayName: 'Current stored version',
     });
-    await renderWorkspace();
+    await renderSources();
     await editBusinessConnection();
     const name = document.getElementById('connection-displayName')!;
     await userEvent.clear(name);
@@ -794,7 +849,7 @@ describe('Hospital integration workbench behavior', () => {
       isAxiosError: true,
       response: { status: 409, data: { errorCode: 'DUPLICATE_CONNECTION' } },
     });
-    await renderWorkspace();
+    await renderSources();
     await editBusinessConnection();
     await click(screen.getByRole('button', { name: 'label.save' }));
 
@@ -817,7 +872,7 @@ describe('Hospital integration workbench behavior', () => {
           resolveSave = resolve;
         })
     );
-    await renderWorkspace();
+    await renderSources();
     await editBusinessConnection();
     await click(screen.getByRole('button', { name: 'label.save' }));
 
@@ -843,13 +898,34 @@ describe('Hospital integration workbench behavior', () => {
   });
 
   it('clears a typed password on cancel and reopening', async () => {
-    await renderWorkspace();
+    await renderSources();
     await editBusinessConnection();
     await userEvent.type(
       document.getElementById('connection-password')!,
       'synthetic-transient-password'
     );
     await click(screen.getByRole('button', { name: 'label.cancel' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'message.unsaved-form-data'
+    );
+
+    expectRevealedError(screen.getByRole('alert'));
+    await click(screen.getByRole('button', { name: 'label.continue-editing' }));
+
+    expect(document.getElementById('connection-password')).toHaveValue(
+      'synthetic-transient-password'
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('integration-connection-drawer')
+      ).toContainElement(document.activeElement as HTMLElement)
+    );
+    await act(async () => {
+      await userEvent.keyboard('{Escape}');
+    });
+    await click(await screen.findByRole('button', { name: 'label.discard' }));
     await click(
       within(
         screen.getByTestId('integration-connection-row-business-source')
@@ -869,8 +945,7 @@ describe('Hospital integration workbench behavior', () => {
         response: { status: 409, data: { errorCode: 'CONNECTION_IN_USE' } },
       })
       .mockResolvedValueOnce(undefined);
-    await renderWorkspace();
-    await openConnections();
+    await renderSources();
     const row = within(
       screen.getByTestId('integration-connection-row-business-source')
     );
@@ -919,8 +994,7 @@ describe('Hospital integration workbench behavior', () => {
           resolveTest = resolve;
         })
     );
-    await renderWorkspace();
-    await openConnections();
+    await renderSources();
     const row = within(
       screen.getByTestId('integration-connection-row-business-source')
     );
@@ -1071,8 +1145,7 @@ describe('Hospital integration workbench behavior', () => {
   });
 
   it('uses family defaults, requires an actual version and binds MySQL scope to the database', async () => {
-    await renderWorkspace();
-    await openConnections();
+    await renderSources();
     await click(
       screen.getByRole('button', {
         name: 'hospitalIntegration.createConnection',
@@ -1116,163 +1189,145 @@ describe('Hospital integration workbench behavior', () => {
     expect(document.getElementById('connection-schemas')).toBeDisabled();
   });
 
-  it.each(['before', 'during'])(
-    'retains a created source when a stale background GET starts %s the save',
-    async (timing) => {
-      jest.useFakeTimers();
-      const raceUser = userEvent.setup({
-        advanceTimers: jest.advanceTimersByTime,
-      });
-      const raceClick = async (element: HTMLElement) => {
-        await act(async () => {
-          await raceUser.click(element);
-        });
-      };
-      let resolveSave: (value: api.IntegrationConnection) => void = () =>
-        undefined;
-      let resolveReload: (value: api.IntegrationTask[]) => void = () =>
-        undefined;
-      const reloadTasks = new Promise<api.IntegrationTask[]>((resolve) => {
-        resolveReload = resolve;
-      });
-      const running = withRun({
-        ...finished,
-        status: 'RUNNING',
-        finishedAt: undefined,
-      });
-      mockApi.getIntegrationTasks
-        .mockResolvedValueOnce([running])
-        .mockRejectedValueOnce(new Error('synthetic polling failure'))
-        .mockImplementationOnce(() => reloadTasks);
-      mockApi.createIntegrationConnection.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            resolveSave = resolve;
-          })
-      );
-      await renderWorkspace();
-      await raceClick(
-        screen.getByRole('tab', { name: 'hospitalIntegration.dataSources' })
-      );
-      await raceClick(
-        screen.getByRole('button', {
-          name: 'hospitalIntegration.createConnection',
-        })
-      );
-      for (const [id, value] of Object.entries({
-        name: 'created_source',
-        displayName: 'Created source',
-        databaseVersion: '17',
-        host: 'source.example.invalid',
-        database: 'synthetic_db',
-        username: 'reader',
-        password: 'synthetic-password',
-      })) {
-        await raceUser.type(
-          document.getElementById('connection-' + id)!,
-          value
-        );
-      }
-      const triggerReload = async () => {
-        await act(async () => {
-          jest.advanceTimersByTime(5000);
-        });
-
-        expect(mockApi.getIntegrationConnections).toHaveBeenCalledTimes(2);
-      };
-      if (timing === 'before') {
-        await triggerReload();
-      }
-      await raceClick(screen.getByRole('button', { name: 'label.save' }));
-
-      expect(mockApi.createIntegrationConnection).toHaveBeenCalledTimes(1);
-
-      if (timing === 'during') {
-        await triggerReload();
-      }
-      await act(async () => {
-        resolveSave({
-          ...businessConnection,
-          id: 'created-source',
-          name: 'created_source',
-        });
-      });
-      await act(async () => {
-        resolveReload([withRun(finished)]);
-      });
-
-      expect(
-        screen.getByTestId('integration-connection-row-created-source')
-      ).toBeInTheDocument();
-      expect(
-        screen.getByTestId('integration-connection-row-business-source')
-      ).toBeInTheDocument();
-    }
-  );
-
-  it('does not restore a deleted source from a GET started during deletion', async () => {
-    jest.useFakeTimers();
-    const raceUser = userEvent.setup({
-      advanceTimers: jest.advanceTimersByTime,
-    });
-    const raceClick = async (element: HTMLElement) => {
-      await act(async () => {
-        await raceUser.click(element);
-      });
-    };
-    let resolveDelete: () => void = () => undefined;
-    let resolveReload: (value: api.IntegrationTask[]) => void = () => undefined;
-    const reloadTasks = new Promise<api.IntegrationTask[]>((resolve) => {
-      resolveReload = resolve;
-    });
-    mockApi.getIntegrationTasks
-      .mockResolvedValueOnce([
-        withRun({ ...finished, status: 'RUNNING', finishedAt: undefined }),
-      ])
-      .mockRejectedValueOnce(new Error('synthetic polling failure'))
-      .mockImplementationOnce(() => reloadTasks);
-    mockApi.deleteIntegrationConnection.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveDelete = () => resolve(undefined);
-        })
-    );
-    await renderWorkspace();
-    await raceClick(
-      screen.getByRole('tab', { name: 'hospitalIntegration.dataSources' })
-    );
-    const row = within(
-      screen.getByTestId('integration-connection-row-business-source')
-    );
-    await raceClick(row.getByRole('button', { name: 'label.delete' }));
-    await raceClick(
-      row.getByRole('button', {
-        name: 'hospitalIntegration.confirmDeleteConnection',
-      })
-    );
-    await act(async () => {
-      jest.advanceTimersByTime(5000);
-    });
-
-    expect(mockApi.getIntegrationConnections).toHaveBeenCalledTimes(2);
-
-    await act(async () => {
-      resolveDelete();
-    });
-    await act(async () => {
-      resolveReload([withRun(finished)]);
-    });
+  it('loads data sources independently of the engine and task polling', async () => {
+    await renderSources();
 
     expect(
-      screen.queryByTestId('integration-connection-row-business-source')
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'hospitalNavigation.sources',
+      })
+    ).toBeInTheDocument();
+    expect(mockApi.getIntegrationConnections).toHaveBeenCalledTimes(1);
+    expect(mockApi.getIntegrationStatus).not.toHaveBeenCalled();
+    expect(mockApi.getIntegrationTasks).not.toHaveBeenCalled();
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+  });
+
+  it('keeps source access restricted without requesting protected data', async () => {
+    await renderSources(false);
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'hospitalIntegration.adminOnly'
+    );
+    expect(mockApi.getIntegrationConnections).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', {
+        name: 'hospitalIntegration.createConnection',
+      })
     ).not.toBeInTheDocument();
+  });
+
+  it('filters sources by URL and preserves the complete collection after editing', async () => {
+    mockApi.updateIntegrationConnection.mockResolvedValue({
+      ...businessConnection,
+      displayName: 'Changed business source',
+    });
+    await renderSources(true, '?q=business&page=1');
+
+    expect(
+      screen.queryByTestId('integration-connection-row-synthetic-source')
+    ).not.toBeInTheDocument();
+
+    await editBusinessConnection();
+    await click(screen.getByRole('button', { name: 'label.save' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId('integration-connection-drawer')
+      ).not.toBeInTheDocument()
+    );
+    await click(screen.getByRole('button', { name: 'label.reset' }));
+
     expect(
       screen.getByTestId('integration-connection-row-synthetic-source')
     ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('integration-connection-row-business-source')
+    ).toHaveTextContent('Changed business source');
+    expect(screen.getByTestId('integration-location')).toHaveTextContent(
+      ROUTES.HOSPITAL_INTEGRATION_SOURCES
+    );
+  });
+
+  it('paginates the loaded source collection without changing server records', async () => {
+    mockApi.getIntegrationConnections.mockResolvedValue(
+      Array.from({ length: 26 }, (_, index) => ({
+        ...businessConnection,
+        id: 'page-source-' + index,
+        name: 'source_' + index,
+        displayName: 'Source ' + index,
+      }))
+    );
+    await renderSources();
+
+    expect(screen.getAllByTestId(/^integration-connection-row-/)).toHaveLength(
+      25
+    );
+
+    await click(screen.getByRole('button', { name: 'label.next' }));
+
+    expect(screen.getAllByTestId(/^integration-connection-row-/)).toHaveLength(
+      1
+    );
+    expect(
+      screen.getByTestId('integration-connection-row-page-source-25')
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('integration-location')).toHaveTextContent(
+      '?page=2'
+    );
+    expect(mockApi.getIntegrationConnections).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens task detail directly and restores task filters when returning', async () => {
+    await renderWorkspace(
+      true,
+      ROUTES.HOSPITAL_INTEGRATION_TASKS +
+        '/' +
+        task.id +
+        '?q=encounter&status=NOT_RUN'
+    );
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: task.displayName })
+    ).toBeInTheDocument();
+    expect(mockApi.getIntegrationTask).toHaveBeenCalledWith(
+      task.id,
+      expect.any(AbortSignal)
+    );
+
+    await click(
+      screen.getByRole('button', { name: 'hospitalIntegration.backToTasks' })
+    );
+
+    expect(screen.getByTestId('integration-location')).toHaveTextContent(
+      ROUTES.HOSPITAL_INTEGRATION_TASKS + '?q=encounter&status=NOT_RUN'
+    );
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'hospitalIntegration.tasks',
+      })
+    ).toBeInTheDocument();
+  });
+
+  it('shows a retryable error when a directly opened task is missing', async () => {
+    mockApi.getIntegrationTask.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404, data: { code: 'TASK_NOT_FOUND' } },
+    });
+    await renderWorkspace(true, ROUTES.HOSPITAL_INTEGRATION_TASKS + '/missing');
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'hospitalIntegration.errors.TASK_NOT_FOUND'
+    );
+    expect(
+      screen.queryByTestId('integration-task-detail')
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'label.refresh' })).toBeEnabled();
   });
 
   it('reveals data-source client validation and keeps the unsaved draft', async () => {
-    await renderWorkspace();
+    await renderSources();
     await editBusinessConnection();
     const version = document.getElementById('connection-databaseVersion')!;
     await userEvent.clear(version);
@@ -1359,5 +1414,289 @@ describe('Hospital integration workbench behavior', () => {
     );
 
     expect(screen.getByTestId('integration-task-detail')).toBe(detail);
+  });
+
+  it('confirms unsaved task edits within the right drawer and preserves edits when continuing', async () => {
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    const name = document.getElementById('integration-task-displayName')!;
+    await userEvent.type(name, ' changed');
+    await click(screen.getByRole('button', { name: 'label.cancel' }));
+    const drawer = screen.getByTestId('integration-task-drawer');
+
+    expect(within(drawer).getByRole('alert')).toHaveTextContent(
+      'message.unsaved-form-data'
+    );
+
+    expectRevealedError(within(drawer).getByRole('alert'));
+    await click(
+      within(drawer).getByRole('button', { name: 'label.continue-editing' })
+    );
+
+    expect(name).toHaveValue(task.displayName + ' changed');
+
+    await click(screen.getByRole('button', { name: 'label.close' }));
+    await click(within(drawer).getByRole('button', { name: 'label.discard' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId('integration-task-drawer')
+      ).not.toBeInTheDocument()
+    );
+
+    expect(screen.getByTestId('integration-task-detail')).toBeInTheDocument();
+    expect(mockApi.updateIntegrationTask).not.toHaveBeenCalled();
+
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+
+    expect(document.getElementById('integration-task-displayName')).toHaveValue(
+      task.displayName
+    );
+
+    await click(screen.getByRole('button', { name: 'label.cancel' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId('integration-task-drawer')
+      ).not.toBeInTheDocument()
+    );
+  });
+
+  it('shows the latest run timestamp independently of configuration updates', async () => {
+    mockApi.getIntegrationTasks.mockResolvedValue([
+      { ...withRun(finished), updatedAt: finished.submittedAt + 3600000 },
+      { ...task, id: 'never-run', name: 'never_run', displayName: 'Never run' },
+    ]);
+    await renderWorkspace();
+    const table = screen.getByRole('table');
+
+    expect(
+      within(table).getByRole('columnheader', {
+        name: 'hospitalIntegration.latestRun',
+      })
+    ).toBeInTheDocument();
+
+    const row = within(table)
+      .getByRole('button', { name: task.displayName })
+      .closest('tr')!;
+
+    expect(row).toHaveTextContent(
+      new Date(finished.submittedAt).toLocaleString('en-US')
+    );
+
+    const neverRun = within(table)
+      .getByRole('button', { name: 'Never run' })
+      .closest('tr')!;
+
+    expect(
+      within(neverRun).getAllByText('hospitalIntegration.notRun')
+    ).toHaveLength(2);
+  });
+
+  it('preserves task page contents after opening and returning from a later page', async () => {
+    const records = Array.from({ length: 50 }, (_, index) => ({
+      ...task,
+      id: 'task-' + (index + 1),
+      name: 'task_' + (index + 1),
+      displayName: 'Task ' + (index + 1),
+    }));
+    mockApi.getIntegrationTasks.mockResolvedValue(records);
+    mockApi.getIntegrationTask.mockImplementation(
+      async (id) => records.find((item) => item.id === id)!
+    );
+    await renderWorkspace(true, ROUTES.HOSPITAL_INTEGRATION_TASKS + '?page=2');
+    await click(screen.getByRole('button', { name: 'Task 30' }));
+    await screen.findByRole('heading', { level: 1, name: 'Task 30' });
+    await click(
+      screen.getByRole('button', { name: 'hospitalIntegration.backToTasks' })
+    );
+
+    expect(screen.getByTestId('integration-location')).toHaveTextContent(
+      '?page=2'
+    );
+
+    const table = screen.getByRole('table');
+
+    expect(
+      within(table).getByRole('button', { name: 'Task 30' })
+    ).toBeInTheDocument();
+    expect(
+      within(table).queryByRole('button', { name: 'Task 25' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('blocks history navigation until unsaved task changes are explicitly discarded', async () => {
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await userEvent.type(
+      document.getElementById('integration-task-displayName')!,
+      ' dirty'
+    );
+    await click(screen.getByTestId('integration-history-back'));
+    const drawer = screen.getByTestId('integration-task-drawer');
+
+    expect(within(drawer).getByRole('alert')).toHaveTextContent(
+      'message.unsaved-form-data'
+    );
+    expect(screen.getByTestId('integration-location')).toHaveTextContent(
+      '/tasks/' + task.id
+    );
+
+    await click(
+      within(drawer).getByRole('button', { name: 'label.continue-editing' })
+    );
+
+    expect(document.getElementById('integration-task-displayName')).toHaveValue(
+      task.displayName + ' dirty'
+    );
+
+    await click(screen.getByTestId('integration-history-back'));
+    await click(within(drawer).getByRole('button', { name: 'label.discard' }));
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId('integration-task-drawer')
+      ).not.toBeInTheDocument()
+    );
+
+    expect(screen.getByTestId('integration-location').textContent).toBe(
+      ROUTES.HOSPITAL_INTEGRATION_TASKS
+    );
+
+    await click(
+      screen.getByRole('button', { name: 'hospitalIntegration.createTask' })
+    );
+    await userEvent.type(
+      document.getElementById('integration-task-displayName')!,
+      'Unsaved new task'
+    );
+    await click(screen.getByTestId('integration-history-forward'));
+
+    expect(
+      within(screen.getByTestId('integration-task-drawer')).getByRole('alert')
+    ).toHaveTextContent('message.unsaved-form-data');
+    expect(screen.getByTestId('integration-location').textContent).toBe(
+      ROUTES.HOSPITAL_INTEGRATION_TASKS
+    );
+  });
+
+  it('allows successful task creation to navigate to its saved detail while the editor is guarded', async () => {
+    const saved = {
+      ...task,
+      id: 'new-task',
+      name: 'created_task',
+      displayName: 'Created transfer',
+      mode: 'FULL' as const,
+    };
+    mockApi.createIntegrationTask.mockResolvedValue(saved);
+    mockApi.getIntegrationTask.mockResolvedValue(saved);
+    await renderWorkspace();
+    await click(
+      screen.getByRole('button', { name: 'hospitalIntegration.createTask' })
+    );
+    await userEvent.type(
+      document.getElementById('integration-task-name')!,
+      'created_task'
+    );
+    await userEvent.type(
+      document.getElementById('integration-task-displayName')!,
+      'Created transfer'
+    );
+    await choose('integration-source-table', 'public.' + table.name);
+    await choose('integration-target-table', 'ods.' + table.name);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'label.save' })).toBeEnabled()
+    );
+    await click(screen.getByRole('button', { name: 'label.save' }));
+    await waitFor(() =>
+      expect(mockApi.createIntegrationTask).toHaveBeenCalledTimes(1)
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('integration-location')).toHaveTextContent(
+        '/tasks/new-task'
+      )
+    );
+
+    expect(
+      screen.queryByTestId('integration-task-drawer')
+    ).not.toBeInTheDocument();
+  });
+
+  it('disables source saving while history discard confirmation is open', async () => {
+    await renderSources();
+    await editBusinessConnection();
+    await userEvent.type(
+      document.getElementById('connection-password')!,
+      'synthetic-new-password'
+    );
+    await click(screen.getByTestId('integration-history-back'));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'message.unsaved-form-data'
+    );
+    expect(screen.getByRole('button', { name: 'label.save' })).toBeDisabled();
+
+    await click(screen.getByRole('button', { name: 'label.save' }));
+
+    expect(mockApi.updateIntegrationConnection).not.toHaveBeenCalled();
+  });
+
+  it('waits for the original browser history entry before confirming rapid traversal', async () => {
+    const originalURL = window.location.href;
+    const originalState: unknown = window.history.state;
+    window.history.replaceState({ idx: 3 }, '', originalURL);
+    const go = jest
+      .spyOn(window.history, 'go')
+      .mockImplementation(() => undefined);
+    try {
+      await renderWorkspace();
+      await openTask();
+      await click(screen.getByRole('button', { name: 'label.edit' }));
+      await userEvent.type(
+        document.getElementById('integration-task-displayName')!,
+        ' retained'
+      );
+      const pop = async (idx: number) =>
+        act(async () => {
+          window.dispatchEvent(
+            new PopStateEvent('popstate', { state: { idx } })
+          );
+        });
+      await pop(2);
+
+      expect(go).toHaveBeenLastCalledWith(1);
+      expect(
+        screen.queryByRole('button', { name: 'label.continue-editing' })
+      ).not.toBeInTheDocument();
+
+      await pop(1);
+
+      expect(go).toHaveBeenLastCalledWith(2);
+      expect(
+        screen.queryByRole('button', { name: 'label.continue-editing' })
+      ).not.toBeInTheDocument();
+
+      await pop(3);
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'message.unsaved-form-data'
+      );
+
+      await click(
+        screen.getByRole('button', { name: 'label.continue-editing' })
+      );
+
+      expect(
+        document.getElementById('integration-task-displayName')
+      ).toHaveValue(task.displayName + ' retained');
+
+      await pop(3);
+
+      expect(
+        screen.queryByRole('button', { name: 'label.continue-editing' })
+      ).not.toBeInTheDocument();
+    } finally {
+      go.mockRestore();
+      window.history.replaceState(originalState, '', originalURL);
+    }
   });
 });

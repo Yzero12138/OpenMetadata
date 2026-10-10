@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-09T02:42:46Z",
+  "generatedAt": "2026-10-10T04:27:10Z",
   "title": "Design System: OpenMetadata Hospital Adaptation",
   "extensions": {
     "colorMeta": {
@@ -266,6 +266,139 @@
           "#fee4e2",
           "#fef3f2"
         ]
+      },
+      "native-page-dark": {
+        "role": "neutral",
+        "displayName": "Native Dark Primary Surface",
+        "sourceProperties": [
+          "--color-bg-primary"
+        ],
+        "mode": "core dark scope"
+      },
+      "native-surface-subtle-dark": {
+        "role": "neutral",
+        "displayName": "Native Dark Secondary Surface",
+        "sourceProperties": [
+          "--color-bg-secondary"
+        ],
+        "mode": "core dark scope"
+      },
+      "native-surface-hover": {
+        "role": "neutral",
+        "displayName": "Native Secondary Hover Surface",
+        "sourceProperties": [
+          "--color-bg-secondary_hover"
+        ],
+        "mode": "core light default"
+      },
+      "native-surface-hover-dark": {
+        "role": "neutral",
+        "displayName": "Native Dark Secondary Hover Surface",
+        "sourceProperties": [
+          "--color-bg-secondary_hover"
+        ],
+        "mode": "core dark scope"
+      },
+      "navigation-selected": {
+        "role": "primary",
+        "displayName": "Workspace Selection Mix",
+        "sourceProperties": [
+          "--hospital-nav-selected-bg"
+        ],
+        "mode": "both themes; live semantic mix",
+        "source": "openmetadata-ui/src/main/resources/ui/src/styles/hospital-workspace.less"
+      },
+      "utility-success-ink": {
+        "role": "semantic-success",
+        "displayName": "Readable Success Status",
+        "sourceProperties": [
+          "--color-utility-success-700"
+        ],
+        "mode": "core light default",
+        "tonalRamp": [
+          "#053321",
+          "#074d31",
+          "#067647",
+          "#079455",
+          "#47cd89",
+          "#abefc6",
+          "#dcfae6",
+          "#ecfdf3"
+        ],
+        "tonalRampSource": "Incumbent success-950, -900, -700, -600, -400, -200, -100, -50; metadata only."
+      },
+      "utility-success-ink-dark": {
+        "role": "semantic-success",
+        "displayName": "Readable Dark Success Status",
+        "sourceProperties": [
+          "--color-utility-success-700"
+        ],
+        "mode": "core dark scope",
+        "tonalRamp": [
+          "#053321",
+          "#074d31",
+          "#067647",
+          "#079455",
+          "#47cd89",
+          "#abefc6",
+          "#dcfae6",
+          "#ecfdf3"
+        ],
+        "tonalRampSource": "Incumbent success-950, -900, -700, -600, -400, -200, -100, -50; metadata only."
+      },
+      "utility-error-ink": {
+        "role": "semantic-error",
+        "displayName": "Readable Error Status",
+        "sourceProperties": [
+          "--color-utility-error-700"
+        ],
+        "mode": "core light default",
+        "tonalRamp": [
+          "#55160c",
+          "#7a271a",
+          "#b42318",
+          "#d92d20",
+          "#f97066",
+          "#fecdca",
+          "#fee4e2",
+          "#fef3f2"
+        ]
+      },
+      "utility-error-ink-dark": {
+        "role": "semantic-error",
+        "displayName": "Readable Dark Error Status",
+        "sourceProperties": [
+          "--color-utility-error-700"
+        ],
+        "mode": "core dark scope",
+        "tonalRamp": [
+          "#55160c",
+          "#7a271a",
+          "#b42318",
+          "#d92d20",
+          "#f97066",
+          "#fecdca",
+          "#fee4e2",
+          "#fef3f2"
+        ]
+      },
+      "error-surface-dark": {
+        "role": "semantic-error",
+        "displayName": "Native Dark Error Surface",
+        "sourceProperties": [
+          "--color-bg-error-primary"
+        ],
+        "mode": "core dark scope",
+        "tonalRamp": [
+          "#55160c",
+          "#7a271a",
+          "#b42318",
+          "#d92d20",
+          "#f97066",
+          "#fecdca",
+          "#fee4e2",
+          "#fef3f2"
+        ]
       }
     },
     "typographyMeta": {
@@ -275,7 +408,7 @@
       },
       "headline-login-mobile": {
         "displayName": "Mobile entry headline",
-        "purpose": "Entry title at maximum width 767px."
+        "purpose": "Retained entry source fallback at maximum width 767px; no mobile delivery claim."
       },
       "headline-workbench": {
         "displayName": "Workbench headline",
@@ -283,7 +416,7 @@
       },
       "headline-workbench-mobile": {
         "displayName": "Mobile workbench headline",
-        "purpose": "Workbench title at maximum width 767px."
+        "purpose": "Retained workbench source fallback at maximum width 767px; no mobile delivery claim."
       },
       "title-portal": {
         "displayName": "Portal title",
@@ -313,6 +446,34 @@
         "displayName": "Catalog total",
         "purpose": "Actual numeric totals.",
         "numericStyling": "font-variant-numeric: tabular-nums"
+      },
+      "headline-page": {
+        "displayName": "Headline Page",
+        "purpose": "Compact integration page heading."
+      },
+      "title-section": {
+        "displayName": "Title Section",
+        "purpose": "Integration section heading."
+      },
+      "title-drawer": {
+        "displayName": "Title Drawer",
+        "purpose": "Native FormDrawer heading, core text-lg with semibold weight."
+      },
+      "title-brand": {
+        "displayName": "Title Brand",
+        "purpose": "Inherited Integrate wordmark in shared sidebar."
+      },
+      "body-table": {
+        "displayName": "Body Table",
+        "purpose": "Recurring integration table text; no new global line-height inferred."
+      },
+      "label-status": {
+        "displayName": "Label Status",
+        "purpose": "Integration state text; no chip style inferred."
+      },
+      "label-selected": {
+        "displayName": "Label Selected",
+        "purpose": "Semibold active workspace navigation label."
       }
     },
     "shadows": [
@@ -321,6 +482,12 @@
         "value": "0px 1px 2px rgba(10, 13, 18, 0.05)",
         "purpose": "Native input low shadow; also used by native disabled-button styling.",
         "source": "openmetadata-ui-core-components/src/main/resources/ui/src/styles/globals.css: --shadow-xs"
+      },
+      {
+        "name": "native-xl",
+        "value": "0px 20px 24px -4px rgba(10, 13, 18, 0.08), 0px 8px 8px -4px rgba(10, 13, 18, 0.03), 0px 3px 3px -1.5px rgba(10, 13, 18, 0.04)",
+        "purpose": "Native SlideoutMenu editing-layer separation.",
+        "source": "openmetadata-ui-core-components/src/main/resources/ui/src/styles/globals.css: --shadow-xl"
       }
     ],
     "motion": [
@@ -333,6 +500,21 @@
         "name": "native-control-easing",
         "value": "linear",
         "purpose": "Native button and input transition easing."
+      },
+      {
+        "name": "native-slideout-enter",
+        "value": "300ms",
+        "purpose": "Core SlideoutMenu entering fade and slide."
+      },
+      {
+        "name": "native-slideout-exit",
+        "value": "500ms",
+        "purpose": "Core SlideoutMenu exiting fade and slide."
+      },
+      {
+        "name": "native-slideout-easing",
+        "value": "linear",
+        "purpose": "Core SlideoutMenu overlay easing."
       }
     ],
     "breakpoints": [
@@ -340,7 +522,13 @@
         "name": "hospital-mobile-max",
         "value": "767px",
         "query": "(max-width: 767px)",
-        "purpose": "Observed local entry and workbench layout change."
+        "purpose": "Retained entry/workbench/integration source fallback; no new mobile delivery or acceptance requirement."
+      },
+      {
+        "name": "workspace-compact-pc-max",
+        "value": "1200px",
+        "query": "(max-width: 1200px)",
+        "purpose": "Reduced PC topbar gutter and account-control gap."
       }
     ],
     "focus": {
@@ -353,6 +541,21 @@
         "outlineWidth": "2px",
         "outlineOffset": "-2px",
         "colorProperty": "--tw-outline-color-brand"
+      },
+      "workspace": {
+        "outline": "2px solid var(--color-border-brand)",
+        "outlineOffset": "2px",
+        "selector": ".hospital-workspace :focus-visible"
+      },
+      "workspaceNavigation": {
+        "outline": "2px solid var(--color-border-brand)",
+        "outlineOffset": "-2px",
+        "selector": "navigation items, submenu titles and links"
+      },
+      "integration": {
+        "outline": "2px solid var(--color-border-brand)",
+        "outlineOffset": "3px",
+        "selector": ".hospital-integration :focus-visible"
       }
     },
     "reducedMotion": {
@@ -364,11 +567,44 @@
       "declarations": {
         "transition": "none",
         "animation": "none"
-      }
+      },
+      "additionalScopes": [
+        {
+          "selectors": [
+            ".hospital-workspace *",
+            ".hospital-workspace__submenu *"
+          ],
+          "declarations": {
+            "animation-duration": "0.01ms !important",
+            "transition-duration": "0.01ms !important",
+            "scroll-behavior": "auto !important"
+          }
+        },
+        {
+          "selectors": [
+            ".hospital-integration *",
+            ".hospital-integration *::before",
+            ".hospital-integration *::after"
+          ],
+          "declarations": {
+            "transition": "none",
+            "animation": "none"
+          }
+        },
+        {
+          "selectors": [
+            ".form-drawer__overlay"
+          ],
+          "declarations": {
+            "transition": "none",
+            "animation": "none"
+          }
+        }
+      ]
     },
     "aliasRelationships": {
       "scope": ".hospital-ui",
-      "explanation": "Local LESS reads --color-* semantics. Native tw: utilities read prefixed property aliases. These are the exact selected rebindings; neutral core property aliases are not comprehensively rebound.",
+      "explanation": "Document hospital theme: local LESS reads --color-* semantics; native tw: utilities read prefixed property aliases. These selected rebindings do not comprehensively replace neutral core property aliases.",
       "aliases": {
         "--tw-color-brand-600": "var(--color-brand-600)",
         "--tw-color-brand-700": "var(--color-brand-700)",
@@ -411,7 +647,68 @@
         "--color-text-secondary": "{colors.muted-dark}",
         "--color-border-secondary": "{colors.border-dark}"
       },
-      "inheritedCoreSemantics": "Native background, status and unmodified neutral tokens retain the core .dark-mode mappings. Light frontmatter defaults do not replace those mappings."
+      "inheritedCoreSemantics": "Native background, status and unmodified neutral tokens retain the core .dark-mode mappings. Light frontmatter defaults do not replace those mappings.",
+      "coreSemanticMappings": {
+        "--color-bg-primary": {
+          "light": "{colors.native-white}",
+          "dark": "{colors.native-page-dark}"
+        },
+        "--color-bg-secondary": {
+          "light": "{colors.native-surface-subtle}",
+          "dark": "{colors.native-surface-subtle-dark}"
+        },
+        "--color-bg-secondary_hover": {
+          "light": "{colors.native-surface-hover}",
+          "dark": "{colors.native-surface-hover-dark}"
+        },
+        "--color-utility-success-700": {
+          "light": "{colors.utility-success-ink}",
+          "dark": "{colors.utility-success-ink-dark}"
+        },
+        "--color-utility-error-700": {
+          "light": "{colors.utility-error-ink}",
+          "dark": "{colors.utility-error-ink-dark}"
+        },
+        "--color-bg-error-primary": {
+          "light": "{colors.error-surface}",
+          "dark": "{colors.error-surface-dark}"
+        }
+      },
+      "componentMappings": {
+        "workspace-sidebar-expanded": {
+          "darkBackground": "{colors.native-surface-subtle-dark}",
+          "darkText": "{colors.muted-dark}"
+        },
+        "workspace-sidebar-collapsed": {
+          "darkBackground": "{colors.native-surface-subtle-dark}",
+          "darkText": "{colors.muted-dark}"
+        },
+        "workspace-topbar": {
+          "darkBackground": "{colors.native-page-dark}",
+          "darkText": "{colors.ink-dark}"
+        },
+        "workspace-navigation-item": {
+          "darkText": "{colors.muted-dark}"
+        },
+        "workspace-navigation-item-hover": {
+          "darkBackground": "{colors.native-surface-hover-dark}",
+          "darkText": "{colors.ink-dark}"
+        },
+        "workspace-navigation-item-selected": {
+          "darkBackground": "{colors.navigation-selected}",
+          "darkText": "{colors.primary-dark}"
+        },
+        "status-success": {
+          "darkText": "{colors.utility-success-ink-dark}"
+        },
+        "status-error": {
+          "darkText": "{colors.utility-error-ink-dark}"
+        },
+        "integration-alert": {
+          "darkBackground": "{colors.error-surface-dark}",
+          "darkText": "{colors.utility-error-ink-dark}"
+        }
+      }
     },
     "layout": {
       "login": {
@@ -452,14 +749,101 @@
       "coreSpacing": {
         "sourceProperty": "--spacing",
         "refersTo": "{spacing.native-unit}"
+      },
+      "workspace": {
+        "sidebarExpandedWidth": "240px",
+        "sidebarCollapsedWidth": "72px",
+        "topbarHeight": "64px",
+        "topbarPadding": "12px 24px",
+        "brandRegionHeight": "64px",
+        "brandMarkSize": "32px",
+        "navigationRowHeight": "40px",
+        "navigationRowMargin": "2px 0",
+        "navigationIconSize": "20px",
+        "menuPaddingInline": "12px",
+        "submenuIndent": "20px",
+        "submenuMinWidth": "180px",
+        "submenuPadding": "6px",
+        "mainMenuPaddingBlock": "12px",
+        "lowerMenuPaddingBlock": "8px 12px",
+        "searchWidth": "min(32vw, 480px)",
+        "searchMinWidth": "180px",
+        "topbarControlGap": "16px",
+        "compactPc": {
+          "maxWidth": "1200px",
+          "topbarPaddingInline": "16px",
+          "topbarControlGap": "8px"
+        },
+        "contentOverflow": "auto",
+        "contentScrollbarGutter": "stable",
+        "mainMenuOverflow": "auto",
+        "lowerMenu": "fixed within sidebar flex layout",
+        "extraBannerNavbarHeightProperty": "128px",
+        "scope": "Shared authenticated frame; incumbent inner-page layouts remain independent."
+      },
+      "integration": {
+        "scope": "Source, task-list and task-detail surfaces only",
+        "width": "100%",
+        "margin": "0",
+        "padding": "24px",
+        "headerGap": "24px",
+        "headerMarginBottom": "24px",
+        "breadcrumbGap": "8px",
+        "breadcrumbMarginBottom": "16px",
+        "descriptionMaxWidth": "72ch",
+        "toolbarGap": "16px",
+        "filterGap": "12px",
+        "filterMinWidth": "140px",
+        "searchMinWidth": "220px",
+        "collectionTableMinWidth": "1000px",
+        "tableHeaderPadding": "12px",
+        "tableCellPadding": "18px 12px",
+        "tableOverflow": "local horizontal scrolling",
+        "fieldColumns": "repeat(2, minmax(0, 1fr))",
+        "fieldGap": "24px 32px",
+        "drawerFieldGap": "20px 24px",
+        "formSectionPadding": "28px 0",
+        "retainedNarrowFallback": {
+          "maxWidth": "767px",
+          "padding": "24px 16px",
+          "headlineSize": "23px",
+          "tableCellPadding": "12px 10px",
+          "deliveryStatus": "Source fallback only; outside PC acceptance scope."
+        }
+      },
+      "formDrawer": {
+        "source": "openmetadata-ui/src/main/resources/ui/src/components/common/atoms/drawer/form-drawer.less",
+        "nativeComponent": "FormDrawer wrapping core SlideoutMenu",
+        "defaultWidth": "640px",
+        "integrationSourceWidth": "720px",
+        "integrationTaskCreateWidth": "880px",
+        "integrationTaskEditWidth": "960px",
+        "height": "100dvh",
+        "wrapperMaxWidthRule": "calc(100vw - 24px)",
+        "headerPadding": "20px 24px",
+        "bodyPadding": "24px",
+        "footerPadding": "16px 24px at PC width",
+        "actionGap": "12px",
+        "bodyOverflow": "auto",
+        "bodyOverscrollBehavior": "contain",
+        "headerAndFooter": "flex: 0 0 auto",
+        "body": "flex: 1 1 auto; min-height: 0",
+        "footerDivider": "inset 0px 1px 0px 0px with native border-secondary shadow color",
+        "overlay": "native bg-overlay/70",
+        "zIndex": 1000,
+        "behavior": "Native focus containment and dismissal APIs; submission blocks dismissal. Integration discard, draft and history commitments remain in the surface contract."
       }
     },
-    "tonalRampPolicy": "Ramps above reuse sampled incumbent gray and error scales only. The hospital green and tinted neutral values do not define an eight-step scale; no synthetic ramp is promoted to an implemented token.",
+    "tonalRampPolicy": "Ramps reuse sampled incumbent gray, error and success scales. Hospital green and tinted neutrals do not define an eight-step scale; no synthetic ramp becomes an implemented token.",
     "provenance": {
       "mode": "scan",
       "scope": [
         "IntegrateLoginPage",
-        "HospitalWorkbench"
+        "HospitalWorkbench",
+        "Shared Hospital PC workspace",
+        "HospitalDataSourcesPage",
+        "HospitalIntegrationPage list/detail",
+        "Native FormDrawer integration use"
       ],
       "sourceFiles": [
         "PRODUCT.md",
@@ -474,19 +858,165 @@
         "openmetadata-ui-core-components/src/main/resources/ui/src/components/base/input/input.tsx",
         "openmetadata-ui-core-components/src/main/resources/ui/src/components/base/input/label.tsx",
         "openmetadata-ui-core-components/src/main/resources/ui/src/utils/tailwindClasses.ts",
-        "openmetadata-ui-core-components/src/main/resources/ui/src/styles/globals.css"
+        "openmetadata-ui-core-components/src/main/resources/ui/src/styles/globals.css",
+        ".impeccable/surfaces/hospital-pc-navigation.md",
+        "docs/hospital/ui-redesign-plan.md",
+        "openmetadata-ui/src/main/resources/ui/src/index.tsx",
+        "openmetadata-ui/src/main/resources/ui/src/styles/hospital-workspace.less",
+        "openmetadata-ui/src/main/resources/ui/src/components/AppContainer/AppContainer.tsx",
+        "openmetadata-ui/src/main/resources/ui/src/components/MyData/LeftSidebar/LeftSidebar.component.tsx",
+        "openmetadata-ui/src/main/resources/ui/src/components/MyData/LeftSidebar/left-sidebar.less",
+        "openmetadata-ui/src/main/resources/ui/src/constants/LeftSidebar.constants.ts",
+        "openmetadata-ui/src/main/resources/ui/src/constants/constants.ts",
+        "openmetadata-ui/src/main/resources/ui/src/components/AppRouter/AuthenticatedAppRouter.tsx",
+        "openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/HospitalDataSourcesPage.tsx",
+        "openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/HospitalIntegrationPage.tsx",
+        "openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/HospitalIntegrationRouteUtils.ts",
+        "openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/IntegrationConnections.tsx",
+        "openmetadata-ui/src/main/resources/ui/src/pages/HospitalIntegrationPage/hospital-integration.less",
+        "openmetadata-ui/src/main/resources/ui/src/components/common/atoms/drawer/FormDrawer.tsx",
+        "openmetadata-ui/src/main/resources/ui/src/components/common/atoms/drawer/form-drawer.less",
+        "openmetadata-ui-core-components/src/main/resources/ui/src/components/application/slideout-menus/slideout-menu.tsx",
+        "openmetadata-ui/src/main/resources/ui/docs/colors.md"
       ],
       "captureReport": ".impeccable/review/capture-report.json",
       "captureCount": 10,
-      "evidenceLimit": "Source and supplied labelled synthetic capture report. Preview omits outer application navigation. No whole-app or end-to-end SSO validation claim.",
-      "snippetLimit": "Standalone static translations of source primitives and patterns. Sample labels and data are synthetic; snippets do not invoke endpoints or perform authentication."
+      "evidenceLimit": "Source extraction and supplied synthetic capture/review manifests. Earlier ten previews omit outer navigation; 44 phase-one captures and five directed correction captures use actual React shell/pages with synthetic HTTP fixtures. This documentation pass does not claim independent screenshot inspection or employee SSO, JDBC extraction or live catalog-write validation.",
+      "snippetLimit": "Standalone static translations of source primitives and patterns. Sample labels and data are synthetic; snippets do not invoke endpoints or perform authentication.",
+      "workspaceEvidence": {
+        "captureReport": ".impeccable/review/pc-navigation/report.json",
+        "captureCount": 44,
+        "capturedAt": "2026-10-10T04:05:06.103Z",
+        "viewports": [
+          {
+            "width": 1366,
+            "height": 900
+          },
+          {
+            "width": 1440,
+            "height": 1000
+          },
+          {
+            "width": 1920,
+            "height": 1080
+          },
+          {
+            "width": 1093,
+            "height": 720
+          }
+        ],
+        "reducedWidthMeaning": "1093px is reduced PC working space equivalent to 1366px at 125% scaling.",
+        "correctionReport": ".impeccable/review/pc-navigation/finish-fix/report.json",
+        "correctionCount": 5,
+        "correctionCapturedAt": "2026-10-10T04:17:34.553Z",
+        "finishReview": ".impeccable/review/pc-navigation/finish-review.md",
+        "designDisposition": "ship for scored fixes",
+        "productionBuildLog": ".impeccable/review/pc-navigation/production-build.txt",
+        "productionBuild": "Parent-verified final production Vite build exit 0; built in 8m 2s.",
+        "reportedContrast": [
+          {
+            "role": "success state",
+            "ratio": 5.41,
+            "foreground": "#067647",
+            "observedBackground": "#f8f9fc"
+          },
+          {
+            "role": "error text",
+            "ratio": 6.05,
+            "foreground": "#b42318",
+            "observedBackground": "#fef3f2"
+          }
+        ],
+        "contrastScope": "Directed correction observations only; no whole-application or whole-theme contrast claim.",
+        "fixture": "Explicit synthetic HTTP boundary; synthetic/example.invalid hosts; no employee SSO, JDBC extraction or live catalog writes.",
+        "shippingRasterAssets": "No new raster assets ship in this product change."
+      }
     },
     "notCanonized": [
       {
         "finding": "Native Button requests shadow-xs-skeuomorphic while globals defines --shadow-xs-skeumorphic.",
         "reason": "Incumbent source discrepancy; no resolved composite button-shadow token is inferred, and UI source is outside this documentation write scope."
+      },
+      {
+        "finding": "Synthetic browser captures report a #f8f9fc workspace ground while source styles request native bg-primary semantics.",
+        "reason": "Observed rendering is not an approved fixed brand ground token. Preserve semantic source authority and record contrast evidence without creating a palette rule."
       }
-    ]
+    ],
+    "workspaceAliasRelationships": {
+      "scope": ".hospital-workspace",
+      "source": "openmetadata-ui/src/main/resources/ui/src/styles/hospital-workspace.less",
+      "aliases": {
+        "--ant-navbar-height": "64px",
+        "--om-page-height": "calc(100vh - var(--ant-navbar-height))",
+        "--hospital-nav-selected-bg": "{colors.navigation-selected}",
+        "--ant-primary-color": "var(--color-bg-brand-solid)",
+        "--ant-primary-color-hover": "var(--color-bg-brand-solid_hover)",
+        "--ant-primary-color-active": "var(--color-bg-brand-solid_hover)",
+        "--color-bg-brand-primary": "var(--hospital-nav-selected-bg)",
+        "--color-bg-brand-primary_alt": "var(--hospital-nav-selected-bg)",
+        "--tw-color-bg-brand-primary": "var(--hospital-nav-selected-bg)",
+        "--tw-color-bg-brand-primary_alt": "var(--hospital-nav-selected-bg)",
+        "--tw-color-text-brand-primary": "var(--color-text-brand-primary)",
+        "--tw-color-text-brand-secondary": "var(--color-text-brand-secondary)",
+        "--tw-color-text-brand-tertiary": "var(--color-text-brand-secondary)",
+        "--tw-color-border-brand": "var(--color-border-brand)",
+        "--tw-color-fg-brand-primary": "var(--color-fg-brand-primary)",
+        "--ant-primary-25": "var(--hospital-nav-selected-bg)",
+        "--ant-primary-50": "var(--hospital-nav-selected-bg)",
+        "--ant-primary-1": "var(--hospital-nav-selected-bg)",
+        "--ant-primary-2": "color-mix(in srgb, var(--color-bg-brand-solid) 20%, var(--color-bg-primary))",
+        "--ant-primary-3": "color-mix(in srgb, var(--color-bg-brand-solid) 30%, var(--color-bg-primary))",
+        "--ant-primary-4": "color-mix(in srgb, var(--color-bg-brand-solid) 40%, var(--color-bg-primary))",
+        "--ant-primary-5": "var(--color-bg-brand-solid)",
+        "--ant-primary-6": "var(--color-bg-brand-solid)",
+        "--ant-primary-7": "var(--color-text-brand-secondary)",
+        "--ant-primary-8": "var(--color-text-brand-primary)",
+        "--ant-primary-9": "var(--color-text-brand-primary)"
+      }
+    },
+    "scopes": {
+      "documentTheme": {
+        "selector": "body.hospital-ui",
+        "source": "openmetadata-ui/src/main/resources/ui/src/index.tsx",
+        "purpose": "Global inherited Integrate palette, Chinese typography and hospital focus defaults."
+      },
+      "authenticatedWorkspace": {
+        "selector": ".hospital-workspace",
+        "purpose": "Shared PC frame, navigation selection and retained legacy accent aliases."
+      },
+      "integrationPages": {
+        "selector": ".hospital-integration",
+        "purpose": "Phase-one source/task/detail density, table, form and status patterns."
+      },
+      "incumbentSurfaces": [
+        "IntegrateLoginPage",
+        "HospitalWorkbench"
+      ],
+      "retainedInteriors": [
+        "data assets",
+        "data quality",
+        "data governance",
+        "knowledge center"
+      ],
+      "surfaceContract": ".impeccable/surfaces/hospital-pc-navigation.md",
+      "delivery": "PC only; retained narrow source fallbacks do not establish mobile acceptance."
+    },
+    "productBrand": {
+      "name": "数据中台",
+      "namePolicy": "Fixed product name across all 20 interface locales; Integrate remains the identity portal.",
+      "surface": "sidebar",
+      "icon": {
+        "source": "openmetadata-ui/src/main/resources/ui/src/assets/svg/data-platform.svg",
+        "provenance": "Original geometric SVG authored for the user request on 2026-10-10.",
+        "artworkSize": "24px",
+        "strokeWidth": "1.7px",
+        "containerSize": "32px",
+        "foreground": "var(--color-fg-white, var(--tw-text-color-white, #fff))",
+        "background": "var(--color-bg-brand-solid)"
+      },
+      "collapsed": "Icon only; accessible link name preserved.",
+      "customLogoPriority": "Existing configured logo remains authoritative."
+    }
   },
   "components": [
     {
@@ -577,7 +1107,7 @@
       "name": "Governance action navigation",
       "kind": "nav",
       "refersTo": "governance-actions",
-      "description": "Synthetic labels illustrate the linked task rail. Outer application navigation remains incumbent.",
+      "description": "Synthetic labels illustrate the retained workbench task rail; the shared PC sidebar is a separate navigation pattern.",
       "html": "<div class=\"ds-hospital-scope\"><nav class=\"ds-actions\" aria-label=\"治理操作合成预览\"><h2>治理操作（示例）</h2><a href=\"#\">维护业务定义</a><a href=\"#\">查看数据质量</a><a href=\"#\">管理数据来源</a><p>以实际治理权限为准。</p></nav></div>",
       "css": ".ds-hospital-scope{--hospital-page:#eef3f1;--color-bg-brand-solid:#12634b;--color-bg-brand-solid_hover:#087354;--color-text-brand-primary:#12634b;--color-text-brand-secondary:#12634b;--color-fg-brand-primary:#12634b;--color-border-brand:#12634b;--color-text-primary:#182f29;--color-text-secondary:#53675f;--color-border-secondary:#dce6e0;--tw-background-color-brand-solid:var(--color-bg-brand-solid);--tw-background-color-brand-solid_hover:var(--color-bg-brand-solid_hover);--tw-text-color-brand-secondary:var(--color-text-brand-secondary);--tw-outline-color-brand:var(--color-border-brand);font-family:'PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif;color:var(--color-text-primary)}.ds-hospital-scope[data-theme=\"dark\"]{--hospital-page:#121c18;--color-text-brand-primary:#68cf99;--color-text-brand-secondary:#68cf99;--color-fg-brand-primary:#68cf99;--color-border-brand:#68cf99;--color-text-primary:#e8f1ec;--color-text-secondary:#b0c4b8;--color-border-secondary:#354a3d}.ds-hospital-scope ::selection{background:#e3f0e8;color:#182f29}.ds-hospital-scope :focus-visible{outline:2px solid var(--color-border-brand);outline-offset:3px}.ds-hospital-scope input{caret-color:var(--color-text-brand-primary)}@media(prefers-reduced-motion:reduce){.ds-hospital-scope *{transition:none;animation:none}}.ds-actions{padding-left:28px;border-left:1px solid var(--color-border-secondary)}.ds-actions h2{margin:0 0 14px;color:inherit;font-size:17px;font-weight:600}.ds-actions a{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 0;border-bottom:1px solid var(--color-border-secondary);color:var(--color-text-brand-secondary);text-underline-offset:3px;text-decoration:none}.ds-actions a:hover{text-decoration:underline}.ds-actions p{margin:20px 0 0;color:var(--color-text-secondary);font-size:12px;line-height:1.7}@media(max-width:767px){.ds-actions{padding-left:0;border-left:none}}",
       "source": "openmetadata-ui/src/main/resources/ui/src/pages/MyDataPage/HospitalWorkbench.tsx",
@@ -601,21 +1131,50 @@
       "html": "<div class=\"ds-hospital-scope\"><p class=\"ds-entry-error\" role=\"alert\">合成预览：暂时无法连接，请重试。</p><div class=\"ds-entry-loading\" role=\"status\" aria-label=\"合成连接状态预览\"><span></span><span></span></div></div>",
       "css": ".ds-hospital-scope{--hospital-page:#eef3f1;--color-bg-brand-solid:#12634b;--color-bg-brand-solid_hover:#087354;--color-text-brand-primary:#12634b;--color-text-brand-secondary:#12634b;--color-fg-brand-primary:#12634b;--color-border-brand:#12634b;--color-text-primary:#182f29;--color-text-secondary:#53675f;--color-border-secondary:#dce6e0;--tw-background-color-brand-solid:var(--color-bg-brand-solid);--tw-background-color-brand-solid_hover:var(--color-bg-brand-solid_hover);--tw-text-color-brand-secondary:var(--color-text-brand-secondary);--tw-outline-color-brand:var(--color-border-brand);font-family:'PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif;color:var(--color-text-primary)}.ds-hospital-scope[data-theme=\"dark\"]{--hospital-page:#121c18;--color-text-brand-primary:#68cf99;--color-text-brand-secondary:#68cf99;--color-fg-brand-primary:#68cf99;--color-border-brand:#68cf99;--color-text-primary:#e8f1ec;--color-text-secondary:#b0c4b8;--color-border-secondary:#354a3d}.ds-hospital-scope ::selection{background:#e3f0e8;color:#182f29}.ds-hospital-scope :focus-visible{outline:2px solid var(--color-border-brand);outline-offset:3px}.ds-hospital-scope input{caret-color:var(--color-text-brand-primary)}@media(prefers-reduced-motion:reduce){.ds-hospital-scope *{transition:none;animation:none}}.ds-entry-error{margin:18px 0 0;border-radius:8px;padding:12px 16px;background:var(--color-bg-error-primary,#fef3f2);color:var(--color-text-error-primary,#d92d20);font-size:14px;line-height:1.8}.ds-entry-loading{display:grid;gap:10px;padding:18px 0 0}.ds-entry-loading span{height:10px;border-radius:4px;background:var(--color-bg-tertiary,#f5f5f5)}.ds-entry-loading span:last-child{width:65%}",
       "source": "openmetadata-ui/src/main/resources/ui/src/pages/LoginPage/hospital-login.less"
+    },
+    {
+      "name": "Shared workspace navigation",
+      "kind": "nav",
+      "refersTo": "workspace-navigation-item-selected",
+      "description": "Text-only static specimen of the approved PC rows and selected child; native SVG icons and live submenu behavior remain in the implementation.",
+      "html": "<div class=\"ds-pc-scope\"><nav class=\"ds-pc-nav\" aria-label=\"工作区导航（合成示例）\"><button class=\"ds-pc-nav-row\" type=\"button\">工作台</button><button class=\"ds-pc-nav-row\" type=\"button\" aria-expanded=\"true\">数据集成</button><div class=\"ds-pc-nav-children\"><a class=\"ds-pc-nav-row ds-pc-nav-selected\" href=\"#ds-sources\" aria-current=\"page\">数据源管理</a><a class=\"ds-pc-nav-row\" href=\"#ds-tasks\">集成任务</a></div><button class=\"ds-pc-nav-row\" type=\"button\">数据资产</button><button class=\"ds-pc-nav-row\" type=\"button\">数据质量</button><button class=\"ds-pc-nav-row\" type=\"button\">数据治理</button><button class=\"ds-pc-nav-row\" type=\"button\">知识中心</button></nav></div>",
+      "css": ".ds-pc-scope{font-family:'PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif;color:var(--color-text-primary,#182f29);font-variant-numeric:tabular-nums}.ds-pc-scope :focus-visible{outline:2px solid var(--color-border-brand,#12634b);outline-offset:2px}@media(prefers-reduced-motion:reduce){.ds-pc-scope *{transition:none;animation:none}}.ds-pc-nav{width:240px;max-width:100%;padding:12px;background:var(--color-bg-secondary,#fafafa);border-inline-end:1px solid var(--color-border-secondary,#dce6e0)}.ds-pc-nav-row{display:flex;align-items:center;width:100%;height:40px;margin:2px 0;padding:0 12px;border:0;border-radius:6px;background:transparent;color:var(--color-text-secondary,#53675f);font-family:inherit;font-size:14px;font-weight:500;line-height:20px;text-decoration:none;cursor:pointer}.ds-pc-nav-row:hover{color:var(--color-text-primary,#182f29);background:var(--color-bg-secondary_hover,#f5f5f5)}.ds-pc-nav-children{padding-inline-start:20px}.ds-pc-nav-selected,.ds-pc-nav-selected:hover{font-weight:600;color:var(--color-text-brand-secondary,#12634b);background:color-mix(in srgb,var(--color-bg-brand-solid,#12634b) 10%,var(--color-bg-primary,#ffffff))}.ds-pc-nav-row:focus-visible{outline-offset:-2px}",
+      "source": "openmetadata-ui/src/main/resources/ui/src/components/MyData/LeftSidebar/left-sidebar.less",
+      "previewLimit": "Static menu specimen; exact native icons, collapsing, focus and URL selection stay in source. No substitute glyph icon is introduced."
+    },
+    {
+      "name": "Native form drawer regions",
+      "kind": "custom",
+      "refersTo": "form-drawer",
+      "description": "Static translation of native title/body/action regions. It does not simulate authentication, modal focus containment or form submission.",
+      "html": "<div class=\"ds-pc-scope\"><section class=\"ds-form-drawer\" aria-labelledby=\"ds-form-title\"><header class=\"ds-form-header\"><h2 id=\"ds-form-title\">编辑数据源（合成示例）</h2></header><div class=\"ds-form-body\"><label class=\"ds-form-label\" for=\"ds-source-name\">数据源名称</label><input class=\"ds-form-input\" id=\"ds-source-name\" value=\"合成业务库\" readonly /></div><footer class=\"ds-form-footer\"><button class=\"ds-form-cancel\" type=\"button\">取消</button><button class=\"ds-form-save\" type=\"button\">保存</button></footer></section></div>",
+      "css": ".ds-pc-scope{font-family:'PingFang SC','Microsoft YaHei','Source Han Sans SC',system-ui,sans-serif;color:var(--color-text-primary,#182f29);font-variant-numeric:tabular-nums}.ds-pc-scope :focus-visible{outline:2px solid var(--color-border-brand,#12634b);outline-offset:2px}@media(prefers-reduced-motion:reduce){.ds-pc-scope *{transition:none;animation:none}}.ds-form-drawer{display:flex;flex-direction:column;align-items:stretch;width:720px;max-width:100%;height:100dvh;max-height:100dvh;overflow:hidden;background:var(--color-bg-primary,#ffffff);box-shadow:var(--tw-shadow-xl,0px 20px 24px -4px rgba(10,13,18,.08),0px 8px 8px -4px rgba(10,13,18,.03),0px 3px 3px -1.5px rgba(10,13,18,.04))}.ds-form-header{flex:0 0 auto;padding:20px 24px;border-bottom:1px solid var(--color-border-secondary,#dce6e0)}.ds-form-header h2{margin:0;font-size:18px;font-weight:600;line-height:28px}.ds-form-body{flex:1 1 auto;min-height:0;padding:24px;overflow-y:auto;overscroll-behavior:contain}.ds-form-label{display:block;margin-bottom:6px;color:var(--color-text-secondary,#53675f);font-size:14px;font-weight:500;line-height:20px}.ds-form-input{width:100%;border:0;border-radius:8px;padding:8px 12px;background:var(--tw-background-color-primary,#ffffff);color:var(--tw-text-color-primary,#181d27);font-family:inherit;font-size:14px;line-height:20px;outline:1px solid var(--tw-outline-color-primary,#d5d7da);outline-offset:-1px;box-shadow:0px 1px 2px rgba(10,13,18,.05)}.ds-form-input:focus-visible{outline:2px solid var(--color-border-brand,#12634b);outline-offset:-2px}.ds-form-footer{display:flex;flex:0 0 auto;justify-content:flex-end;gap:12px;padding:16px 24px;box-shadow:inset 0px 1px 0px 0px var(--color-border-secondary,#dce6e0)}.ds-form-footer button{border:0;border-radius:8px;padding:8px 12px;font-family:inherit;font-size:14px;font-weight:500;line-height:20px;cursor:pointer;transition:background 100ms linear}.ds-form-cancel{color:var(--tw-text-color-secondary,#414651);background:var(--tw-background-color-primary,#ffffff);outline:1px solid var(--tw-outline-color-primary,#d5d7da);outline-offset:-1px}.ds-form-cancel:hover{background:var(--tw-background-color-primary_hover,#fafafa)}.ds-form-save{color:var(--tw-text-color-white,#ffffff);background:var(--color-bg-brand-solid,#12634b)}.ds-form-save:hover{background:var(--color-bg-brand-solid_hover,#087354)}",
+      "source": "openmetadata-ui/src/main/resources/ui/src/components/common/atoms/drawer/FormDrawer.tsx",
+      "sourceStyles": [
+        "openmetadata-ui/src/main/resources/ui/src/components/common/atoms/drawer/form-drawer.less",
+        "openmetadata-ui-core-components/src/main/resources/ui/src/components/application/slideout-menus/slideout-menu.tsx"
+      ],
+      "previewLimit": "Static source-width specimen. Native overlay, close affordance, focus containment, portal routing and discard guards are not reimplemented."
     }
   ],
   "narrative": {
     "northStar": "Calm, precise hospital operations",
-    "overview": "This record describes the shipped Integrate entry page and Chinese hospital governance workbench inside OpenMetadata. The confirmed direction uses Integrate's green accent, a Chinese system font stack, restrained native controls and a clear task hierarchy. The incumbent OpenMetadata core library remains the authority for shared widgets, outer navigation and the wider catalog, lineage and quality workflows.\n\nThe adaptation is scoped through the hospital wrapper. Local styles use semantic OpenMetadata variables; selected prefixed aliases connect the native controls to the hospital accent. Frontmatter records the observed light defaults and explicit hospital dark overrides. Native surface, text and status primitives continue to resolve through the incumbent semantic tokens at runtime.",
+    "overview": "The approved Integrate identity now applies to the document hospital theme and shared authenticated PC workspace. Integrate green, inherited Chinese system typography, compact native controls and a clear task hierarchy connect the entry, workbench, navigation and integration surfaces. The incumbent OpenMetadata core library remains the authority for shared widgets and explicit native typography.\n\nThis expands the established identity and preserves the confirmed entry and workbench rules. Phase one changes the shared frame and navigation plus source, task-list and task-detail surfaces. Asset, quality, governance and knowledge interiors retain incumbent behavior and page composition. Their navigation membership does not establish an inner-page redesign.\n\nLocal styles use semantic OpenMetadata variables. Selected prefixed aliases connect native and retained Ant controls to the hospital accent. Frontmatter records observed light defaults and explicit dark primitives; the sidecar records scope, dark mappings, layout, focus and motion. Native surface, text and status primitives continue to resolve through the core semantic system at runtime. Page strategy remains in the surface briefs.",
     "keyCharacteristics": [
       "Calm green emphasis with tinted page neutrals and legible text.",
-      "Chinese system typography with compact native controls.",
-      "Search, factual catalog totals and clear governance actions.",
+      "Chinese system typography, preserved native type roles and compact controls.",
+      "Full-width PC navigation, factual data regions and native right-hand form drawers.",
       "Distinct loading, unavailable, error and empty states."
     ],
     "rules": [
       {
         "name": "The Scoped Alias Rule",
-        "body": "Apply hospital color overrides through the hospital wrapper. Preserve semantic status roles and the core component token system when adding a hospital surface.",
+        "body": "Apply hospital color overrides through the document hospital theme and workspace wrappers. Preserve semantic status roles and the core component token system when adding a hospital surface.",
+        "section": "colors"
+      },
+      {
+        "name": "The Status Meaning Rule",
+        "body": "Use shared success/error utility aliases and their dark mappings for data-bound state text. Keep a readable label with the color.",
         "section": "colors"
       },
       {
@@ -630,16 +1189,18 @@
       }
     ],
     "dos": [
-      "Do use the confirmed Chinese system stack and Integrate green within the hospital scope.",
-      "Do use native core Button and Input variants with semantic color aliases.",
+      "Do use the confirmed Chinese system stack and Integrate green through the hospital theme and shared workspace.",
+      "Do use native core Button, Input and FormDrawer behavior with semantic color aliases and their dark mappings.",
+      "Do preserve explicit native type roles and contain table/form overflow so shared navigation and drawer actions stay reachable.",
       "Do preserve clear task hierarchy, compact data typography and visible keyboard focus.",
       "Do keep loading, unavailable, error, empty and zero states distinct.",
       "Do describe the asset rows as a catalog sample in API order."
     ],
     "donts": [
-      "Don't broaden this scoped adaptation into a replacement for the wider OpenMetadata system.",
+      "Don't treat the shared frame redesign as evidence that every inner page has been redesigned.",
       "Don't add a marketing carousel or decorative data graphics to these operating surfaces.",
       "Don't present synthetic preview data as connected hospital data or imply unsupported asset recency.",
+      "Don't hardcode a screenshot background or status hue in place of the established semantic role.",
       "Don't canonize an unconfirmed native utility spelling discrepancy as a new elevation rule."
     ]
   }

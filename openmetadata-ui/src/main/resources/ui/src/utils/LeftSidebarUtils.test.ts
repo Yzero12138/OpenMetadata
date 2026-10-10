@@ -11,14 +11,66 @@
  *  limitations under the License.
  */
 import { ROUTES } from '../constants/constants';
-import { SIDEBAR_NESTED_KEYS } from '../constants/LeftSidebar.constants';
-import { getSidebarActiveKeys, getSidebarPathname } from './LeftSidebarUtils';
+import {
+  SIDEBAR_LIST,
+  SIDEBAR_NESTED_KEYS,
+} from '../constants/LeftSidebar.constants';
+import {
+  getSidebarActiveKeys,
+  getSidebarParentKeys,
+  getSidebarPathname,
+} from './LeftSidebarUtils';
 
 describe('getSidebarActiveKeys', () => {
-  it('keeps the hospital integration entry active on its two-part route', () => {
+  it.each([
+    '/table/his.patient/versions/1.0',
+    '/dashboard/reporting.overview',
+    '/pipeline/ingestion.daily',
+    '/apiEndpoint/clinical.results',
+    '/aiApplication/research.assistant',
+  ])(
+    'selects the catalog and asset parent for direct entity route %s',
+    (path) => {
+      const keys = getSidebarActiveKeys(path, SIDEBAR_NESTED_KEYS);
+
+      expect(keys).toEqual([ROUTES.EXPLORE]);
+      expect(getSidebarParentKeys(keys, SIDEBAR_LIST)).toEqual([
+        ROUTES.DATA_MARKETPLACE_SECTION,
+      ]);
+    }
+  );
+
+  it('selects distinct integration children for lists and direct task details', () => {
+    expect(
+      getSidebarActiveKeys('/hospital/integration/sources', SIDEBAR_NESTED_KEYS)
+    ).toEqual(['/hospital/integration/sources']);
+    expect(
+      getSidebarActiveKeys(
+        '/hospital/integration/tasks/task-17',
+        SIDEBAR_NESTED_KEYS
+      )
+    ).toEqual(['/hospital/integration/tasks']);
+  });
+
+  it('uses the longest registered route with a segment boundary', () => {
+    const nested = {
+      '/plugin': 'plugin-parent',
+      '/plugin/reports': 'plugin-parent',
+      '/plugin/reports/recent': 'plugin-parent',
+    };
+
+    expect(
+      getSidebarActiveKeys('/plugin/reports/recent/report-1', nested)
+    ).toEqual(['/plugin/reports/recent']);
+    expect(getSidebarActiveKeys('/plugin/reporting', nested)).toEqual([
+      '/plugin',
+    ]);
+  });
+
+  it('selects tasks for the legacy integration entry', () => {
     expect(
       getSidebarActiveKeys(ROUTES.HOSPITAL_INTEGRATION, SIDEBAR_NESTED_KEYS)
-    ).toEqual([ROUTES.HOSPITAL_INTEGRATION]);
+    ).toEqual([ROUTES.HOSPITAL_INTEGRATION_TASKS]);
   });
 
   it('should return the two-segment path for a list page', () => {
