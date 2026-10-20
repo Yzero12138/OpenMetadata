@@ -11,11 +11,14 @@ import org.openmetadata.service.integration.IntegrationModels.ConnectionDefiniti
 public final class IntegrationConfiguration {
   public static final String SOURCE_ID = "synthetic-source";
   public static final String TARGET_ID = "synthetic-ods";
+  public static final String DORIS_TARGET_ID = "doris-ods-validation";
   private final boolean enabled;
   private final URI engineUri;
   private final JdbcEndpoint source;
   private final JdbcEndpoint target;
   private final boolean configured;
+  private final JdbcEndpoint dorisTarget;
+  private final int dorisReplicationNum;
 
   private IntegrationConfiguration(Map<String, String> values) {
     enabled = "true".equalsIgnoreCase(values.get("HOSPITAL_INTEGRATION_ENABLED"));
@@ -44,6 +47,28 @@ public final class IntegrationConfiguration {
     source = parsedSource;
     target = parsedTarget;
     configured = enabled && engineUri != null && source != null && target != null;
+    JdbcEndpoint parsedDoris = null;
+    if (configured && "true".equalsIgnoreCase(values.get("HOSPITAL_DORIS_ENABLED"))) {
+      try {
+        ConnectionDefinition definition = new ConnectionDefinition();
+        definition.id = DORIS_TARGET_ID;
+        definition.role = "TARGET";
+        definition.databaseType = "Doris";
+        definition.host = required(values, "HOSPITAL_DORIS_HOST");
+        definition.port = Integer.parseInt(required(values, "HOSPITAL_DORIS_SQL_PORT"));
+        definition.dorisHttpPort = Integer.parseInt(required(values, "HOSPITAL_DORIS_HTTP_PORT"));
+        definition.database = required(values, "HOSPITAL_DORIS_DATABASE");
+        definition.username = required(values, "HOSPITAL_DORIS_USER");
+        definition.schemas = List.of(definition.database);
+        definition.tlsMode = "DISABLED";
+        parsedDoris = new JdbcEndpoint(definition, required(values, "HOSPITAL_DORIS_PASSWORD"));
+      } catch (IllegalArgumentException | IntegrationException e) {
+        parsedDoris = null;
+      }
+    }
+    dorisTarget = parsedDoris;
+    String replication = values.getOrDefault("HOSPITAL_DORIS_REPLICATION_NUM", "3");
+    dorisReplicationNum = replication.matches("[1-9]") ? Integer.parseInt(replication) : 0;
   }
 
   public static IntegrationConfiguration fromEnvironment() {
@@ -81,8 +106,25 @@ public final class IntegrationConfiguration {
     return switch (id == null ? "" : id) {
       case SOURCE_ID -> source;
       case TARGET_ID -> target;
+      case DORIS_TARGET_ID -> {
+        if (dorisTarget == null) {
+          throw new IntegrationException("CONNECTION_NOT_FOUND", 404);
+        }
+        yield dorisTarget;
+      }
       default -> throw new IntegrationException("INVALID_CONFIGURATION", 400);
     };
+  }
+
+  public boolean hasDorisTarget() {
+    return dorisTarget != null;
+  }
+
+  public int dorisReplicationNum() {
+    if (dorisReplicationNum == 0) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 503);
+    }
+    return dorisReplicationNum;
   }
 
   private static JdbcEndpoint endpoint(Map<String, String> values, String prefix, String id) {
@@ -139,6 +181,9 @@ public final class IntegrationConfiguration {
     private final JdbcDialect dialect;
     private final List<String> schemas;
     private final String tlsMode;
+    private final String host;
+    private final int port;
+    private final Integer dorisHttpPort;
 
     private JdbcEndpoint(
         String id, String jdbcUrl, String username, String password, String database) {
@@ -150,6 +195,10 @@ public final class IntegrationConfiguration {
       this.dialect = JdbcDialect.Postgres;
       this.schemas = List.of("public");
       this.tlsMode = "DISABLED";
+      URI databaseUri = URI.create(jdbcUrl.substring(5));
+      host = databaseUri.getHost();
+      port = databaseUri.getPort() == -1 ? 5432 : databaseUri.getPort();
+      dorisHttpPort = null;
     }
 
     public JdbcEndpoint(ConnectionDefinition definition, String password) {
@@ -161,6 +210,24 @@ public final class IntegrationConfiguration {
       database = definition.database;
       schemas = List.copyOf(definition.schemas);
       tlsMode = definition.tlsMode;
+      host = definition.host;
+      port = definition.port;
+      dorisHttpPort = definition.dorisHttpPort;
+      if (dialect == JdbcDialect.Doris
+          && (!"TARGET".equals(definition.role)
+              || !"DISABLED".equals(tlsMode)
+              || host == null
+              || !host.matches("[a-zA-Z0-9][a-zA-Z0-9.-]{0,252}")
+              || host.contains("..")
+              || port < 1
+              || port > 65535
+              || dorisHttpPort == null
+              || dorisHttpPort < 1
+              || dorisHttpPort > 65535
+              || !IntegrationValidator.safeIdentifier(database)
+              || !schemas.equals(List.of(database)))) {
+        throw new IntegrationException("INVALID_CONFIGURATION", 400);
+      }
     }
 
     public String jdbcUrl() {
@@ -193,6 +260,18 @@ public final class IntegrationConfiguration {
 
     public String tlsMode() {
       return tlsMode;
+    }
+
+    public String host() {
+      return host;
+    }
+
+    public int port() {
+      return port;
+    }
+
+    public Integer dorisHttpPort() {
+      return dorisHttpPort;
     }
 
     public Properties connectionProperties() {

@@ -29,7 +29,8 @@ public final class JdbcInspector {
   public boolean test(String connectionId) {
     JdbcEndpoint endpoint = endpoints.apply(connectionId);
     try (Connection connection = open(endpoint)) {
-      return connection.isValid(5);
+      return connection.isValid(5)
+          && (endpoint.dialect() != JdbcDialect.Doris || DorisHttpHealth.healthy(endpoint));
     } catch (SQLException e) {
       throw new IntegrationException("CONNECTION_UNAVAILABLE", 503);
     }
@@ -134,6 +135,9 @@ public final class JdbcInspector {
   private TableDefinition inspect(
       Connection connection, JdbcEndpoint endpoint, String schema, String name)
       throws SQLException {
+    if (endpoint.dialect() == JdbcDialect.Doris) {
+      return DorisTableMetadata.read(connection, schema, name);
+    }
     DatabaseMetaData metadata = connection.getMetaData();
     Set<String> primaryKeys = new HashSet<>();
     try (ResultSet keys =
@@ -230,16 +234,23 @@ public final class JdbcInspector {
   }
 
   private String catalog(Connection connection, JdbcEndpoint endpoint) throws SQLException {
+    if (endpoint.dialect() == JdbcDialect.Doris) {
+      return endpoint.database();
+    }
     return endpoint.dialect() == JdbcDialect.Oracle ? null : connection.getCatalog();
   }
 
   private String schemaPattern(DatabaseMetaData metadata, JdbcEndpoint endpoint, String schema)
       throws SQLException {
-    return endpoint.dialect() == JdbcDialect.Mysql ? null : pattern(metadata, schema);
+    return catalogSchema(endpoint) ? null : pattern(metadata, schema);
   }
 
   private String schema(ResultSet result, JdbcEndpoint endpoint) throws SQLException {
-    return result.getString(endpoint.dialect() == JdbcDialect.Mysql ? "TABLE_CAT" : "TABLE_SCHEM");
+    return result.getString(catalogSchema(endpoint) ? "TABLE_CAT" : "TABLE_SCHEM");
+  }
+
+  private boolean catalogSchema(JdbcEndpoint endpoint) {
+    return endpoint.dialect() == JdbcDialect.Mysql || endpoint.dialect() == JdbcDialect.Doris;
   }
 
   private String pattern(DatabaseMetaData metadata, String literal) throws SQLException {

@@ -21,7 +21,7 @@ public final class IntegrationValidator {
   private static final Pattern IDENTIFIER = Pattern.compile("[\\p{L}_][\\p{L}\\p{N}_$#]{0,127}");
   private static final Pattern TASK_NAME = Pattern.compile("[a-z][a-z0-9_-]{0,62}");
   private static final List<Integer> INTEGERS =
-      List.of(Types.SMALLINT, Types.INTEGER, Types.BIGINT);
+      List.of(Types.TINYINT, Types.SMALLINT, Types.INTEGER, Types.BIGINT);
   private static final Set<Integer> STRINGS =
       Set.of(
           Types.CHAR,
@@ -189,6 +189,9 @@ public final class IntegrationValidator {
   private static boolean compatible(ColumnDefinition source, ColumnDefinition target) {
     int from = source.jdbcType();
     int to = target.jdbcType();
+    if (from == Types.BIT && to == Types.BOOLEAN && source.size() == 1) {
+      return true;
+    }
     if (INTEGERS.contains(from) && INTEGERS.contains(to)) {
       boolean sourceUnsigned = source.dataType().toUpperCase(Locale.ROOT).contains("UNSIGNED");
       boolean targetUnsigned = target.dataType().toUpperCase(Locale.ROOT).contains("UNSIGNED");
@@ -212,6 +215,7 @@ public final class IntegrationValidator {
     if (DECIMALS.contains(from) && INTEGERS.contains(to) && source.scale() == 0) {
       return source.size()
           <= switch (to) {
+            case Types.TINYINT -> 2;
             case Types.SMALLINT -> 4;
             case Types.INTEGER -> 9;
             default -> 18;
@@ -244,7 +248,8 @@ public final class IntegrationValidator {
 
   private static boolean connectionId(String id) {
     if (IntegrationConfiguration.SOURCE_ID.equals(id)
-        || IntegrationConfiguration.TARGET_ID.equals(id)) {
+        || IntegrationConfiguration.TARGET_ID.equals(id)
+        || IntegrationConfiguration.DORIS_TARGET_ID.equals(id)) {
       return true;
     }
     try {

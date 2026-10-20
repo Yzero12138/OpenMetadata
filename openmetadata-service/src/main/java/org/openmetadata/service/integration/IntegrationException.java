@@ -39,6 +39,16 @@ public final class IntegrationException extends RuntimeException {
               "This data source does not support the selected collection mode."),
           Map.entry("SCHEMA_NOT_ALLOWED", "Select a schema in the configured collection scope."),
           Map.entry("TABLE_NOT_FOUND", "The selected table does not exist or is not accessible."),
+          Map.entry("TABLE_ALREADY_EXISTS", "The target table already exists. Choose a new name."),
+          Map.entry(
+              "TABLE_PREVIEW_STALE",
+              "The table preview changed. Preview it again before creating."),
+          Map.entry(
+              "UNSUPPORTED_TARGET_TYPE",
+              "The selected source type cannot be represented safely in this target."),
+          Map.entry(
+              "TARGET_TABLE_CREATE_FAILED",
+              "The target table could not be created. Check target connectivity and permissions."),
           Map.entry(
               "TABLE_LIMIT_EXCEEDED",
               "There are too many tables. Narrow the configured schema scope."),

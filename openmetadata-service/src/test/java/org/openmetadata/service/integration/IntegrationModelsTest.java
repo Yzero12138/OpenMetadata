@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
+import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
 
 class IntegrationModelsTest {
   private static final ObjectMapper JSON = new ObjectMapper();
@@ -50,5 +51,39 @@ class IntegrationModelsTest {
       input.set("version", JSON.readTree(version));
       assertThrows(IntegrationException.class, () -> IntegrationModels.readInput(input, true));
     }
+  }
+
+  @Test
+  void tableCreationNeverAcceptsSqlOrClientSuppliedColumnTypes() throws Exception {
+    for (String field : new String[] {"ddl", "sql", "columns", "query", "overwrite"}) {
+      var input = JSON.createObjectNode().put(field, "DROP TABLE patients");
+      assertEquals(
+          "INVALID_CONFIGURATION",
+          assertThrows(
+                  IntegrationException.class,
+                  () -> IntegrationModels.read(input, TargetTableInput.class))
+              .code());
+    }
+  }
+
+  @Test
+  void rejectsDuplicateKeysTrailingJsonAndScalarCoercion() throws Exception {
+    for (String body : new String[] {"{\"targetTable\":\"a\",\"targetTable\":\"b\"}", "{} {}"}) {
+      assertEquals(
+          "INVALID_CONFIGURATION",
+          assertThrows(
+                  IntegrationException.class,
+                  () ->
+                      IntegrationModels.readBody(
+                          new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8))))
+              .code());
+    }
+    var input = JSON.valueToTree(IntegrationConnectionsTest.input("Postgres"));
+    ((ObjectNode) input).put("port", "5432");
+    assertEquals(
+        "INVALID_CONFIGURATION",
+        assertThrows(
+                IntegrationException.class, () -> IntegrationModels.readConnection(input, false))
+            .code());
   }
 }

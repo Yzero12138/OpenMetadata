@@ -27,6 +27,7 @@ import org.openmetadata.service.integration.IntegrationModels;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionUpdate;
 import org.openmetadata.service.integration.IntegrationModels.RunInput;
 import org.openmetadata.service.integration.IntegrationModels.StopInput;
+import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
 import org.openmetadata.service.integration.IntegrationModels.UpdateInput;
 import org.openmetadata.service.integration.IntegrationService;
 import org.openmetadata.service.resources.Collection;
@@ -153,6 +154,37 @@ public final class HospitalIntegrationResource {
       @PathParam("table") String table) {
     authorizer.authorizeAdmin(securityContext);
     return respond(() -> Response.ok(service.table(id, schema, table)).build());
+  }
+
+  @POST
+  @Path("/connections/{id}/tables/preview")
+  public Response previewTargetTable(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.previewTargetTable(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), TargetTableInput.class)))
+                .build());
+  }
+
+  @POST
+  @Path("/connections/{id}/tables")
+  public Response createTargetTable(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.status(Response.Status.CREATED)
+                .entity(
+                    service.createTargetTable(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), TargetTableInput.class)))
+                .build());
   }
 
   @GET

@@ -16,6 +16,8 @@ import org.openmetadata.service.integration.IntegrationModels.EngineStatus;
 import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
 import org.openmetadata.service.integration.IntegrationModels.RunSummary;
 import org.openmetadata.service.integration.IntegrationModels.TableDefinition;
+import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
+import org.openmetadata.service.integration.IntegrationModels.TargetTablePreview;
 import org.openmetadata.service.integration.IntegrationModels.TaskInput;
 import org.openmetadata.service.integration.IntegrationModels.UpdateInput;
 import org.openmetadata.service.integration.IntegrationModels.ValidationError;
@@ -119,6 +121,67 @@ public final class IntegrationService {
       throw new IntegrationException("TABLE_NOT_FOUND", 404);
     }
     return result;
+  }
+
+  public TargetTablePreview previewTargetTable(String id, TargetTableInput input) {
+    configuration.requireReady();
+    synchronized (TASK_LOCK) {
+      TargetTablePreview preview = targetTablePreview(id, input);
+      new DorisDdlExecutor()
+          .requireAbsent(connections.endpoint(id), input.targetSchema(), input.targetTable());
+      return preview;
+    }
+  }
+
+  public TableDefinition createTargetTable(String id, TargetTableInput input) {
+    configuration.requireReady();
+    DorisTableDdl.requireInput(input);
+    if (input.previewHash() == null || !input.previewHash().matches("[a-f0-9]{64}")) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
+    synchronized (TASK_LOCK) {
+      requireDorisTarget(id);
+      TargetTablePreview current;
+      try {
+        current = targetTablePreview(id, input);
+      } catch (IntegrationException e) {
+        if (Set.of(
+                "TABLE_NOT_FOUND",
+                "UNSUPPORTED_TARGET_TYPE",
+                "SCHEMA_NOT_ALLOWED",
+                "INVALID_CONFIGURATION")
+            .contains(e.code())) {
+          throw new IntegrationException("TABLE_PREVIEW_STALE", 409);
+        }
+        throw e;
+      }
+      if (!current.previewHash().equals(input.previewHash())) {
+        throw new IntegrationException("TABLE_PREVIEW_STALE", 409);
+      }
+      new DorisDdlExecutor().create(connections.endpoint(id), current);
+      return table(id, current.table().schema(), current.table().name());
+    }
+  }
+
+  private TargetTablePreview targetTablePreview(String id, TargetTableInput input) {
+    DorisTableDdl.requireInput(input);
+    connections.requireRole(input.sourceConnectionId(), "SOURCE", "FULL");
+    requireDorisTarget(id);
+    ConnectionDefinition source = connections.connection(input.sourceConnectionId());
+    ConnectionDefinition target = connections.connection(id);
+    return DorisTableDdl.preview(
+        input,
+        inspector.table(input.sourceConnectionId(), input.sourceSchema(), input.sourceTable()),
+        source,
+        target,
+        configuration.dorisReplicationNum());
+  }
+
+  private void requireDorisTarget(String id) {
+    connections.requireRole(id, "TARGET", "FULL");
+    if (!"Doris".equals(connections.connection(id).databaseType)) {
+      throw new IntegrationException("UNSUPPORTED_TARGET_TYPE", 400);
+    }
   }
 
   public ValidationResult validate(TaskInput input) {

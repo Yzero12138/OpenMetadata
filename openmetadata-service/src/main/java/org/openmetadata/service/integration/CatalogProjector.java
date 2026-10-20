@@ -236,6 +236,7 @@ public final class CatalogProjector {
 
   private static ColumnDataType dataType(ColumnDefinition column) {
     return switch (column.jdbcType()) {
+      case Types.TINYINT -> ColumnDataType.TINYINT;
       case Types.SMALLINT -> ColumnDataType.SMALLINT;
       case Types.INTEGER -> ColumnDataType.INT;
       case Types.BIGINT -> ColumnDataType.BIGINT;

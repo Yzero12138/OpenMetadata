@@ -5,9 +5,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.StreamReadConstraints;
+import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -15,7 +18,13 @@ import java.util.List;
 
 public final class IntegrationModels {
   private static final ObjectMapper JSON =
-      new ObjectMapper().enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+      JsonMapper.builder()
+          .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+          .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+          .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+          .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
+          .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS)
+          .build();
   private static final int MAX_INPUT_BYTES = 32768;
 
   static {
@@ -134,6 +143,22 @@ public final class IntegrationModels {
 
   public record TableDefinition(String schema, String name, List<ColumnDefinition> columns) {}
 
+  public record TargetTableInput(
+      String sourceConnectionId,
+      String sourceSchema,
+      String sourceTable,
+      String targetSchema,
+      String targetTable,
+      List<FieldMapping> fieldMappings,
+      String previewHash) {}
+
+  public record TargetTablePreview(
+      String targetConnectionId,
+      String previewHash,
+      String ddl,
+      TableDefinition table,
+      List<FieldMapping> fieldMappings) {}
+
   public static class ConnectionInput {
     public String name;
     public String displayName;
@@ -142,6 +167,7 @@ public final class IntegrationModels {
     public String databaseVersion;
     public String host;
     public Integer port;
+    public Integer dorisHttpPort;
     public String database;
     public String username;
 
@@ -161,6 +187,7 @@ public final class IntegrationModels {
       databaseVersion = input.databaseVersion;
       host = input.host;
       port = input.port;
+      dorisHttpPort = input.dorisHttpPort;
       database = input.database;
       username = input.username;
       schemas = input.schemas == null ? null : List.copyOf(input.schemas);

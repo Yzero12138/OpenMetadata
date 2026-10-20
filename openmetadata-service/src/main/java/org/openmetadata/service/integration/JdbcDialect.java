@@ -7,6 +7,7 @@ import org.openmetadata.service.integration.IntegrationModels.ConnectionInput;
 public enum JdbcDialect {
   Postgres("org.postgresql.Driver"),
   Mysql("com.mysql.cj.jdbc.Driver"),
+  Doris("com.mysql.cj.jdbc.Driver"),
   Oracle("oracle.jdbc.OracleDriver"),
   Mssql("com.microsoft.sqlserver.jdbc.SQLServerDriver");
 
@@ -29,7 +30,7 @@ public enum JdbcDialect {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
     return switch (this) {
-      case Mysql -> "`" + identifier + "`";
+      case Mysql, Doris -> "`" + identifier + "`";
       case Mssql -> "[" + identifier + "]";
       default -> "\"" + identifier + "\"";
     };
@@ -45,13 +46,14 @@ public enum JdbcDialect {
           + input.database
           + "?connectTimeout=5&socketTimeout=15&sslmode="
           + (verify ? "verify-full" : "disable");
-      case Mysql -> "jdbc:mysql://"
+      case Mysql, Doris -> "jdbc:mysql://"
           + hostPort
           + "/"
           + input.database
           + "?connectTimeout=5000&socketTimeout=15000&sslMode="
           + (verify ? "VERIFY_IDENTITY" : "DISABLED")
-          + "&allowLoadLocalInfile=false&allowUrlInLocalInfile=false&allowPublicKeyRetrieval=false";
+          + "&allowLoadLocalInfile=false&allowUrlInLocalInfile=false&allowPublicKeyRetrieval=false"
+          + (this == Doris ? "&useLocalSessionState=true&characterEncoding=UTF-8" : "");
       case Mssql -> "jdbc:sqlserver://"
           + hostPort
           + ";databaseName="
@@ -87,7 +89,7 @@ public enum JdbcDialect {
         properties.setProperty("socketTimeout", "15");
         properties.setProperty("ApplicationName", "hospital-integration-inspector");
       }
-      case Mysql -> {
+      case Mysql, Doris -> {
         properties.setProperty("connectTimeout", "5000");
         properties.setProperty("socketTimeout", "15000");
       }

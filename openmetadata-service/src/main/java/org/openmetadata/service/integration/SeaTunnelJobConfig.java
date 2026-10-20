@@ -124,36 +124,68 @@ public final class SeaTunnelJobConfig {
             .findFirst()
             .orElseThrow(() -> new IntegrationException("INVALID_CONFIGURATION", 400));
     Map<String, Object> sink = new LinkedHashMap<>();
-    sink.put("plugin_name", "Jdbc");
     sink.put("plugin_input", cdc ? "mapped" : "source");
-    sink.put("url", targetConnection.jdbcUrl());
-    sink.put("driver", targetConnection.driver());
-    sink.put("username", targetConnection.username());
-    sink.put("password", targetConnection.password());
-    sink.put("generate_sink_sql", true);
-    sink.put("database", targetConnection.database());
-    sink.put(
-        "table",
-        targetConnection.dialect() == JdbcDialect.Mysql
-            ? task.targetTable
-            : task.targetSchema + "." + task.targetTable);
-    if (targetConnection.dialect() == JdbcDialect.Oracle) {
-      sink.put("dialect", "HospitalOracle");
+    if (targetConnection.dialect() == JdbcDialect.Doris) {
+      if (!"DISABLED".equals(targetConnection.tlsMode())) {
+        throw new IntegrationException("INVALID_CONFIGURATION", 400);
+      }
+      sink.put("plugin_name", "Doris");
+      sink.put("fenodes", targetConnection.host() + ":" + targetConnection.dorisHttpPort());
+      sink.put("query-port", targetConnection.port());
+      sink.put("username", targetConnection.username());
+      sink.put("password", targetConnection.password());
+      sink.put("database", task.targetSchema);
+      sink.put("table", task.targetTable);
+      sink.put("sink.enable-2pc", false);
+      sink.put("sink.enable-delete", cdc);
+      String runId = task.latestRun == null ? "preview" : task.latestRun.jobId;
+      if (task.id == null || runId == null || !runId.matches("[a-zA-Z0-9_-]{1,64}")) {
+        throw new IntegrationException("INVALID_CONFIGURATION", 400);
+      }
+      sink.put("sink.label-prefix", "hospital_" + task.id.replace("-", "") + "_" + runId);
+      sink.put("doris.batch.size", 100);
       sink.put(
-          "properties",
+          "doris.config",
           Map.of(
-              "oracle.net.CONNECT_TIMEOUT",
-              "5000",
-              "oracle.jdbc.ReadTimeout",
-              "15000",
-              "oracle.jdbc.timezoneAsRegion",
-              "false"));
+              "format",
+              "json",
+              "read_json_by_line",
+              "true",
+              "strict_mode",
+              "true",
+              "max_filter_ratio",
+              "0"));
+    } else {
+      sink.put("plugin_name", "Jdbc");
+      sink.put("url", targetConnection.jdbcUrl());
+      sink.put("driver", targetConnection.driver());
+      sink.put("username", targetConnection.username());
+      sink.put("password", targetConnection.password());
+      sink.put("generate_sink_sql", true);
+      sink.put("database", targetConnection.database());
+      sink.put(
+          "table",
+          targetConnection.dialect() == JdbcDialect.Mysql
+              ? task.targetTable
+              : task.targetSchema + "." + task.targetTable);
+      if (targetConnection.dialect() == JdbcDialect.Oracle) {
+        sink.put("dialect", "HospitalOracle");
+        sink.put(
+            "properties",
+            Map.of(
+                "oracle.net.CONNECT_TIMEOUT",
+                "5000",
+                "oracle.jdbc.ReadTimeout",
+                "15000",
+                "oracle.jdbc.timezoneAsRegion",
+                "false"));
+      }
+      sink.put("primary_keys", List.of(targetKey));
+      sink.put("enable_upsert", true);
+      sink.put("is_exactly_once", false);
+      sink.put("batch_size", 100);
+      sink.put("batch_interval_ms", 1000);
     }
-    sink.put("primary_keys", List.of(targetKey));
-    sink.put("enable_upsert", true);
-    sink.put("is_exactly_once", false);
-    sink.put("batch_size", 100);
-    sink.put("batch_interval_ms", 1000);
     sink.put("schema_save_mode", "IGNORE");
     sink.put("data_save_mode", "APPEND_DATA");
     Map<String, Object> environment =
