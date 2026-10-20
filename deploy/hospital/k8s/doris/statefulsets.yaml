@@ -1,0 +1,326 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hospital-doris-fe
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  serviceName: hospital-doris-fe-headless
+  replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-doris-fe
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hospital-doris-fe
+        app.kubernetes.io/part-of: hospital-doris
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 120
+      imagePullSecrets:
+        - name: harbor-cred
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: [k8s-worker01]
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values: [amd64]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: prepare
+          image: harbor.qcrmyy.local/coop/hospital-doris-fe:4.0.8@sha256:0994b0e017ca024116e9c721b74fbc7293b1edc18ada988cdb1abdfed60cfa2f
+          command: [/bin/bash, /config/prepare.sh, fe]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: runtime-config
+              mountPath: /work/conf
+            - name: data
+              mountPath: /var/lib/doris
+            - name: bootstrap
+              mountPath: /run/secrets/bootstrap
+              readOnly: true
+      containers:
+        - name: fe
+          image: harbor.qcrmyy.local/coop/hospital-doris-fe:4.0.8@sha256:0994b0e017ca024116e9c721b74fbc7293b1edc18ada988cdb1abdfed60cfa2f
+          command: [/bin/bash, /config/start.sh, fe]
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: edit-log
+              containerPort: 9010
+            - name: rpc
+              containerPort: 9020
+            - name: mysql
+              containerPort: 9030
+            - name: http
+              containerPort: 8030
+          startupProbe:
+            tcpSocket:
+              port: mysql
+            periodSeconds: 5
+            failureThreshold: 120
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            tcpSocket:
+              port: mysql
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: "1"
+              memory: 2Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: runtime-config
+              mountPath: /opt/apache-doris/fe/conf
+            - name: data
+              mountPath: /var/lib/doris
+            - name: logs
+              mountPath: /var/log/doris
+            - name: runtime
+              mountPath: /run/doris
+            - name: temp
+              mountPath: /tmp
+            - name: bootstrap
+              mountPath: /run/secrets/bootstrap
+              readOnly: true
+            - name: writer
+              mountPath: /run/secrets/writer
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: hospital-doris-config
+        - name: runtime-config
+          emptyDir:
+            sizeLimit: 32Mi
+        - name: logs
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: runtime
+          emptyDir:
+            sizeLimit: 16Mi
+        - name: temp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: bootstrap
+          secret:
+            secretName: hospital-doris-bootstrap
+            defaultMode: 0440
+        - name: writer
+          secret:
+            secretName: hospital-doris-writer
+            defaultMode: 0440
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/part-of: hospital-doris
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: hospital-doris-be
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  serviceName: hospital-doris-be-headless
+  replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-doris-be
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hospital-doris-be
+        app.kubernetes.io/part-of: hospital-doris
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 120
+      imagePullSecrets:
+        - name: harbor-cred
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: [k8s-worker01]
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values: [amd64]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: prepare
+          image: harbor.qcrmyy.local/coop/hospital-doris-be:4.0.8@sha256:b56c70cbe32d4ccdea4a166ddf0ed55a38e82ce4eac5a8aceb80480c946ebf76
+          command: [/bin/bash, /config/prepare.sh, be]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: "1"
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: runtime-config
+              mountPath: /work/conf
+            - name: data
+              mountPath: /var/lib/doris
+      containers:
+        - name: be
+          image: harbor.qcrmyy.local/coop/hospital-doris-be:4.0.8@sha256:b56c70cbe32d4ccdea4a166ddf0ed55a38e82ce4eac5a8aceb80480c946ebf76
+          command: [/bin/bash, /config/start.sh, be]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: heartbeat
+              containerPort: 9050
+            - name: be-rpc
+              containerPort: 9060
+            - name: brpc
+              containerPort: 8060
+            - name: http
+              containerPort: 8040
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 120
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            tcpSocket:
+              port: heartbeat
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              cpu: "4"
+              memory: 8Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: runtime-config
+              mountPath: /opt/apache-doris/be/conf
+            - name: data
+              mountPath: /var/lib/doris
+            - name: logs
+              mountPath: /var/log/doris
+            - name: runtime
+              mountPath: /run/doris
+            - name: temp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: hospital-doris-config
+        - name: runtime-config
+          emptyDir:
+            sizeLimit: 32Mi
+        - name: logs
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: runtime
+          emptyDir:
+            sizeLimit: 16Mi
+        - name: temp
+          emptyDir:
+            sizeLimit: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app.kubernetes.io/part-of: hospital-doris
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 20Gi

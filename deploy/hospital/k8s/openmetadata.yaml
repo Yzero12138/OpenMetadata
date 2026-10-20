@@ -82,9 +82,24 @@ spec:
                 name: hospital-openmetadata-config
             - configMapRef:
                 name: hospital-integration-config
+            - configMapRef:
+                name: hospital-doris-integration-config
+                optional: true
             - secretRef:
                 name: hospital-openmetadata-runtime
           env:
+            - name: HOSPITAL_DORIS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: hospital-doris-writer
+                  key: username
+                  optional: true
+            - name: HOSPITAL_DORIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hospital-doris-writer
+                  key: password
+                  optional: true
             - name: HOSPITAL_SOURCE_JDBC_PASSWORD
               valueFrom:
                 secretKeyRef:

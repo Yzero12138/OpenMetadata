@@ -1,0 +1,189 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hospital-doris-fe-isolation
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-doris-fe
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [hospital-openmetadata, hospital-seatunnel]
+      ports:
+        - protocol: TCP
+          port: 8030
+        - protocol: TCP
+          port: 9030
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: hospital-doris
+      ports:
+        - protocol: TCP
+          port: 9010
+        - protocol: TCP
+          port: 9020
+        - protocol: TCP
+          port: 9030
+        - protocol: TCP
+          port: 8030
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hospital-doris-be
+      ports:
+        - protocol: TCP
+          port: 9050
+        - protocol: TCP
+          port: 9060
+        - protocol: TCP
+          port: 8060
+        - protocol: TCP
+          port: 8040
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hospital-doris-fe
+      ports:
+        - protocol: TCP
+          port: 9010
+        - protocol: TCP
+          port: 9020
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hospital-doris-be-isolation
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-doris-be
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [hospital-openmetadata, hospital-seatunnel]
+      ports:
+        - protocol: TCP
+          port: 8040
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: hospital-doris
+      ports:
+        - protocol: TCP
+          port: 9050
+        - protocol: TCP
+          port: 9060
+        - protocol: TCP
+          port: 8060
+        - protocol: TCP
+          port: 8040
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hospital-doris-fe
+      ports:
+        - protocol: TCP
+          port: 9020
+        - protocol: TCP
+          port: 9030
+        - protocol: TCP
+          port: 8030
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hospital-doris-be
+      ports:
+        - protocol: TCP
+          port: 9060
+        - protocol: TCP
+          port: 8060
+        - protocol: TCP
+          port: 8040
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hospital-seatunnel-to-doris
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-seatunnel
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: hospital-doris
+      ports:
+        - protocol: TCP
+          port: 8030
+        - protocol: TCP
+          port: 9030
+        - protocol: TCP
+          port: 8040
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hospital-openmetadata-to-doris
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: hospital-openmetadata
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: hospital-doris
+      ports:
+        - protocol: TCP
+          port: 8030
+        - protocol: TCP
+          port: 9030
+        - protocol: TCP
+          port: 8040

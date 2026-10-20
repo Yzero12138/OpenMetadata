@@ -1,0 +1,19 @@
+{
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+    "name": "hospital-doris-integration-config",
+    "namespace": "datahub-open-test",
+    "labels": {
+      "app.kubernetes.io/part-of": "hospital-doris"
+    }
+  },
+  "data": {
+    "HOSPITAL_DORIS_ENABLED": "true",
+    "HOSPITAL_DORIS_HOST": "hospital-doris-fe",
+    "HOSPITAL_DORIS_SQL_PORT": "9030",
+    "HOSPITAL_DORIS_HTTP_PORT": "8030",
+    "HOSPITAL_DORIS_DATABASE": "ods_validation",
+    "HOSPITAL_DORIS_REPLICATION_NUM": "1"
+  }
+}

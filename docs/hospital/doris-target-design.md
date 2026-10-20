@@ -8,7 +8,7 @@ Independent Doris is the business warehouse; existing PostgreSQL remains the pla
 
 Doris4.0.8 is selected from the official Stable channel, fixed to verified image digests. Test topology: FE1+BE1 on k8s-worker01, requests FE1CPU/2Gi, BE2CPU/4Gi, limits FE2CPU/4Gi and BE4CPU/8Gi, subject to actual image startup verification. Dedicated local-path FE5Gi and BE20Gi volumes; preserve on rollback. ClusterIP service only, restricted application/engine ingress and component communication. Node vm.max_map_count must satisfy2000000; record prior65530 and apply only the selected node's prerequisite with a bounded helper, preserving the official startup check. Raise container nofile soft limit within existing hard limit instead of changing host process limits.
 
-Bootstrap FE initial hashed password from dedicated Secret before startup, then register BE, create ods_validation and a scoped hospital_doris_writer with only SELECT/LOAD/CREATE on that database. Credentials stay in K8s Secret and encrypted server storage; never print them, never use an unauthenticated root. Existing hospital data is excluded from acceptance.
+Bootstrap FE initial hashed password from dedicated Secret before startup, then register BE, create ods_validation and a scoped hospital_ods_writer with only SELECT/LOAD/CREATE on that database. Credentials stay in K8s Secret and encrypted server storage; never print them, never use an unauthenticated root. Existing hospital data is excluded from acceptance.
 
 ## Connection contract
 

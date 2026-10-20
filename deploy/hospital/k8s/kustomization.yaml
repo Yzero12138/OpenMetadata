@@ -4,5 +4,6 @@ resources:
   - configmap.yaml
   - dependencies.yaml
   - integration
+  - doris-integration-config.yaml
   - openmetadata.yaml
   - integrate-backchannel-networkpolicy.yaml
