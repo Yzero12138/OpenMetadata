@@ -1,5 +1,5 @@
 # The approved Integrate/SeaTunnel server is fixed; only the UI archive changes.
-FROM harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:934be97369255e2b08bd803fb719b0de0112ff8ba0c739e90ee3d2212f41a473
+FROM harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:287323f97a2643a6c009f977eca3d438a83dcde0fa6c28b922c09287fcb1a2e1
 ARG SOURCE_REVISION
 LABEL org.opencontainers.image.source="https://github.com/Yzero12138/OpenMetadata" \
       org.opencontainers.image.version="2.0.4-integrate-v7-pc" \
