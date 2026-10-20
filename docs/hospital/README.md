@@ -1,4 +1,4 @@
-# 医院数据治理第一阶段
+# 医院数据中台
 
 基线：OpenMetadata `2.0.4-release`。Fork：<https://github.com/Yzero12138/OpenMetadata>。
 
@@ -34,7 +34,7 @@ Origin 必须是完整协议、主机和可选端口，不能含路径或尾部 
 给员工分配 Integrate 的 `app:datahub` 权限并启用此应用；不需要再创建一组员工密码。
 
 OpenMetadata 通过后端认证地址访问 Integrate 的 exchange/introspect 接口，返回的 issuer
-仍须精确等于公开门户 origin。测试门户的网关要求员工设备证书，因此服务间通道使用
+仍须精确等于公开门户 origin。测试门户的设备证书门禁已按要求关闭；服务间通道继续使用
 `platform.coop-dev.svc.cluster.local:8081`；Basic 客户端校验、票据 challenge 和会话核验全部保留。
 反向代理应保留浏览器 `Origin`，不缓存认证响应，允许这两个不同 origin 之间保留弹窗的 opener。
 不要为这条门户启动链配置 `Cross-Origin-Opener-Policy: same-origin` 或 `noopener`，否则浏览器会断开握手。
@@ -78,7 +78,7 @@ Integrate session_token 通过 OpenMetadata 现有 Fernet 机制加密后保存�
 
 ## 界面
 
-使用默认 `design-taste-frontend` 与完整 Impeccable **4.5.1** 文件。
+使用默认 `design-taste-frontend` 与完整 Impeccable **4.7.0** 文件。
 院内工作台沿用 Integrate 绿色体系，保留上游核心组件和数据治理功能。
 根据用户最新确认，整个服务只面向 PC；当前验收使用 1440 与 1920 桌面尺寸。
 首页数据表、业务词汇表、质量规则、数据库服务数量来自真实接口；无权限或异常显示“不可用”，不伪造统计。
@@ -239,3 +239,7 @@ node tools/hospital-ui-preview/verify-deployment.cjs
 数据集成现在包含独立的数据源维护和任务配置，复用原生管理员权限。先配置来源/目标，再测试连接、发现表和字段并创建采集任务。密码使用原生加密机制持久化，读取时不返回；四类数据库的适配范围与已验证版本见[数据源维护](data-source-maintenance.md)。
 
 新增、编辑、配置表单统一采用 PC 右侧抽屉。迁移范围、共享组件和保留的确认/查看语义见[表单抽屉清单](form-drawers.md)。
+
+## Doris 业务存储与页面建表
+
+元数据继续存于平台 PostgreSQL，业务明细由独立 Doris 保存。当前验证集群、限定账号和网络边界见 [Doris 部署](doris-deployment.md)，真实建表与同步结果见 [验收记录](doris-verification.md)。页面仍为“数据源管理”和“集成任务”两个独立入口；Doris 目标及目标建表、字段映射均在右侧抽屉中操作。构建和使用步骤见 [Doris 镜像与页面操作](../../docker/hospital/README.doris.md)，页面设计证据见 [Doris 页面扩展](doris-ui-design-extension.md)。

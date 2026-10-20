@@ -913,7 +913,11 @@ describe('Hospital integration workbench behavior', () => {
     );
 
     expectRevealedError(screen.getByRole('alert'));
-    await click(screen.getByRole('button', { name: 'label.continue-editing' }));
+    // This removes the focused button. Let user-event commit its click before
+    // the native FocusScope frame restores focus inside the drawer.
+    await userEvent.click(
+      screen.getByRole('button', { name: 'label.continue-editing' })
+    );
 
     expect(document.getElementById('connection-password')).toHaveValue(
       'synthetic-transient-password'
@@ -1719,6 +1723,9 @@ describe('Hospital integration workbench behavior', () => {
       8030
     );
     expect(
+      document.getElementById('connection-databaseVersion')
+    ).toHaveAttribute('placeholder', '4.0.8');
+    expect(
       screen.getByText('hospitalIntegration.dorisTargetOnly')
     ).toBeInTheDocument();
 
@@ -2040,5 +2047,61 @@ describe('Hospital integration workbench behavior', () => {
     expect(
       screen.getByTestId('integration-connection-row-' + dorisConnection.id)
     ).toBeInTheDocument();
+  });
+
+  it('explains a rejected Doris label, retains the draft and previews again after shortening the name', async () => {
+    await openDorisCreate();
+    const targetName = document.getElementById('integration-new-target-table')!;
+    const columnName = document.getElementById('integration-new-column-0')!;
+    await userEvent.clear(targetName);
+    await userEvent.type(targetName, 'a'.repeat(60));
+    await userEvent.clear(columnName);
+    await userEvent.type(columnName, 'encounter_id');
+    mockApi.previewIntegrationTargetTable.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 400, data: { errorCode: 'DORIS_LABEL_INVALID' } },
+    });
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.previewTargetTable',
+      })
+    );
+    const alert = await screen.findByRole('alert');
+
+    expect(alert).toHaveTextContent(
+      'hospitalIntegration.errors.DORIS_LABEL_INVALID'
+    );
+
+    expectRevealedError(alert);
+
+    expect(targetName).toHaveValue('a'.repeat(60));
+    expect(columnName).toHaveValue('encounter_id');
+    expect(
+      screen.queryByTestId('integration-target-ddl')
+    ).not.toBeInTheDocument();
+    expect(mockApi.createIntegrationTargetTable).not.toHaveBeenCalled();
+
+    await userEvent.clear(targetName);
+    await userEvent.type(targetName, 'encounter_daily');
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.previewTargetTable',
+      })
+    );
+
+    expect(
+      await screen.findByTestId('integration-target-ddl')
+    ).toHaveTextContent(dorisPreview.ddl);
+    expect(mockApi.previewIntegrationTargetTable).toHaveBeenLastCalledWith(
+      targetConnection.id,
+      expect.objectContaining({
+        targetTable: 'encounter_daily',
+        fieldMappings: dorisPreview.fieldMappings,
+      }),
+      expect.any(AbortSignal)
+    );
   });
 });

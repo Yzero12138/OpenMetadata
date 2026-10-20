@@ -1,5 +1,5 @@
 param(
-    [string]$Image = 'hospital-openmetadata:2.0.4-integrate-v7-pc',
+    [string]$Image = 'hospital-openmetadata:2.0.4-integrate-v12-pc',
     [Parameter(Mandatory = $true)]
     [ValidatePattern('^[0-9a-f]{40}$')]
     [string]$Revision,
@@ -43,7 +43,7 @@ $manifest = [ordered]@{
     image = $Image
     imageId = $imageId
     sourceRevision = $Revision
-    baseImage = 'harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:287323f97a2643a6c009f977eca3d438a83dcde0fa6c28b922c09287fcb1a2e1'
+    baseImage = 'harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:54e4d883d86b901cb1180a9ace36dbeaa1e465b5a81060cc6974a4843dad6baa'
     uiArchiveSha256 = (Get-FileHash -LiteralPath $uiJar -Algorithm SHA256).Hash.ToLowerInvariant()
     archiveDate = $SourceDate
     context = $context

@@ -21,6 +21,7 @@ import {
   changeIntegrationDatabaseType,
   emptyIntegrationConnection,
   EMPTY_INTEGRATION_TASK,
+  integrationErrorKey,
   isIntegrationRunBusy,
   isIntegrationRunUncertain,
   suggestIntegrationIdentifier,
@@ -278,5 +279,21 @@ describe('Hospital integration validation and run safety', () => {
       /^[a-z][a-z0-9_]{0,63}$/
     );
     expect(suggestIntegrationIdentifier('X'.repeat(90))).toHaveLength(64);
+  });
+
+  it('classifies an invalid Doris label as an explicit pre-submission rejection with dedicated recovery copy', () => {
+    expect(integrationErrorKey('DORIS_LABEL_INVALID')).toBe(
+      'hospitalIntegration.errors.DORIS_LABEL_INVALID'
+    );
+    expect(
+      getIntegrationFailure({
+        isAxiosError: true,
+        response: { status: 503, data: { errorCode: 'DORIS_LABEL_INVALID' } },
+      })
+    ).toEqual({
+      code: 'DORIS_LABEL_INVALID',
+      conflict: false,
+      uncertain: false,
+    });
   });
 });
