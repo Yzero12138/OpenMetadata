@@ -55,7 +55,7 @@ FE 使用 Docker Buildx registry copy 复制原始 manifest。BE 以官方 regis
 
 只有 ClusterIP 和 headless Service，无 NodePort、LoadBalancer 或 Ingress。FE 在新集群启用 [FQDN 模式](https://doris.apache.org/docs/4.x/admin-manual/cluster-management/fqdn/)，BE 注册为 `hospital-doris-be-0.hospital-doris-be-headless.datahub-open-test.svc.cluster.local:9050`，不把易变化的 Pod IP 写入元数据。
 
-新的 FE/BE NetworkPolicy 只允许同命名空间 TEST 应用、SeaTunnel、Doris 内部必要端口，以及集群 DNS。额外的 `hospital-seatunnel-to-doris` 和 `hospital-openmetadata-to-doris` 只补充到 Doris 标签的 8030/9030/8040 egress，不覆盖原有 policy。FE 返回 BE 的 Stream Load 重定向，因此引擎必须能访问稳定 BE Pod FQDN 的 8040，只有 FE 8030 的连通性不够。
+新的 FE/BE NetworkPolicy 只允许同命名空间 TEST 应用、SeaTunnel、Doris 内部必要端口，以及集群 DNS。`hospital-seatunnel-to-doris` 为已经受 Egress 策略约束的引擎补充到 Doris 标签的 8030/9030/8040 访问，不覆盖原有 policy。应用原先没有匹配的 Egress 策略，保留其既有出站行为，由 Doris FE/BE 的入站规则限定来访方。不能给应用添加仅允许 Doris 的第一条 Egress 规则，否则会同时阻断 DNS、元数据库和 Integrate 等必要连接。FE 返回 BE 的 Stream Load 重定向，因此引擎必须能访问稳定 BE Pod FQDN 的 8040，只有 FE 8030 的连通性不够。
 
 [SeaTunnel 3.0.0 Doris sink](https://seatunnel.apache.org/docs/3.0.0/connectors/sink/Doris/) 支持 Doris 1.1 及以上的 exactly-once/CDC，使用批量 Stream Load；4.0.8 满足其声明的服务端版本范围，仍需通过本仓库的合成任务验证。Zeta 运行还需要 Doris connector JAR 和 MySQL JDBC driver。目标参数应为 `fenodes=...:8030`、`query-port=9030`、`database=ods_validation` 和 scoped writer。单 BE 的默认副本策略由 bootstrap 建库时设置为 `tag.location.default:1`；目标 DDL 同样应显式指定 `replication_num=1`，避免连接器模板默认生成三个副本。建库属性见[官方 CREATE DATABASE](https://doris.apache.org/docs/4.x/sql-manual/sql-statements/database/CREATE-DATABASE/)。
 
@@ -97,7 +97,7 @@ kubectl -n datahub-open-test scale statefulset/hospital-doris-be statefulset/hos
 
 ## 验证记录
 
-已通过全部 Bash 脚本语法检查、Secret 生成脚本 PowerShell AST/真实生成、二阶段密码 hash 匹配、受限 ACL 和 Git 忽略检查。11 个 Doris 资源及两个独立 Secret 均通过 Kubernetes server dry-run；准备脚本本身不执行实际 apply。
+已通过全部 Bash 脚本语法检查、Secret 生成脚本 PowerShell AST/真实生成、二阶段密码 hash 匹配、受限 ACL 和 Git 忽略检查。10 个 Doris 资源及两个独立 Secret 均通过 Kubernetes server dry-run；准备脚本本身不执行实际 apply。
 
 官方 FE 镜像在本地隔离 Docker 网络、uid 1000、只读根文件系统、2 CPU / 4Gi 下完成实际启动；`/api/health` 返回 200。显式关闭 localhost 免认证后，正确 bootstrap 口令可访问 FE 元数据；在 `--no-defaults` 并清除 `MYSQL_PWD` 的探针中，空口令和错误口令均被拒绝。scoped writer 的建用户/授权 SQL 与登录通过，尝试创建其他数据库被拒绝；信号转发后停机约 0.9 秒，未发生 OOM。临时 FE 容器及其专用 Docker 网络已经移除。
 
@@ -105,4 +105,6 @@ BE 已验证完整镜像 blob 和 config 的 SHA-256，导入后 RootFS DiffIDs 
 
 已创建 FE 的只读状态复核显示 `Alive=true`，Host 为 `hospital-doris-fe-0.hospital-doris-fe-headless.datahub-open-test.svc.cluster.local`，确认 Kubernetes 中实际使用稳定 FQDN。
 
-2026-10-20 实际应用 11 个资源后，只读复核显示 FE/BE Pod 均位于 `k8s-worker01`，状态为 `Running`、`Ready=true`，没有 waiting/init waiting 原因。BE 已在满足 map count 的节点上通过非 root、只读根文件系统的实际启动。完整验收还包括 bootstrap 的 BE 成员注册、SQL `Alive=true` 及应用/SeaTunnel 的合成写入对账。
+2026-10-20 实际应用 10 个最终资源后，只读复核显示 FE/BE Pod 均位于 `k8s-worker01`，状态为 `Running`、`Ready=true`，没有 waiting/init waiting 原因。BE 已在满足 map count 的节点上通过非 root、只读根文件系统的实际启动。完整验收还包括 bootstrap 的 BE 成员注册、SQL `Alive=true` 及应用/SeaTunnel 的合成写入对账。
+
+首次应用清单曾包含第四条 `hospital-openmetadata-to-doris`，使原先未受 Egress 约束的应用首次进入出站隔离，新 Pod 的迁移因此报 `UnknownHostException: hospital-metadata-postgres`。检查实际标签后已删除该条新规则并从清单移除；其余 34 条既有策略均未修改。最终清单为 10 个资源、3 条新策略。新应用重启和完整数据验收结果见 doris-verification.md。
