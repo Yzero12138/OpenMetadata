@@ -99,6 +99,28 @@ class SeaTunnelClientTest {
   }
 
   @Test
+  void savepointInProgressRemainsStoppingUntilTheEngineConfirmsCompletion() {
+    AtomicReference<String> status = new AtomicReference<>("DOING_SAVEPOINT");
+    server.createContext(
+        "/job-info/" + JOB_ID,
+        exchange -> {
+          byte[] response =
+              ("{\"jobId\":\"" + JOB_ID + "\",\"jobStatus\":\"" + status.get() + "\"}")
+                  .getBytes(StandardCharsets.UTF_8);
+          exchange.sendResponseHeaders(200, response.length);
+          exchange.getResponseBody().write(response);
+          exchange.close();
+        });
+    assertEquals("STOPPING", client.info(JOB_ID).status());
+    status.set("SAVEPOINT_DONE");
+    assertEquals("SAVEPOINT_DONE", client.info(JOB_ID).status());
+    status.set("UNRECOGNIZED_STATE");
+    assertEquals(
+        "ENGINE_UNAVAILABLE",
+        assertThrows(IntegrationException.class, () -> client.info(JOB_ID)).code());
+  }
+
+  @Test
   void readsRealOverviewVersionAndRequiresCompletedSavepointEvidence() {
     server.createContext(
         "/overview",

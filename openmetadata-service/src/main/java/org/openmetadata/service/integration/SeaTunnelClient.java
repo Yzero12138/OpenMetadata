@@ -108,6 +108,9 @@ public final class SeaTunnelClient {
       throw new IntegrationException("JOB_NOT_FOUND", 404);
     }
     String status = job.path("jobStatus").asText("");
+    if ("DOING_SAVEPOINT".equals(status)) {
+      status = "STOPPING";
+    }
     if (!STATUSES.contains(status)) {
       throw new IntegrationException("ENGINE_UNAVAILABLE", 503);
     }
