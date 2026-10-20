@@ -41,6 +41,9 @@ public final class IntegrationException extends RuntimeException {
           Map.entry("TABLE_NOT_FOUND", "The selected table does not exist or is not accessible."),
           Map.entry("TABLE_ALREADY_EXISTS", "The target table already exists. Choose a new name."),
           Map.entry(
+              "DORIS_LABEL_INVALID",
+              "Doris database and table names must use ASCII letters, digits or underscores and total at most 67 characters."),
+          Map.entry(
               "TABLE_PREVIEW_STALE",
               "The table preview changed. Preview it again before creating."),
           Map.entry(

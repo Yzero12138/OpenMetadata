@@ -135,6 +135,7 @@ final class DorisTableDdl {
     }
     IntegrationValidator.requireTable(input.sourceSchema(), input.sourceTable());
     IntegrationValidator.requireTable(input.targetSchema(), input.targetTable());
+    DorisLoadLabel.requireTablePath(input.targetSchema(), input.targetTable());
     Set<String> sources = new HashSet<>();
     Set<String> targets = new HashSet<>();
     for (FieldMapping mapping : input.fieldMappings()) {

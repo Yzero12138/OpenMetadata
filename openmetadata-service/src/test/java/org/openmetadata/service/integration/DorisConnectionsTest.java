@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,25 +12,29 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmetadata.service.fernet.Fernet;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionInput;
+import org.openmetadata.service.integration.IntegrationModels.FieldMapping;
 import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
 import org.openmetadata.service.integration.IntegrationModels.RunSummary;
+import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
 
 class DorisConnectionsTest {
   private final ObjectMapper json = new ObjectMapper();
   private IntegrationConnections connections;
+  private IntegrationConnectionsTest.MemoryConnections store;
+  private IntegrationConnectionsTest.MemoryTasks tasks;
 
   @BeforeEach
   void prepare() {
     Fernet.getInstance().setFernetKey(Base64.getUrlEncoder().encodeToString(new byte[32]));
+    store = new IntegrationConnectionsTest.MemoryConnections();
+    tasks = new IntegrationConnectionsTest.MemoryTasks();
     connections =
-        new IntegrationConnections(
-            IntegrationConnectionsTest.configuration(),
-            new IntegrationConnectionsTest.MemoryConnections(),
-            new IntegrationConnectionsTest.MemoryTasks());
+        new IntegrationConnections(IntegrationConnectionsTest.configuration(), store, tasks);
   }
 
   @Test
@@ -113,6 +118,96 @@ class DorisConnectionsTest {
     assertEquals(
         "Postgres-CDC", ((Map<?, ?>) ((List<?>) cdc.get("source")).getFirst()).get("plugin_name"));
     assertEquals(true, sink(cdc).get("sink.enable-delete"));
+  }
+
+  @Test
+  void boundsTheCompleteNativeConnectorLabelAtTheLongestSupportedTablePath() throws Exception {
+    var created = connections.create(input(), "synthetic");
+    var builder = new SeaTunnelJobConfig(connections::endpoint);
+    var task = IntegrationTask.from(IntegrationValidatorTest.validInput());
+    task.id = "12345678-1234-1234-1234-1234567890ab";
+    task.targetConnectionId = created.id;
+    task.targetSchema = "warehouse";
+    task.targetTable = "t".repeat(67 - task.targetSchema.length());
+    task.latestRun = new RunSummary();
+    task.latestRun.jobId = Long.toString(Long.MAX_VALUE);
+    var config = builder.build(task);
+    String prefix = (String) sink(config).get("sink.label-prefix");
+    String label =
+        prefix
+            + "_"
+            + task.targetSchema
+            + "_"
+            + task.targetTable
+            + "_"
+            + task.latestRun.jobId
+            + "_0_"
+            + Long.MAX_VALUE;
+    assertEquals(17, prefix.length());
+    assertEquals(128, label.length());
+    assertTrue(label.matches("[-_A-Za-z0-9:]{1,128}"));
+    assertEquals(1, ((Map<?, ?>) config.get("env")).get("parallelism"));
+    assertEquals(prefix, sink(builder.build(task)).get("sink.label-prefix"));
+    task.latestRun.jobId = "984918146341189798";
+    assertNotEquals(prefix, sink(builder.build(task)).get("sink.label-prefix"));
+    task.targetTable += "t";
+    assertEquals(
+        "DORIS_LABEL_INVALID",
+        assertThrows(IntegrationException.class, () -> builder.build(task)).code());
+    for (String name : List.of("table$", "table#", "表名", "table\u00b2")) {
+      task.targetTable = name;
+      assertEquals(
+          "DORIS_LABEL_INVALID",
+          assertThrows(IntegrationException.class, () -> builder.build(task)).code());
+    }
+    task.targetTable = "visits";
+    task.latestRun.jobId = "9223372036854775808";
+    assertEquals(
+        "INVALID_CONFIGURATION",
+        assertThrows(IntegrationException.class, () -> builder.build(task)).code());
+  }
+
+  @Test
+  void rejectsUnusableLabelsBeforeMetadataTableCreationOrStartingAnExistingTask() throws Exception {
+    var created = connections.create(input(), "synthetic");
+    var service = new IntegrationService(IntegrationConnectionsTest.configuration(), tasks, store);
+    var task = IntegrationTask.from(IntegrationValidatorTest.validInput());
+    task.id = "12345678-1234-1234-1234-1234567890ab";
+    task.targetConnectionId = created.id;
+    task.targetSchema = "warehouse";
+    task.targetTable = "t".repeat(59);
+    var result = service.validate(task);
+    assertFalse(result.valid());
+    assertEquals("DORIS_LABEL_INVALID", result.errors().getFirst().code());
+    assertEquals(
+        "DORIS_LABEL_INVALID",
+        assertThrows(IntegrationException.class, () -> service.create(task, "synthetic")).code());
+    tasks.save(task);
+    assertEquals(
+        "DORIS_LABEL_INVALID",
+        assertThrows(IntegrationException.class, () -> service.run(task.id, false, "synthetic"))
+            .code());
+    assertNull(tasks.get(UUID.fromString(task.id)).latestRun);
+    var tableInput =
+        new TargetTableInput(
+            "synthetic-source",
+            "public",
+            "visits",
+            "warehouse",
+            task.targetTable,
+            List.of(new FieldMapping("id", "id")),
+            "0".repeat(64));
+    assertEquals(
+        "DORIS_LABEL_INVALID",
+        assertThrows(
+                IntegrationException.class,
+                () -> service.previewTargetTable(created.id, tableInput))
+            .code());
+    assertEquals(
+        "DORIS_LABEL_INVALID",
+        assertThrows(
+                IntegrationException.class, () -> service.createTargetTable(created.id, tableInput))
+            .code());
   }
 
   private Map<?, ?> sink(Map<String, Object> config) {

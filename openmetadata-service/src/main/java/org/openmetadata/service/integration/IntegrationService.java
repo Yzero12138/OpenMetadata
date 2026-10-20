@@ -193,6 +193,9 @@ public final class IntegrationService {
     try {
       connections.requireRole(input.sourceConnectionId, "SOURCE", input.mode);
       connections.requireRole(input.targetConnectionId, "TARGET", input.mode);
+      if ("Doris".equals(connections.connection(input.targetConnectionId).databaseType)) {
+        DorisLoadLabel.requireTablePath(input.targetSchema, input.targetTable);
+      }
       return IntegrationValidator.validateTables(
           input,
           inspector.table(input.sourceConnectionId, input.sourceSchema, input.sourceTable),
@@ -483,7 +486,11 @@ public final class IntegrationService {
   }
 
   private void requireValid(TaskInput input) {
-    if (!validate(input).valid()) {
+    ValidationResult result = validate(input);
+    if (result.errors().stream().anyMatch(error -> "DORIS_LABEL_INVALID".equals(error.code()))) {
+      throw new IntegrationException("DORIS_LABEL_INVALID", 400);
+    }
+    if (!result.valid()) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
   }

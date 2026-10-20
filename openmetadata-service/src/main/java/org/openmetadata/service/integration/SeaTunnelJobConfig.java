@@ -138,11 +138,7 @@ public final class SeaTunnelJobConfig {
       sink.put("table", task.targetTable);
       sink.put("sink.enable-2pc", false);
       sink.put("sink.enable-delete", cdc);
-      String runId = task.latestRun == null ? "preview" : task.latestRun.jobId;
-      if (task.id == null || runId == null || !runId.matches("[a-zA-Z0-9_-]{1,64}")) {
-        throw new IntegrationException("INVALID_CONFIGURATION", 400);
-      }
-      sink.put("sink.label-prefix", "hospital_" + task.id.replace("-", "") + "_" + runId);
+      sink.put("sink.label-prefix", DorisLoadLabel.prefix(task));
       sink.put("doris.batch.size", 100);
       sink.put(
           "doris.config",

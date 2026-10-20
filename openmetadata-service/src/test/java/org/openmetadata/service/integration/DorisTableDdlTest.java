@@ -18,6 +18,37 @@ import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
 
 class DorisTableDdlTest {
   @Test
+  void rejectsAnUnusableStreamLoadLabelBeforeCreatingATargetTable() {
+    var mappings = List.of(new FieldMapping("id", "id"));
+    for (String name : List.of("t".repeat(54), "table$", "table#", "表名")) {
+      var input =
+          new TargetTableInput(
+              "synthetic-source", "public", "visits", "ods_validation", name, mappings, null);
+      assertEquals(
+          "DORIS_LABEL_INVALID",
+          assertThrows(
+                  IntegrationException.class,
+                  () ->
+                      DorisTableDdl.preview(
+                          input, source(), sourceConnection(), targetConnection(), 1))
+              .code());
+    }
+    var boundary =
+        new TargetTableInput(
+            "synthetic-source",
+            "public",
+            "visits",
+            "ods_validation",
+            "t".repeat(53),
+            mappings,
+            null);
+    assertTrue(
+        DorisTableDdl.preview(boundary, source(), sourceConnection(), targetConnection(), 1)
+            .ddl()
+            .contains("`" + "t".repeat(53) + "`"));
+  }
+
+  @Test
   void derivesSafeUniqueKeyDdlWithKeyFirstAndUnicodeByteCapacity() {
     var input =
         input(
