@@ -20,6 +20,7 @@ import {
   integrationTableKey,
 } from './HospitalIntegrationUtils';
 import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
+import { IntegrationTargetTableForm } from './IntegrationTargetTableForm';
 
 export const IntegrationTaskForm = ({
   value,
@@ -27,6 +28,9 @@ export const IntegrationTaskForm = ({
   connections,
   tablesLoading,
   onReloadTables,
+  onTargetTableBusyChange,
+  onTargetTableDraftChange,
+  onTargetTableCreated,
   targetTables,
   errors,
   disabled,
@@ -74,6 +78,12 @@ export const IntegrationTaskForm = ({
       connection.id === value.sourceConnectionId &&
       connection.enabled &&
       connection.role === 'SOURCE'
+  );
+  const targetConnection = connections.find(
+    (connection) =>
+      connection.id === value.targetConnectionId &&
+      connection.enabled &&
+      connection.role === 'TARGET'
   );
   const modes = sourceConnection?.supportedModes ?? [];
 
@@ -152,7 +162,9 @@ export const IntegrationTaskForm = ({
               items={connections
                 .filter(
                   (connection) =>
-                    connection.enabled && connection.role === 'SOURCE'
+                    connection.enabled &&
+                    connection.role === 'SOURCE' &&
+                    connection.databaseType !== 'Doris'
                 )
                 .map((connection) => ({
                   id: connection.id,
@@ -284,6 +296,28 @@ export const IntegrationTaskForm = ({
           </Select>
         </div>
       </section>
+      {targetConnection?.databaseType === 'Doris' && source?.columns.length ? (
+        <section aria-labelledby="integration-target-create-title">
+          <h2 id="integration-target-create-title">
+            {t('hospitalIntegration.targetTableSetup')}
+          </h2>
+          <IntegrationTargetTableForm
+            disabled={disabled || tablesLoading}
+            key={JSON.stringify([
+              value.sourceConnectionId,
+              source,
+              targetConnection.id,
+              targetConnection.database,
+            ])}
+            source={source}
+            sourceConnectionId={value.sourceConnectionId}
+            targetConnection={targetConnection}
+            onBusyChange={onTargetTableBusyChange}
+            onCreated={onTargetTableCreated}
+            onDraftChange={onTargetTableDraftChange}
+          />
+        </section>
+      ) : null}
       <section
         aria-labelledby="integration-mapping-title"
         data-testid="integration-field-mappings">

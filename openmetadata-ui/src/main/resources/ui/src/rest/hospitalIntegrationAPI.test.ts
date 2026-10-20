@@ -13,11 +13,13 @@
 import APIClient from '.';
 import {
   createIntegrationConnection,
+  createIntegrationTargetTable,
   deleteIntegrationConnection,
   getIntegrationConnection,
   getIntegrationTable,
   getIntegrationTableOptions,
   IntegrationConnectionInput,
+  previewIntegrationTargetTable,
   updateIntegrationConnection,
 } from './hospitalIntegrationAPI';
 
@@ -121,5 +123,39 @@ describe('Hospital managed connection HTTP boundary', () => {
         { signal: controller.signal },
       ],
     ]);
+  });
+
+  it('previews and creates a target table through structured metadata and a server preview hash', async () => {
+    const definition = {
+      sourceConnectionId: 'source',
+      sourceSchema: 'public',
+      sourceTable: 'patient',
+      targetSchema: 'hospital_ods',
+      targetTable: 'patient',
+      fieldMappings: [{ source: 'PATIENT_ID', target: 'patient_id' }],
+    };
+    const controller = new AbortController();
+    await previewIntegrationTargetTable(
+      'doris/id',
+      definition,
+      controller.signal
+    );
+    await createIntegrationTargetTable('doris/id', {
+      ...definition,
+      previewHash: 'server-generated-hash',
+    });
+
+    expect(client.post.mock.calls).toEqual([
+      [
+        '/hospital/integration/connections/doris%2Fid/tables/preview',
+        definition,
+        { signal: controller.signal },
+      ],
+      [
+        '/hospital/integration/connections/doris%2Fid/tables',
+        { ...definition, previewHash: 'server-generated-hash' },
+      ],
+    ]);
+    expect(client.post.mock.calls[1][1]).not.toHaveProperty('ddl');
   });
 });

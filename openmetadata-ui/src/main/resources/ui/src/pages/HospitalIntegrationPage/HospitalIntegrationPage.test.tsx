@@ -50,6 +50,8 @@ jest.mock('../../rest/hospitalIntegrationAPI', () => ({
   stopIntegrationTask: jest.fn(),
   syncIntegrationCatalog: jest.fn(),
   testIntegrationConnection: jest.fn(),
+  previewIntegrationTargetTable: jest.fn(),
+  createIntegrationTargetTable: jest.fn(),
 }));
 
 const mockApi = api as jest.Mocked<typeof api>;
@@ -1698,5 +1700,345 @@ describe('Hospital integration workbench behavior', () => {
       go.mockRestore();
       window.history.replaceState(originalState, '', originalURL);
     }
+  });
+
+  it('uses Doris SQL and HTTP defaults and clears family settings when switching types', async () => {
+    await renderSources();
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.createConnection',
+      })
+    );
+    await choose(
+      'connection-databaseType',
+      'hospitalIntegration.databaseTypes.Doris'
+    );
+
+    expect(document.getElementById('connection-port')).toHaveValue(9030);
+    expect(document.getElementById('connection-dorisHttpPort')).toHaveValue(
+      8030
+    );
+    expect(
+      screen.getByText('hospitalIntegration.dorisTargetOnly')
+    ).toBeInTheDocument();
+
+    await choose('connection-role', 'label.target');
+    await userEvent.type(
+      document.getElementById('connection-database')!,
+      'hospital_ods'
+    );
+
+    expect(document.getElementById('connection-schemas')).toHaveValue(
+      'hospital_ods'
+    );
+    expect(document.getElementById('connection-schemas')).toBeDisabled();
+
+    await click(document.getElementById('connection-tlsMode')!);
+
+    expect(
+      screen.queryByRole('option', { name: 'hospitalIntegration.tlsVerify' })
+    ).not.toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    await choose(
+      'connection-databaseType',
+      'hospitalIntegration.databaseTypes.Oracle'
+    );
+
+    expect(
+      document.getElementById('connection-dorisHttpPort')
+    ).not.toBeInTheDocument();
+    expect(document.getElementById('connection-port')).toHaveValue(1521);
+    expect(
+      document.getElementById('connection-oracleConnectionType')
+    ).toHaveTextContent('hospitalIntegration.oracleServiceName');
+  });
+
+  const dorisConnection: api.IntegrationConnection = {
+    ...targetConnection,
+    databaseType: 'Doris',
+    databaseVersion: '3.1.3',
+    database: 'hospital_ods',
+    schemas: ['hospital_ods'],
+    port: 9030,
+    dorisHttpPort: 8030,
+    tlsMode: 'DISABLED',
+  };
+  const dorisTable: api.IntegrationTable = {
+    ...table,
+    schema: 'hospital_ods',
+    name: 'synthetic_encounter',
+    columns: [
+      { ...table.columns[0], name: 'encounter_id', dataType: 'BIGINT' },
+      { ...table.columns[1], dataType: 'STRING' },
+    ],
+  };
+  const dorisPreview: api.IntegrationTargetTablePreview = {
+    targetConnectionId: targetConnection.id,
+    previewHash: 'preview-hash',
+    ddl: 'CREATE TABLE hospital_ods.synthetic_encounter (encounter_id BIGINT, department STRING)',
+    table: dorisTable,
+    fieldMappings: [
+      { source: 'id', target: 'encounter_id' },
+      { source: 'department', target: 'department' },
+    ],
+  };
+  const openDorisCreate = async () => {
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      sourceConnection,
+      dorisConnection,
+    ]);
+    mockApi.getIntegrationTableOptions.mockImplementation(async (id) =>
+      id === sourceConnection.id ? [{ ...table, columns: [] }] : []
+    );
+    mockApi.previewIntegrationTargetTable.mockResolvedValue(dorisPreview);
+    mockApi.createIntegrationTargetTable.mockResolvedValue(dorisTable);
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await click(
+      await screen.findByRole('button', {
+        name: 'hospitalIntegration.createTargetFromSource',
+      })
+    );
+  };
+
+  it('previews Doris target metadata and invalidates confirmation when table or mapped columns change', async () => {
+    await openDorisCreate();
+
+    expect(document.getElementById('integration-new-target-table')).toHaveValue(
+      'synthetic_encounter'
+    );
+
+    await userEvent.clear(document.getElementById('integration-new-column-0')!);
+    await userEvent.type(
+      document.getElementById('integration-new-column-0')!,
+      'encounter_id'
+    );
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.previewTargetTable',
+      })
+    );
+
+    expect(
+      await screen.findByTestId('integration-target-ddl')
+    ).toHaveTextContent(dorisPreview.ddl);
+    expect(mockApi.previewIntegrationTargetTable).toHaveBeenCalledWith(
+      targetConnection.id,
+      {
+        sourceConnectionId: sourceConnection.id,
+        sourceSchema: 'public',
+        sourceTable: table.name,
+        targetSchema: 'hospital_ods',
+        targetTable: 'synthetic_encounter',
+        fieldMappings: dorisPreview.fieldMappings,
+      },
+      expect.any(AbortSignal)
+    );
+
+    await userEvent.type(
+      document.getElementById('integration-new-target-table')!,
+      '_v2'
+    );
+
+    expect(
+      screen.queryByTestId('integration-target-ddl')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: 'hospitalIntegration.confirmCreateTargetTable',
+      })
+    ).not.toBeInTheDocument();
+
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.previewTargetTable',
+      })
+    );
+    await screen.findByTestId('integration-target-ddl');
+    await userEvent.type(
+      document.getElementById('integration-new-column-1')!,
+      '_name'
+    );
+
+    expect(
+      screen.queryByTestId('integration-target-ddl')
+    ).not.toBeInTheDocument();
+  });
+
+  it('retains the Doris creation draft after a failure and selects the refreshed table with returned mappings', async () => {
+    await openDorisCreate();
+    mockApi.createIntegrationTargetTable
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          status: 503,
+          data: { errorCode: 'TARGET_TABLE_CREATE_FAILED' },
+        },
+      })
+      .mockResolvedValue(dorisTable);
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.previewTargetTable',
+      })
+    );
+    await click(
+      await screen.findByRole('button', {
+        name: 'hospitalIntegration.confirmCreateTargetTable',
+      })
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'hospitalIntegration.errors.TARGET_TABLE_CREATE_FAILED'
+    );
+    expect(document.getElementById('integration-new-target-table')).toHaveValue(
+      'synthetic_encounter'
+    );
+
+    mockApi.getIntegrationTableOptions.mockImplementation(async (id) =>
+      id === sourceConnection.id
+        ? [{ ...table, columns: [] }]
+        : [{ ...dorisTable, columns: [] }]
+    );
+    mockApi.getIntegrationTable.mockImplementation(async (id, schema, name) =>
+      id === targetConnection.id ? dorisTable : { ...table, schema, name }
+    );
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.confirmCreateTargetTable',
+      })
+    );
+    await waitFor(() =>
+      expect(
+        document.getElementById('integration-target-table')
+      ).toHaveTextContent('hospital_ods.synthetic_encounter')
+    );
+
+    expect(screen.getByRole('textbox', { name: /label.name/ })).toHaveValue(
+      task.name
+    );
+    expect(
+      screen.getByRole('textbox', { name: /label.display-name/ })
+    ).toHaveValue(task.displayName);
+
+    await click(screen.getByRole('button', { name: 'label.validate' }));
+    await waitFor(() =>
+      expect(mockApi.validateIntegrationTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          targetSchema: dorisTable.schema,
+          targetTable: dorisTable.name,
+          fieldMappings: dorisPreview.fieldMappings,
+          primaryKey: 'id',
+          mode: 'CDC',
+        })
+      )
+    );
+
+    expect(
+      mockApi.getIntegrationTableOptions.mock.calls.filter(
+        ([id]) => id === targetConnection.id
+      ).length
+    ).toBeGreaterThan(1);
+  });
+
+  it('requires a fresh Doris preview after a stale preview error', async () => {
+    await openDorisCreate();
+    mockApi.createIntegrationTargetTable.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 409, data: { errorCode: 'TABLE_PREVIEW_STALE' } },
+    });
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.previewTargetTable',
+      })
+    );
+    await click(
+      await screen.findByRole('button', {
+        name: 'hospitalIntegration.confirmCreateTargetTable',
+      })
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'hospitalIntegration.errors.TABLE_PREVIEW_STALE'
+    );
+    expect(
+      screen.queryByTestId('integration-target-ddl')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: 'hospitalIntegration.confirmCreateTargetTable',
+      })
+    ).not.toBeInTheDocument();
+
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.previewTargetTable',
+      })
+    );
+
+    expect(
+      await screen.findByTestId('integration-target-ddl')
+    ).toHaveTextContent(dorisPreview.ddl);
+  });
+
+  it('locks the task drawer and repeated Doris creation while the create request is pending', async () => {
+    await openDorisCreate();
+    let finish: (table: api.IntegrationTable) => void = () => undefined;
+    mockApi.createIntegrationTargetTable.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.previewTargetTable',
+      })
+    );
+    const create = await screen.findByRole('button', {
+      name: 'hospitalIntegration.confirmCreateTargetTable',
+    });
+    await click(create);
+    await click(create);
+
+    expect(mockApi.createIntegrationTargetTable).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'label.cancel' })).toBeDisabled();
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.getByTestId('integration-task-drawer')).toBeInTheDocument();
+
+    await act(async () => finish(dorisTable));
+  });
+
+  it('shows and filters Doris data sources with both endpoint ports', async () => {
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      sourceConnection,
+      dorisConnection,
+    ]);
+    await renderSources();
+    const row = within(
+      screen.getByTestId('integration-connection-row-' + dorisConnection.id)
+    );
+
+    expect(
+      row.getByText('hospitalIntegration.databaseTypes.Doris')
+    ).toBeInTheDocument();
+    expect(row.getByText('3.1.3')).toBeInTheDocument();
+    expect(row.getByText(/8030/)).toBeInTheDocument();
+    expect(row.getByText(/9030/)).toBeInTheDocument();
+
+    await choose(
+      'integration-filter-type',
+      'hospitalIntegration.databaseTypes.Doris'
+    );
+
+    expect(
+      screen.queryByTestId('integration-connection-row-' + sourceConnection.id)
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId('integration-connection-row-' + dorisConnection.id)
+    ).toBeInTheDocument();
   });
 });

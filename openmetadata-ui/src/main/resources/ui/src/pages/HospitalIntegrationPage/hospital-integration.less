@@ -335,6 +335,48 @@
     font-size: 13px;
     overflow-wrap: anywhere;
   }
+  &__target-create-fields {
+    padding-top: 16px;
+  }
+  &__target-column {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 104px;
+    gap: 20px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-border-secondary);
+  }
+  &__target-column > label {
+    position: relative;
+  }
+  &__target-column strong {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  &__target-preview {
+    margin-top: 24px;
+  }
+  &__target-preview details {
+    margin-top: 20px;
+  }
+  &__target-preview summary {
+    cursor: pointer;
+    color: var(--color-text-brand-secondary);
+    font-weight: 500;
+  }
+  &__ddl {
+    max-height: 280px;
+    margin: 12px 0 0;
+    padding: 16px;
+    overflow: auto;
+    border-radius: 8px;
+    background: var(--color-bg-secondary, var(--tw-color-bg-secondary));
+    color: var(--color-text-primary);
+    font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    tab-size: 2;
+  }
   &__mapping-empty {
     padding: 20px 0;
   }

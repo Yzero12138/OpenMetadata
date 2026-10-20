@@ -80,6 +80,19 @@ export const HospitalIntegrationWorkspace = ({
   const [connections, setConnections] = useState<IntegrationConnection[]>([]);
   const [engine, setEngine] = useState<IntegrationEngineStatus>();
   const [tablesReload, setTablesReload] = useState(0);
+  const [targetTablesReload, setTargetTablesReload] = useState(0);
+  const [targetTableBusy, setTargetTableBusy] = useState(false);
+  const [targetTableDirty, setTargetTableDirty] = useState(false);
+  const targetTablePending = useRef(false);
+  const targetTableDraft = useRef(false);
+  const targetTableBusyChange = useCallback((pending: boolean) => {
+    targetTablePending.current = pending;
+    setTargetTableBusy(pending);
+  }, []);
+  const targetTableDraftChange = useCallback((dirty: boolean) => {
+    targetTableDraft.current = dirty;
+    setTargetTableDirty(dirty);
+  }, []);
   const [selected, setSelected] = useState<IntegrationTask>();
   const [view, setView] = useState<IntegrationView>(
     routeTaskId ? 'detail' : 'list'
@@ -119,17 +132,20 @@ export const HospitalIntegrationWorkspace = ({
     form.targetSchema,
     form.targetTable,
     taskEditorOpen,
-    tablesReload
+    tablesReload + targetTablesReload
   );
   const sourceTables = sourceData.tables;
   const targetTables = targetData.tables;
   const tablesLoading = sourceData.loading || targetData.loading;
   const autoMappedRoute = useRef<string>();
-  const busy = Object.values(loading).some(Boolean);
+  const busy = targetTableBusy || Object.values(loading).some(Boolean);
   const engineAvailable = engine?.enabled === true && engine.reachable;
   const navigationGuard = useIntegrationNavigationGuard({
     enabled:
-      taskEditorOpen && (busy || JSON.stringify(form) !== initialForm.current),
+      taskEditorOpen &&
+      (busy ||
+        targetTableDirty ||
+        JSON.stringify(form) !== initialForm.current),
     locked: busy,
   });
   const confirmDiscard = discardRequested || navigationGuard.blocked;
@@ -313,10 +329,13 @@ export const HospitalIntegrationWorkspace = ({
     changeView(selected ? 'detail' : 'list');
   };
   const requestCloseEditor = () => {
-    if (mutation.current) {
+    if (mutation.current || targetTablePending.current) {
       return;
     }
-    if (JSON.stringify(form) !== initialForm.current) {
+    if (
+      targetTableDraft.current ||
+      JSON.stringify(form) !== initialForm.current
+    ) {
       setDiscardRequested(true);
 
       return;
@@ -398,7 +417,12 @@ export const HospitalIntegrationWorkspace = ({
   };
 
   const validateOrSave = async (save: boolean) => {
-    if (tablesLoading || mutation.current || confirmDiscard) {
+    if (
+      tablesLoading ||
+      mutation.current ||
+      targetTablePending.current ||
+      confirmDiscard
+    ) {
       return;
     }
     const errors = validateIntegrationInput(form, sourceTables, targetTables);
@@ -927,6 +951,25 @@ export const HospitalIntegrationWorkspace = ({
               }}
               onReloadTables={() => setTablesReload((current) => current + 1)}
               onSave={() => void validateOrSave(true)}
+              onTargetTableBusyChange={targetTableBusyChange}
+              onTargetTableCreated={(table, fieldMappings) => {
+                targetData.acceptTable(table);
+                setForm((current) => ({
+                  ...current,
+                  targetSchema: table.schema,
+                  targetTable: table.name,
+                  fieldMappings,
+                  primaryKey:
+                    current.primaryKey ||
+                    sourceData.detail?.columns.find(
+                      (column) => column.primaryKey
+                    )?.name ||
+                    '',
+                }));
+                setTargetTablesReload((current) => current + 1);
+                setFormErrors([]);
+              }}
+              onTargetTableDraftChange={targetTableDraftChange}
               onValidate={() => void validateOrSave(false)}
             />
           </FormDrawer>

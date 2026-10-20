@@ -175,6 +175,10 @@ export const integrationErrorKey = (code?: string) => {
     'SCHEMA_NOT_ALLOWED',
     'TABLE_NOT_FOUND',
     'TABLE_LIMIT_EXCEEDED',
+    'TABLE_ALREADY_EXISTS',
+    'TABLE_PREVIEW_STALE',
+    'UNSUPPORTED_TARGET_TYPE',
+    'TARGET_TABLE_CREATE_FAILED',
   ]);
 
   return `hospitalIntegration.errors.${
@@ -184,12 +188,58 @@ export const integrationErrorKey = (code?: string) => {
 
 export const INTEGRATION_DATABASE_DEFAULTS: Record<
   IntegrationDatabaseType,
-  { port: number; schemas: string[] }
+  { port: number; schemas: string[]; dorisHttpPort?: number }
 > = {
   Postgres: { port: 5432, schemas: ['public'] },
   Oracle: { port: 1521, schemas: [] },
   Mssql: { port: 1433, schemas: ['dbo'] },
   Mysql: { port: 3306, schemas: [] },
+  Doris: { port: 9030, dorisHttpPort: 8030, schemas: [] },
+};
+
+export const changeIntegrationDatabaseType = (
+  value: IntegrationConnectionInput,
+  databaseType: IntegrationDatabaseType
+): IntegrationConnectionInput => {
+  const {
+    oracleConnectionType: _oracle,
+    dorisHttpPort: _doris,
+    ...current
+  } = value;
+  const defaults = INTEGRATION_DATABASE_DEFAULTS[databaseType];
+
+  return {
+    ...current,
+    databaseType,
+    databaseVersion: '',
+    port: defaults.port,
+    schemas:
+      databaseType === 'Mysql' || databaseType === 'Doris'
+        ? value.database
+          ? [value.database]
+          : []
+        : [...defaults.schemas],
+    ...(databaseType === 'Oracle'
+      ? { oracleConnectionType: 'SERVICE_NAME' }
+      : {}),
+    ...(databaseType === 'Doris'
+      ? { dorisHttpPort: defaults.dorisHttpPort, tlsMode: 'DISABLED' }
+      : {}),
+  };
+};
+
+export const suggestIntegrationIdentifier = (name: string): string => {
+  const normalized = name
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return (
+    (/^[a-z]/.test(normalized) ? normalized : 'target_' + normalized).slice(
+      0,
+      64
+    ) || 'target_table'
+  );
 };
 
 export const emptyIntegrationConnection = (): IntegrationConnectionInput => ({
@@ -225,6 +275,9 @@ export const toIntegrationConnectionInput = (
     ? {
         oracleConnectionType: connection.oracleConnectionType ?? 'SERVICE_NAME',
       }
+    : {}),
+  ...(connection.databaseType === 'Doris'
+    ? { dorisHttpPort: connection.dorisHttpPort }
     : {}),
   tlsMode: connection.tlsMode,
   enabled: connection.enabled,
@@ -274,6 +327,25 @@ export const validateIntegrationConnectionInput = (
     )
   ) {
     errors.push('schemasInvalid');
+  }
+  if (input.databaseType === 'Doris') {
+    if (input.role !== 'TARGET') {
+      errors.push('dorisTargetOnly');
+    }
+    if (
+      !Number.isInteger(input.dorisHttpPort) ||
+      !input.dorisHttpPort ||
+      input.dorisHttpPort < 1 ||
+      input.dorisHttpPort > 65535
+    ) {
+      errors.push('dorisHttpPortInvalid');
+    }
+    if (input.tlsMode !== 'DISABLED') {
+      errors.push('dorisTlsHint');
+    }
+    if (input.schemas.length !== 1 || input.schemas[0] !== input.database) {
+      errors.push('dorisScopeHint');
+    }
   }
   if (
     input.databaseType === 'Mysql' &&

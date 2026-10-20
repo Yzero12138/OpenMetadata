@@ -15,6 +15,7 @@ import {
   IntegrationConnection,
   IntegrationConnectionInput,
   IntegrationTable,
+  IntegrationTargetTableInput,
   IntegrationTask,
   IntegrationTaskInput,
 } from '../../rest/hospitalIntegrationAPI';
@@ -28,6 +29,12 @@ export interface IntegrationTaskFormProps {
   connections: IntegrationConnection[];
   tablesLoading: boolean;
   onReloadTables: () => void;
+  onTargetTableBusyChange: (busy: boolean) => void;
+  onTargetTableDraftChange: (dirty: boolean) => void;
+  onTargetTableCreated: (
+    table: IntegrationTable,
+    fieldMappings: IntegrationTargetTableInput['fieldMappings']
+  ) => void;
   sourceTables: IntegrationTable[];
   targetTables: IntegrationTable[];
   errors: string[];
@@ -39,6 +46,19 @@ export interface IntegrationTaskFormProps {
   onValidate: () => void;
   onSave: () => void;
   onCancel: () => void;
+}
+
+export interface IntegrationTargetTableFormProps {
+  source: IntegrationTable;
+  sourceConnectionId: string;
+  targetConnection: IntegrationConnection;
+  disabled: boolean;
+  onBusyChange: (busy: boolean) => void;
+  onDraftChange: (dirty: boolean) => void;
+  onCreated: (
+    table: IntegrationTable,
+    fieldMappings: IntegrationTargetTableInput['fieldMappings']
+  ) => void;
 }
 
 export interface IntegrationTaskDetailProps {

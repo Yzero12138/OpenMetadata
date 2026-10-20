@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getIntegrationFailure,
   getIntegrationTable,
@@ -119,7 +119,18 @@ export const useIntegrationTables = (
     [detail, options]
   );
 
+  const acceptTable = useCallback((table: IntegrationTable) => {
+    setOptions((current) => [
+      ...current.filter(
+        (item) => item.schema !== table.schema || item.name !== table.name
+      ),
+      table,
+    ]);
+    setDetail(table);
+  }, []);
+
   return {
+    acceptTable,
     tables,
     detail,
     loading: loading.options || loading.detail,

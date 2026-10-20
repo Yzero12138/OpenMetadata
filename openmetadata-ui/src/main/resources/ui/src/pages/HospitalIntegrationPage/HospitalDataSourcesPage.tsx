@@ -129,12 +129,16 @@ export const HospitalDataSourcesWorkspace = ({
                 {
                   key: 'type',
                   label: t('label.type'),
-                  options: ['Oracle', 'Mssql', 'Mysql', 'Postgres'].map(
-                    (id) => ({
-                      id,
-                      label: t('hospitalIntegration.databaseTypes.' + id),
-                    })
-                  ),
+                  options: [
+                    'Oracle',
+                    'Mssql',
+                    'Mysql',
+                    'Postgres',
+                    'Doris',
+                  ].map((id) => ({
+                    id,
+                    label: t('hospitalIntegration.databaseTypes.' + id),
+                  })),
                 },
                 {
                   key: 'role',

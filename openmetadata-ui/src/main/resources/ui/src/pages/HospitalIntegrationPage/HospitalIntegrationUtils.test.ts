@@ -18,10 +18,13 @@ import {
 } from '../../rest/hospitalIntegrationAPI';
 import {
   canResumeIntegrationTask,
+  changeIntegrationDatabaseType,
   emptyIntegrationConnection,
   EMPTY_INTEGRATION_TASK,
   isIntegrationRunBusy,
   isIntegrationRunUncertain,
+  suggestIntegrationIdentifier,
+  toIntegrationConnectionInput,
   validateIntegrationConnectionInput,
   validateIntegrationInput,
 } from './HospitalIntegrationUtils';
@@ -200,5 +203,80 @@ describe('Hospital integration validation and run safety', () => {
         true
       )
     ).toContain('mysqlScopeHint');
+  });
+
+  it('validates Doris target role, HTTP endpoint and database scope', () => {
+    const value = {
+      ...changeIntegrationDatabaseType(emptyIntegrationConnection(), 'Doris'),
+      name: 'doris_target',
+      displayName: 'Doris target',
+      databaseVersion: '3.1.3',
+      host: 'doris.example.invalid',
+      database: 'hospital_ods',
+      schemas: ['hospital_ods'],
+      username: 'writer',
+      password: 'synthetic-password',
+      role: 'TARGET' as const,
+    };
+
+    expect(validateIntegrationConnectionInput(value, false)).toEqual([]);
+    expect(
+      validateIntegrationConnectionInput({ ...value, role: 'SOURCE' }, false)
+    ).toContain('dorisTargetOnly');
+
+    for (const dorisHttpPort of [undefined, 0, 65536, 8030.5]) {
+      expect(
+        validateIntegrationConnectionInput({ ...value, dorisHttpPort }, false)
+      ).toContain('dorisHttpPortInvalid');
+    }
+
+    expect(
+      validateIntegrationConnectionInput(
+        { ...value, schemas: ['public'] },
+        false
+      )
+    ).toContain('dorisScopeHint');
+    expect(
+      validateIntegrationConnectionInput({ ...value, tlsMode: 'VERIFY' }, false)
+    ).toContain('dorisTlsHint');
+    expect(value).toMatchObject({
+      port: 9030,
+      dorisHttpPort: 8030,
+      tlsMode: 'DISABLED',
+    });
+
+    const oracle = changeIntegrationDatabaseType(value, 'Oracle');
+
+    expect(oracle).not.toHaveProperty('dorisHttpPort');
+    expect(oracle).toMatchObject({
+      port: 1521,
+      oracleConnectionType: 'SERVICE_NAME',
+    });
+    expect(changeIntegrationDatabaseType(oracle, 'Doris')).not.toHaveProperty(
+      'oracleConnectionType'
+    );
+
+    const saved = toIntegrationConnectionInput({
+      ...value,
+      id: 'doris',
+      version: 1,
+      managed: false,
+      synthetic: true,
+      passwordSet: true,
+      supportedModes: ['FULL'],
+    });
+
+    expect(saved.dorisHttpPort).toBe(8030);
+  });
+
+  it('suggests bounded lowercase ASCII identifiers for real source names', () => {
+    expect(suggestIntegrationIdentifier('PATIENT-Records')).toBe(
+      'patient_records'
+    );
+    expect(suggestIntegrationIdentifier('123 ID')).toBe('target_123_id');
+    expect(suggestIntegrationIdentifier('患者')).toMatch(
+      /^[a-z][a-z0-9_]{0,63}$/
+    );
+    expect(suggestIntegrationIdentifier('X'.repeat(90))).toHaveLength(64);
   });
 });

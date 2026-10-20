@@ -170,7 +170,7 @@ export const IntegrationConnections = ({
     const input = {
       ...definition,
       schemas:
-        draft.databaseType === 'Mysql'
+        draft.databaseType === 'Mysql' || draft.databaseType === 'Doris'
           ? [draft.database]
           : schemasText.split(',').map((schema) => schema.trim()),
       ...(password ? { password } : {}),
@@ -412,8 +412,17 @@ export const IntegrationConnections = ({
                       <td>
                         <span>
                           {connection.host}:{connection.port}
+                          {connection.databaseType === 'Doris'
+                            ? ' · ' + t('hospitalIntegration.dorisSqlPort')
+                            : ''}
                         </span>
                         <small>{connection.database}</small>
+                        {connection.databaseType === 'Doris' && (
+                          <small>
+                            {t('hospitalIntegration.dorisHttpPort')}:{' '}
+                            {connection.dorisHttpPort}
+                          </small>
+                        )}
                       </td>
                       <td>
                         {connection.schemas.join(', ')}

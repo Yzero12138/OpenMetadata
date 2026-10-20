@@ -13,7 +13,12 @@
 import { isAxiosError } from 'axios';
 import APIClient from '.';
 
-export type IntegrationDatabaseType = 'Oracle' | 'Mssql' | 'Mysql' | 'Postgres';
+export type IntegrationDatabaseType =
+  | 'Oracle'
+  | 'Mssql'
+  | 'Mysql'
+  | 'Postgres'
+  | 'Doris';
 export type IntegrationMode = 'FULL' | 'CDC';
 
 export interface IntegrationConnectionInput {
@@ -28,6 +33,7 @@ export interface IntegrationConnectionInput {
   username: string;
   password?: string;
   schemas: string[];
+  dorisHttpPort?: number;
   oracleConnectionType?: 'SERVICE_NAME' | 'SID';
   tlsMode: 'DISABLED' | 'VERIFY';
   enabled: boolean;
@@ -57,6 +63,23 @@ export interface IntegrationTable {
   schema: string;
   name: string;
   columns: IntegrationColumn[];
+}
+
+export interface IntegrationTargetTableInput {
+  sourceConnectionId: string;
+  sourceSchema: string;
+  sourceTable: string;
+  targetSchema: string;
+  targetTable: string;
+  fieldMappings: { source: string; target: string }[];
+}
+
+export interface IntegrationTargetTablePreview {
+  targetConnectionId: string;
+  previewHash: string;
+  ddl: string;
+  table: IntegrationTable;
+  fieldMappings: IntegrationTargetTableInput['fieldMappings'];
 }
 
 export interface IntegrationTaskInput {
@@ -212,6 +235,32 @@ export const getIntegrationTable = async (
       id
     )}/tables/${encodeURIComponent(schema)}/${encodeURIComponent(table)}`,
     { signal }
+  );
+
+  return data;
+};
+
+export const previewIntegrationTargetTable = async (
+  id: string,
+  input: IntegrationTargetTableInput,
+  signal?: AbortSignal
+): Promise<IntegrationTargetTablePreview> => {
+  const { data } = await APIClient.post<IntegrationTargetTablePreview>(
+    PREFIX + '/connections/' + encodeURIComponent(id) + '/tables/preview',
+    input,
+    { signal }
+  );
+
+  return data;
+};
+
+export const createIntegrationTargetTable = async (
+  id: string,
+  input: IntegrationTargetTableInput & { previewHash: string }
+): Promise<IntegrationTable> => {
+  const { data } = await APIClient.post<IntegrationTable>(
+    PREFIX + '/connections/' + encodeURIComponent(id) + '/tables',
+    input
   );
 
   return data;

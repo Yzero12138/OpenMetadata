@@ -43,3 +43,23 @@ The native shared FormDrawer provides 720px source create/edit, 880px task creat
 The [current design record](../../docs/hospital/data-integration-design-extension.md) separates this scope from the 2026-10-09 history. The [final packet](../review/integration/report.json) contains 30 actual-React synthetic-HTTP captures, 15 states at each required PC viewport, plus two passing recorded interaction checks. The [fresh finish review](../review/integration/finish-managed-sources.md) returns `disposition: ship`, all five required sections, no material fixes. Two screenshot rounds are complete; the formal single [detector output](../../.logs/impeccable-managed-sources-detector.json) is `[]`.
 
 Parent verification records 55/55 integration UI tests, shared groups of 287 + 97 + 14 tests, and 550 baseline TypeScript diagnostics with zero owned diagnostics. Final UI build/package and local application/engine images passed; subsequent publication and test-deployment evidence belongs to the [implementation verification track](../../docs/hospital/data-integration-verification.md). Independent four-database 100-row/native-catalog tests are recorded in [data-source maintenance](../../docs/hospital/data-source-maintenance.md), not established by screenshots or rerun by this documenter. No employee-login, real hospital endpoint, all-family CDC, mobile or dark-theme acceptance claim.
+
+## Direction contract — Doris target extension, 2026-10-20
+
+THESIS: Configure a reusable Doris target, then create its table from real source metadata without leaving the task drawer. Database choices retain all four existing source families; Doris is target-only.
+
+OWN-WORLD: Extend the incumbent restrained green, Chinese system typography, native core fields and flat section rules. Preserve DESIGN.md and design.json. No new design package or decorative motion.
+
+STORY: Keep the existing separate data-source and task menus/routes. The administrator registers Doris SQL/HTTP endpoints, selects a real source table, edits suggested safe lowercase target names and explicitly includes or skips columns. Source primary-key columns stay included. The server previews generated Doris types, keys and read-only DDL before the explicit create action.
+
+FIRST VIEWPORT: Preserve task/source navigation, the underlying list, and the 880px/960px right drawer. Put the creation disclosure directly below route selection. The mapping rows and generated DDL scroll inside the existing drawer body; native header/footer stay fixed.
+
+FORM: Code-led local extension; no seed applies. Preview edits invalidate confirmation, stale requests cannot replace a newer draft, errors retain edits, and pending operations block repeated creation and dismissal. Successful creation refreshes target choices, selects the table and initializes mappings while preserving the task draft.
+
+FINISH: Parent owns the single detector, batched PC captures, fresh finish review and final documentation handoff. Verify typed endpoints, Doris defaults/role/ports, stale preview guards, retry and post-create mapping. No live database or production operation belongs to this UI subtask.
+
+## UI implementation evidence — 2026-10-20
+
+The typed Doris connection extension and structured table preview/create endpoints are implemented. Target-only validation, SQL/HTTP defaults, family-setting cleanup, database scope, TLS-disabled-only choices, Doris list filtering and endpoint facts preserve the existing source/task menus and right drawers. Inline creation previews generated types, primary keys and read-only DDL; explicit skips, preview invalidation, stale-source guards, failure retry, parent pending locks, automatic table selection and returned field mappings are covered. Task draft fields remain intact.
+
+The final owned integration/API group passed 73/73 tests in five suites; the earlier missing-Doris and missing-table-creation regressions were observed failing first. The required organize-imports → ESLint --fix → Prettier sequence completed. TypeScript reports the existing 550 project diagnostics with zero diagnostics in the owned hospital integration/API files. yarn i18n ran and all 20 locale files contain the new messages, with real non-English translations and preserved interpolation tokens. Parent owns the one detector, production build, batched visual review and finish/documentation handoffs; these UI tests make no database or production deployment claim.
