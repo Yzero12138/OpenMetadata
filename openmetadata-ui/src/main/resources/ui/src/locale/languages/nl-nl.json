@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "Kies een gegevensbron met de vereiste bron- of doelrol.",
       "CONNECTION_UNAVAILABLE": "Verbinding mislukt. Controleer het eindpunt, het netwerk en de aanmeldgegevens.",
       "CREDENTIALS_NOT_CONFIGURED": "Versleuteling van aanmeldgegevens is niet beschikbaar. Neem contact op met de beheerder.",
+      "DORIS_LABEL_INVALID": "De namen van de Doris-database en tabel mogen samen maximaal 67 tekens bevatten, en alleen ASCII-letters, cijfers en underscores gebruiken. Maak de namen korter en bekijk het voorbeeld opnieuw.",
       "DUPLICATE_CONNECTION": "Deze technische naam bestaat al. Wijzig de naam en sla opnieuw op.",
       "DUPLICATE_ROUTE": "Er bestaat al een taak voor deze route van bron- naar doeltabel. Gebruik die taak of kies een andere doeltabel.",
       "DUPLICATE_TASK": "Deze naam bestaat al. Wijzig de naam en sla opnieuw op.",

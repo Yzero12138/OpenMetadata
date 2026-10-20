@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "Escolla unha fonte co rol de orixe ou destino requirido.",
       "CONNECTION_UNAVAILABLE": "Fallou a conexión. Comprobe o punto de conexión, a rede e as credenciais.",
       "CREDENTIALS_NOT_CONFIGURED": "O cifrado de credenciais non está dispoñible. Contacte coa administración.",
+      "DORIS_LABEL_INVALID": "Os nomes da base de datos e da táboa de Doris non poden superar 67 caracteres en total e só poden conter letras ASCII, díxitos e guións baixos. Acurte os nomes e volva previsualizar.",
       "DUPLICATE_CONNECTION": "Este nome técnico xa existe. Cambie o nome e garde de novo.",
       "DUPLICATE_ROUTE": "Xa existe unha tarefa para esta ruta entre as táboas de orixe e destino. Use esa tarefa ou escolla outra táboa de destino.",
       "DUPLICATE_TASK": "Este nome xa existe. Cámbieo e garde de novo.",

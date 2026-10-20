@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "選擇符合來源或目標角色的資料來源。",
       "CONNECTION_UNAVAILABLE": "連線失敗，請檢查連線資訊、網路和存取憑證。",
       "CREDENTIALS_NOT_CONFIGURED": "憑證加密無法使用，請聯絡管理員。",
+      "DORIS_LABEL_INVALID": "Doris 資料庫名稱與資料表名稱合計不得超過 67 個字元，且只能包含英文字母、數字和底線。請縮短名稱後重新預覽。",
       "DUPLICATE_CONNECTION": "技術名稱已存在，請修改名稱後重新儲存。",
       "DUPLICATE_ROUTE": "此來源表到目標表的整合路徑已有任務，請使用現有任務或選擇其他目標表。",
       "DUPLICATE_TASK": "名稱已存在，請修改名稱後儲存。",

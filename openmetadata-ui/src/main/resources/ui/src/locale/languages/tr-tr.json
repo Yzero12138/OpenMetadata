@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "Gerekli kaynak veya hedef rolüne sahip bir veri kaynağı seçin.",
       "CONNECTION_UNAVAILABLE": "Bağlantı başarısız. Bağlantı noktasını, ağı ve kimlik bilgilerini kontrol edin.",
       "CREDENTIALS_NOT_CONFIGURED": "Kimlik bilgisi şifreleme kullanılamıyor. Yöneticiyle iletişime geçin.",
+      "DORIS_LABEL_INVALID": "Doris veritabanı ve tablo adlarının toplamı 67 karakteri aşamaz ve yalnızca ASCII harfleri, rakamlar ve alt çizgiler içerebilir. Adları kısaltıp yeniden önizleyin.",
       "DUPLICATE_CONNECTION": "Bu teknik ad zaten var. Veri kaynağını yeniden adlandırıp tekrar kaydedin.",
       "DUPLICATE_ROUTE": "Bu kaynak tablodan hedef tabloya giden yol için zaten bir görev var. Bu görevi kullanın veya başka bir hedef tablo seçin.",
       "DUPLICATE_TASK": "Bu ad zaten var. Adı değiştirip yeniden kaydedin.",

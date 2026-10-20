@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "Choose a data source with the required source or target role.",
       "CONNECTION_UNAVAILABLE": "Connection failed. Check the endpoint, network and credentials.",
       "CREDENTIALS_NOT_CONFIGURED": "Credential encryption is unavailable. Contact the administrator.",
+      "DORIS_LABEL_INVALID": "Doris database and table names must use only ASCII letters, digits and underscores, and together must not exceed 67 characters. Shorten the names and preview again.",
       "DUPLICATE_CONNECTION": "This technical name already exists. Rename the data source and save again.",
       "DUPLICATE_ROUTE": "A task already owns this source-to-target route. Use that task or choose another target table.",
       "DUPLICATE_TASK": "This name already exists. Change the name and save again.",

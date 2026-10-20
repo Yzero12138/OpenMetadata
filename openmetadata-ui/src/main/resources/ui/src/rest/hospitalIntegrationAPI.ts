@@ -381,6 +381,7 @@ export const getIntegrationFailure = (error: unknown): IntegrationFailure => {
       'CONNECTION_UNAVAILABLE',
       'CONNECTION_DISABLED',
       'MODE_UNSUPPORTED',
+      'DORIS_LABEL_INVALID',
     ]);
 
     return {

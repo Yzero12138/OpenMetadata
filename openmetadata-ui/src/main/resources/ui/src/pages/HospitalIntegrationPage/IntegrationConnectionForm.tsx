@@ -52,7 +52,7 @@ export const IntegrationConnectionForm = ({
     Mssql: '2016 / 2019',
     Mysql: '8',
     Postgres: '17.2',
-    Doris: '3.1.3',
+    Doris: '4.0.8',
   };
 
   return (

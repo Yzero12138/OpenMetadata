@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "Escolha uma fonte com o papel de origem ou destino necessário.",
       "CONNECTION_UNAVAILABLE": "A ligação falhou. Verifique o ponto de ligação, a rede e as credenciais.",
       "CREDENTIALS_NOT_CONFIGURED": "A encriptação de credenciais não está disponível. Contacte o administrador.",
+      "DORIS_LABEL_INVALID": "Os nomes da base de dados e da tabela Doris não podem exceder 67 carateres no total e só podem conter letras ASCII, algarismos e sublinhados. Encurte os nomes e volte a pré-visualizar.",
       "DUPLICATE_CONNECTION": "Este nome técnico já existe. Mude o nome da fonte e guarde novamente.",
       "DUPLICATE_ROUTE": "Já existe uma tarefa para este percurso entre as tabelas de origem e destino. Utilize essa tarefa ou escolha outra tabela de destino.",
       "DUPLICATE_TASK": "Este nome já existe. Altere o nome e guarde novamente.",

@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "选择符合来源或目标角色的数据源。",
       "CONNECTION_UNAVAILABLE": "连接失败，请检查连接信息、网络和访问凭据。",
       "CREDENTIALS_NOT_CONFIGURED": "凭据加密不可用，请联系管理员。",
+      "DORIS_LABEL_INVALID": "Doris 数据库名与表名合计不能超过 67 个字符，且只能包含英文字母、数字和下划线。请缩短名称后重新预览。",
       "DUPLICATE_CONNECTION": "技术名称已存在，请修改名称后重新保存。",
       "DUPLICATE_ROUTE": "该来源表到目标表的集成路径已有任务，请使用现有任务或选择其他目标表。",
       "DUPLICATE_TASK": "名称已存在，请修改名称后保存。",

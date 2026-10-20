@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "Välj en datakälla med den käll- eller målroll som krävs.",
       "CONNECTION_UNAVAILABLE": "Anslutningen misslyckades. Kontrollera anslutningspunkt, nätverk och inloggningsuppgifter.",
       "CREDENTIALS_NOT_CONFIGURED": "Kryptering av inloggningsuppgifter är inte tillgänglig. Kontakta administratören.",
+      "DORIS_LABEL_INVALID": "Doris databas- och tabellnamn får tillsammans innehålla högst 67 tecken och endast ASCII-bokstäver, siffror och understreck. Korta namnen och förhandsgranska igen.",
       "DUPLICATE_CONNECTION": "Det tekniska namnet finns redan. Byt namn på datakällan och spara igen.",
       "DUPLICATE_ROUTE": "Det finns redan en uppgift för den här vägen från källtabell till måltabell. Använd den uppgiften eller välj en annan måltabell.",
       "DUPLICATE_TASK": "Namnet finns redan. Ändra namnet och spara igen.",

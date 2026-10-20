@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "Choisissez une source ayant le rôle source ou cible requis.",
       "CONNECTION_UNAVAILABLE": "La connexion a échoué. Vérifiez le point de connexion, le réseau et les identifiants.",
       "CREDENTIALS_NOT_CONFIGURED": "Le chiffrement des identifiants est indisponible. Contactez l’administrateur.",
+      "DORIS_LABEL_INVALID": "Les noms de la base de données et de la table Doris ne doivent pas dépasser 67 caractères au total et ne peuvent contenir que des lettres ASCII, des chiffres et des traits de soulignement. Raccourcissez les noms et prévisualisez à nouveau.",
       "DUPLICATE_CONNECTION": "Ce nom technique existe déjà. Renommez la source et enregistrez à nouveau.",
       "DUPLICATE_ROUTE": "Une tâche utilise déjà ce trajet entre les tables source et cible. Utilisez cette tâche ou choisissez une autre table cible.",
       "DUPLICATE_TASK": "Ce nom existe déjà. Modifiez-le puis enregistrez à nouveau.",

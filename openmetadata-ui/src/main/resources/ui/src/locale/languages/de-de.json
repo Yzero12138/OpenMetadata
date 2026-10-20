@@ -148,6 +148,7 @@
       "CONNECTION_ROLE_MISMATCH": "Wählen Sie eine Datenquelle mit der erforderlichen Quell- oder Zielrolle.",
       "CONNECTION_UNAVAILABLE": "Verbindung fehlgeschlagen. Prüfen Sie Endpunkt, Netzwerk und Zugangsdaten.",
       "CREDENTIALS_NOT_CONFIGURED": "Die Verschlüsselung der Zugangsdaten ist nicht verfügbar. Wenden Sie sich an den Administrator.",
+      "DORIS_LABEL_INVALID": "Doris-Datenbank- und Tabellennamen dürfen zusammen höchstens 67 Zeichen lang sein und nur ASCII-Buchstaben, Ziffern und Unterstriche enthalten. Kürzen Sie die Namen und zeigen Sie die Vorschau erneut an.",
       "DUPLICATE_CONNECTION": "Dieser technische Name existiert bereits. Benennen Sie die Datenquelle um und speichern Sie erneut.",
       "DUPLICATE_ROUTE": "Für diesen Weg von der Quell- zur Zieltabelle besteht bereits eine Aufgabe. Verwenden Sie diese Aufgabe oder wählen Sie eine andere Zieltabelle.",
       "DUPLICATE_TASK": "Dieser Name ist bereits vorhanden. Ändern Sie den Namen und speichern Sie erneut.",
