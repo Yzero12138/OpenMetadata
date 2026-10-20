@@ -1,0 +1,13 @@
+# Minimal Oracle NLS repair; base application/engine and stored data are preserved.
+ARG OPENMETADATA_BASE=harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:8e62ee6767145bc425cf1fb93226e214274b9f239172f424c9375a9c497e446b
+ARG SEATUNNEL_BASE=harbor.qcrmyy.local/coop/hospital-seatunnel@sha256:26eb80de58a8855a6a7c459979d283919c143e17eca13fd90e29cb4af75b2347
+FROM ${OPENMETADATA_BASE} AS openmetadata
+ARG SOURCE_REVISION
+LABEL org.opencontainers.image.revision="$SOURCE_REVISION" org.opencontainers.image.version="2.0.4-integrate-v10-oracle-nls"
+COPY --chown=1000:1000 orai18n-19.32.0.0.jar /opt/openmetadata/libs/orai18n-19.32.0.0.jar
+RUN echo 'b709d6cee59d23658b4dbd66cd1088b65380b43c68678bc107f2a1a5cd112c56  /opt/openmetadata/libs/orai18n-19.32.0.0.jar' | sha256sum -c -
+FROM ${SEATUNNEL_BASE} AS seatunnel
+ARG SOURCE_REVISION
+LABEL org.opencontainers.image.revision="$SOURCE_REVISION" org.opencontainers.image.version="3.0.0-jdbc-v3-oracle-nls"
+COPY --chown=1000:1000 orai18n-19.32.0.0.jar /opt/seatunnel/lib/orai18n-19.32.0.0.jar
+RUN echo 'b709d6cee59d23658b4dbd66cd1088b65380b43c68678bc107f2a1a5cd112c56  /opt/seatunnel/lib/orai18n-19.32.0.0.jar' | sha256sum -c -
