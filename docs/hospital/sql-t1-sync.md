@@ -22,6 +22,8 @@
 
 至少使用其中一个参数。窗口建议采用左闭右开，避免午夜记录重复进入两天。
 
+参数表示配置时区的业务本地时间。源字段使用 UTC 或带时区类型时，应在 SQL 中显式转换；例如 PostgreSQL `timestamptz` 可使用 `CAST(:window_start AS timestamp) AT TIME ZONE 'Asia/Shanghai'` 表达窗口起点。
+
 PostgreSQL 示例：
 
 ```sql
