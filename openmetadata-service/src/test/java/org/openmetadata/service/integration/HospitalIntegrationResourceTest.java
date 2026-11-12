@@ -19,6 +19,7 @@ class HospitalIntegrationResourceTest {
     assertThrows(AuthenticationException.class, () -> resource.deleteConnection(null, null, 1));
     assertThrows(AuthenticationException.class, () -> resource.tableOptions(null, null));
     assertThrows(AuthenticationException.class, () -> resource.table(null, null, null, null));
+    assertThrows(AuthenticationException.class, () -> resource.querySchema(null, null));
     assertThrows(
         AuthenticationException.class, () -> resource.previewTargetTable(null, null, null));
     assertThrows(AuthenticationException.class, () -> resource.createTargetTable(null, null, null));

@@ -10,12 +10,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button } from '@openmetadata/ui-core-components';
+import { Button, Input } from '@openmetadata/ui-core-components';
 import { ArrowLeft, ArrowRight, Plus, RefreshCw01 } from '@untitledui/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FormDrawer from '../../components/common/atoms/drawer/FormDrawer';
+import { FormDrawerActions } from '../../components/common/atoms/drawer/FormDrawerActions';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { ROUTES } from '../../constants/constants';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
@@ -28,6 +29,7 @@ import {
   getIntegrationTasks,
   IntegrationConnection,
   IntegrationEngineStatus,
+  IntegrationRunOptions,
   IntegrationTask,
   IntegrationTaskInput,
   runIntegrationTask,
@@ -48,6 +50,7 @@ import {
   canResumeIntegrationTask,
   EMPTY_INTEGRATION_TASK,
   integrationErrorKey,
+  integrationModeKey,
   isIntegrationRunBusy,
   isIntegrationRunUncertain,
   toIntegrationTaskInput,
@@ -64,6 +67,7 @@ import { IntegrationPageHeader } from './IntegrationPageHeader';
 import { IntegrationTaskDetail } from './IntegrationTaskDetail';
 import { IntegrationTaskForm } from './IntegrationTaskForm';
 import { useIntegrationNavigationGuard } from './useIntegrationNavigationGuard';
+import { useIntegrationQuerySchema } from './useIntegrationQuerySchema';
 import { useIntegrationTables } from './useIntegrationTables';
 
 type IntegrationView = 'list' | 'create' | 'detail' | 'edit';
@@ -108,6 +112,10 @@ export const HospitalIntegrationWorkspace = ({
   const [tasksErrorCode, setTasksErrorCode] = useState<string>();
   const [conflict, setConflict] = useState(false);
   const [editingVersion, setEditingVersion] = useState<number>();
+  const [backfillOpen, setBackfillOpen] = useState(false);
+  const [businessDate, setBusinessDate] = useState('');
+  const initialBusinessDate = useRef('');
+  const [businessDateError, setBusinessDateError] = useState(false);
   const [loading, setLoading] = useState<Record<string, boolean>>({
     initial: true,
   });
@@ -124,7 +132,7 @@ export const HospitalIntegrationWorkspace = ({
     form.sourceConnectionId,
     form.sourceSchema,
     form.sourceTable,
-    taskEditorOpen,
+    taskEditorOpen && form.mode !== 'SQL_T1',
     tablesReload
   );
   const targetData = useIntegrationTables(
@@ -134,7 +142,22 @@ export const HospitalIntegrationWorkspace = ({
     taskEditorOpen,
     tablesReload + targetTablesReload
   );
-  const sourceTables = sourceData.tables;
+  const queryData = useIntegrationQuerySchema(
+    {
+      connectionId: form.sourceConnectionId,
+      schema: form.sourceSchema,
+      query: form.sourceQuery ?? '',
+    },
+    taskEditorOpen && form.mode === 'SQL_T1'
+  );
+  const sourceDetail =
+    form.mode === 'SQL_T1' ? queryData.table : sourceData.detail;
+  const sourceTables =
+    form.mode === 'SQL_T1'
+      ? queryData.table
+        ? [queryData.table]
+        : []
+      : sourceData.tables;
   const targetTables = targetData.tables;
   const tablesLoading = sourceData.loading || targetData.loading;
   const autoMappedRoute = useRef<string>();
@@ -142,10 +165,11 @@ export const HospitalIntegrationWorkspace = ({
   const engineAvailable = engine?.enabled === true && engine.reachable;
   const navigationGuard = useIntegrationNavigationGuard({
     enabled:
-      taskEditorOpen &&
-      (busy ||
-        targetTableDirty ||
-        JSON.stringify(form) !== initialForm.current),
+      (taskEditorOpen &&
+        (busy ||
+          targetTableDirty ||
+          JSON.stringify(form) !== initialForm.current)) ||
+      (backfillOpen && (busy || businessDate !== initialBusinessDate.current)),
     locked: busy,
   });
   const confirmDiscard = discardRequested || navigationGuard.blocked;
@@ -259,7 +283,7 @@ export const HospitalIntegrationWorkspace = ({
 
       return;
     }
-    const source = sourceData.detail;
+    const source = sourceDetail;
     const target = targetData.detail;
     if (
       !source ||
@@ -275,6 +299,7 @@ export const HospitalIntegrationWorkspace = ({
       form.sourceConnectionId,
       form.sourceSchema,
       form.sourceTable,
+      form.sourceQuery,
       form.targetConnectionId,
       form.targetSchema,
       form.targetTable,
@@ -287,7 +312,9 @@ export const HospitalIntegrationWorkspace = ({
       ...current,
       primaryKey:
         current.primaryKey ||
-        source.columns.find((column) => column.primaryKey)?.name ||
+        (current.mode === 'SQL_T1'
+          ? ''
+          : source.columns.find((column) => column.primaryKey)?.name) ||
         '',
       fieldMappings: current.fieldMappings.length
         ? current.fieldMappings
@@ -299,11 +326,12 @@ export const HospitalIntegrationWorkspace = ({
     }));
   }, [
     taskEditorOpen,
-    sourceData.detail,
+    sourceDetail,
     targetData.detail,
     form.sourceConnectionId,
     form.sourceSchema,
     form.sourceTable,
+    form.sourceQuery,
     form.targetConnectionId,
     form.targetSchema,
     form.targetTable,
@@ -342,6 +370,34 @@ export const HospitalIntegrationWorkspace = ({
     }
     closeEditor();
   };
+  const closeBackfill = () => {
+    setBackfillOpen(false);
+    setBusinessDateError(false);
+    setErrorCode(undefined);
+    setDiscardRequested(false);
+  };
+  const requestCloseBackfill = () => {
+    if (mutation.current) {
+      return;
+    }
+    if (businessDate !== initialBusinessDate.current) {
+      setDiscardRequested(true);
+
+      return;
+    }
+    closeBackfill();
+  };
+  const openBackfill = () => {
+    const date =
+      selected?.latestRun?.businessDate ??
+      selected?.scheduleState?.pendingBusinessDate ??
+      '';
+    initialBusinessDate.current = date;
+    setBusinessDate(date);
+    setBusinessDateError(false);
+    setErrorCode(undefined);
+    setBackfillOpen(true);
+  };
 
   const loadTask = useCallback(
     async (id: string) => {
@@ -376,6 +432,7 @@ export const HospitalIntegrationWorkspace = ({
     epoch.current += 1;
     selectedRequest.current?.abort();
     setSelected(undefined);
+    setBackfillOpen(false);
     setConflict(false);
     setFormErrors([]);
     setErrorCode(undefined);
@@ -419,6 +476,8 @@ export const HospitalIntegrationWorkspace = ({
   const validateOrSave = async (save: boolean) => {
     if (
       tablesLoading ||
+      queryData.loading ||
+      Boolean(queryData.errorCode) ||
       mutation.current ||
       targetTablePending.current ||
       confirmDiscard
@@ -437,7 +496,8 @@ export const HospitalIntegrationWorkspace = ({
         (connection) =>
           connection.id === form.targetConnectionId &&
           connection.enabled &&
-          connection.role === 'TARGET'
+          connection.role === 'TARGET' &&
+          (form.mode !== 'SQL_T1' || connection.databaseType === 'Doris')
       )
     ) {
       errors.push('connectionsRequired');
@@ -492,7 +552,15 @@ export const HospitalIntegrationWorkspace = ({
   };
 
   const taskAction = async (
-    key: 'run' | 'resume' | 'stop' | 'catalog' | 'refresh'
+    key:
+      | 'run'
+      | 'resume'
+      | 'stop'
+      | 'catalog'
+      | 'refresh'
+      | 'backfill'
+      | 'retry',
+    options?: IntegrationRunOptions
   ) => {
     if (!selected) {
       return;
@@ -500,7 +568,12 @@ export const HospitalIntegrationWorkspace = ({
     const task = selected;
     const active =
       isIntegrationRunBusy(task.latestRun) || uncertainTasks[task.id];
-    if ((key === 'run' || key === 'resume') && (active || !engineAvailable)) {
+    const submits =
+      key === 'run' ||
+      key === 'resume' ||
+      key === 'backfill' ||
+      key === 'retry';
+    if (submits && (active || !engineAvailable)) {
       return;
     }
     if (key === 'run' && canResumeIntegrationTask(task.mode, task.latestRun)) {
@@ -522,17 +595,19 @@ export const HospitalIntegrationWorkspace = ({
             ? await syncIntegrationCatalog(task.id)
             : key === 'stop'
             ? await stopIntegrationTask(task.id, task.mode === 'CDC')
+            : options
+            ? await runIntegrationTask(task.id, key === 'resume', options)
             : await runIntegrationTask(task.id, key === 'resume');
         if (requestEpoch === epoch.current) {
           acceptTask(result);
+          if (key === 'backfill') {
+            navigationGuard.release();
+            closeBackfill();
+          }
         }
       } catch (error) {
         const failure = getIntegrationFailure(error);
-        if (
-          mounted.current &&
-          (key === 'run' || key === 'resume') &&
-          failure.uncertain
-        ) {
+        if (mounted.current && submits && failure.uncertain) {
           setUncertainTasks((current) => ({ ...current, [task.id]: true }));
         }
         if (requestEpoch === epoch.current) {
@@ -540,6 +615,17 @@ export const HospitalIntegrationWorkspace = ({
         }
       }
     });
+  };
+  const submitBackfill = () => {
+    const date = new Date(businessDate + 'T00:00:00Z');
+    const valid =
+      /^\d{4}-\d{2}-\d{2}$/.test(businessDate) &&
+      Number.isFinite(date.getTime()) &&
+      date.toISOString().slice(0, 10) === businessDate;
+    setBusinessDateError(!valid);
+    if (valid && !confirmDiscard) {
+      void taskAction('backfill', { businessDate });
+    }
   };
 
   const reloadCurrentTask = async () => {
@@ -659,7 +745,7 @@ export const HospitalIntegrationWorkspace = ({
               {t('hospitalIntegration.backToTasks')}
             </Button>
           )}
-          {errorCode && !taskEditorOpen && (
+          {errorCode && !taskEditorOpen && !backfillOpen && (
             <div className="hospital-integration__alert" role="alert">
               <p>{t(integrationErrorKey(errorCode))}</p>
               {conflict && <p>{t('hospitalIntegration.conflictHint')}</p>}
@@ -735,6 +821,7 @@ export const HospitalIntegrationWorkspace = ({
                   options: [
                     { id: 'FULL', label: t('hospitalIntegration.full') },
                     { id: 'CDC', label: t('hospitalIntegration.cdc') },
+                    { id: 'SQL_T1', label: t('hospitalIntegration.sqlT1') },
                   ],
                 },
                 {
@@ -811,7 +898,10 @@ export const HospitalIntegrationWorkspace = ({
                           </td>
                           <td>
                             <span>
-                              {task.sourceSchema}.{task.sourceTable}
+                              {task.sourceSchema}.
+                              {task.mode === 'SQL_T1'
+                                ? t('hospitalIntegration.sqlResult')
+                                : task.sourceTable}
                             </span>
                             <ArrowRight
                               aria-hidden="true"
@@ -822,9 +912,18 @@ export const HospitalIntegrationWorkspace = ({
                             </span>
                           </td>
                           <td>
-                            {t(
-                              'hospitalIntegration.' +
-                                (task.mode === 'CDC' ? 'cdc' : 'full')
+                            {t(integrationModeKey(task.mode))}
+                            {task.mode === 'SQL_T1' && (
+                              <small>
+                                {t(
+                                  task.schedule?.enabled
+                                    ? 'label.enabled'
+                                    : 'hospitalIntegration.scheduleDisabled'
+                                )}
+                                {task.schedule
+                                  ? ` · ${task.schedule.dailyTime} · ${task.schedule.timeZone}`
+                                  : ''}
+                              </small>
                             )}
                           </td>
                           <td>
@@ -837,6 +936,12 @@ export const HospitalIntegrationWorkspace = ({
                                     { defaultValue: task.latestRun.status }
                                   )
                                 : t('hospitalIntegration.notRun')}
+                              {task.latestRun?.businessDate && (
+                                <small>
+                                  {t('hospitalIntegration.businessDate')}:{' '}
+                                  {task.latestRun.businessDate}
+                                </small>
+                              )}
                             </span>
                           </td>
                           <td>
@@ -935,6 +1040,8 @@ export const HospitalIntegrationWorkspace = ({
               connections={connections}
               disabled={busy || confirmDiscard}
               errors={formErrors}
+              queryErrorCode={queryData.errorCode}
+              queryLoading={queryData.loading}
               saving={loading.save}
               sourceTables={sourceTables}
               tablesLoading={tablesLoading}
@@ -949,6 +1056,7 @@ export const HospitalIntegrationWorkspace = ({
                 setForm(value);
                 setFormErrors([]);
               }}
+              onReadQuerySchema={() => void queryData.read()}
               onReloadTables={() => setTablesReload((current) => current + 1)}
               onSave={() => void validateOrSave(true)}
               onTargetTableBusyChange={targetTableBusyChange}
@@ -961,9 +1069,8 @@ export const HospitalIntegrationWorkspace = ({
                   fieldMappings,
                   primaryKey:
                     current.primaryKey ||
-                    sourceData.detail?.columns.find(
-                      (column) => column.primaryKey
-                    )?.name ||
+                    sourceDetail?.columns.find((column) => column.primaryKey)
+                      ?.name ||
                     '',
                 }));
                 setTargetTablesReload((current) => current + 1);
@@ -972,6 +1079,94 @@ export const HospitalIntegrationWorkspace = ({
               onTargetTableDraftChange={targetTableDraftChange}
               onValidate={() => void validateOrSave(false)}
             />
+          </FormDrawer>
+          <FormDrawer
+            destroyOnClose
+            className="hospital-integration hospital-integration--drawer"
+            data-testid="integration-backfill-drawer"
+            isOpen={backfillOpen}
+            isSubmitting={busy}
+            title={t('hospitalIntegration.backfill')}
+            width={720}
+            onClose={requestCloseBackfill}>
+            {confirmDiscard && (
+              <IntegrationDiscardConfirmation
+                onContinue={() => {
+                  setDiscardRequested(false);
+                  navigationGuard.stay();
+                }}
+                onDiscard={() => navigationGuard.proceed(closeBackfill)}
+              />
+            )}
+            <form
+              noValidate
+              className="hospital-integration__form"
+              id="integration-backfill-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitBackfill();
+              }}>
+              <p>{t('hospitalIntegration.backfillHint')}</p>
+              {(businessDateError || errorCode) && (
+                <IntegrationDrawerAlert
+                  focusKey={
+                    businessDateError
+                      ? 'businessDateInvalid'
+                      : errorCode ?? 'REQUEST_FAILED'
+                  }>
+                  <p>
+                    {t(
+                      businessDateError
+                        ? 'hospitalIntegration.businessDateInvalid'
+                        : integrationErrorKey(errorCode)
+                    )}
+                  </p>
+                </IntegrationDrawerAlert>
+              )}
+              <Input
+                isRequired
+                id="integration-business-date"
+                isDisabled={busy || confirmDiscard}
+                label={t('hospitalIntegration.businessDate')}
+                maxLength={10}
+                placeholder="yyyy-MM-dd"
+                value={businessDate}
+                onChange={(value) => {
+                  setBusinessDate(value);
+                  setBusinessDateError(false);
+                  setErrorCode(undefined);
+                }}
+              />
+              <p className="hospital-integration__hint">
+                {t('hospitalIntegration.mergeHint')}
+              </p>
+              <FormDrawerActions>
+                <div className="hospital-integration__actions">
+                  <Button
+                    form="integration-backfill-form"
+                    isDisabled={
+                      busy ||
+                      confirmDiscard ||
+                      !engineAvailable ||
+                      Boolean(
+                        selected &&
+                          (isIntegrationRunBusy(selected.latestRun) ||
+                            uncertainTasks[selected.id])
+                      )
+                    }
+                    isLoading={loading.backfill}
+                    type="submit">
+                    {t('label.run')}
+                  </Button>
+                  <Button
+                    color="tertiary"
+                    isDisabled={busy}
+                    onClick={requestCloseBackfill}>
+                    {t('label.cancel')}
+                  </Button>
+                </div>
+              </FormDrawerActions>
+            </form>
           </FormDrawer>
           {routeTaskId && !selected && loading.detail && (
             <p role="status">{t('hospitalIntegration.loading')}</p>
@@ -1009,7 +1204,19 @@ export const HospitalIntegrationWorkspace = ({
                   changeView('edit');
                 }}
                 onRefresh={() => void taskAction('refresh')}
-                onRun={(resume) => void taskAction(resume ? 'resume' : 'run')}
+                onRetry={() => {
+                  if (selected.latestRun?.businessDate) {
+                    void taskAction('retry', {
+                      businessDate: selected.latestRun.businessDate,
+                      retry: true,
+                    });
+                  }
+                }}
+                onRun={(resume) =>
+                  selected.mode === 'SQL_T1'
+                    ? openBackfill()
+                    : void taskAction(resume ? 'resume' : 'run')
+                }
                 onStop={() => void taskAction('stop')}
               />
             </div>

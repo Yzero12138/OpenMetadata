@@ -1624,6 +1624,22 @@ public interface CollectionDAO {
     @SqlQuery("SELECT json FROM entity_extension WHERE id = :id AND extension = :extension")
     String getExtension(@BindUUID("id") UUID id, @Bind("extension") String extension);
 
+    @ConnectionAwareSqlUpdate(
+        value =
+            "UPDATE entity_extension SET json = :json WHERE id = :id AND extension = :extension "
+                + "AND CAST(JSON_UNQUOTE(JSON_EXTRACT(json, '$.version')) AS UNSIGNED) = :version",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value =
+            "UPDATE entity_extension SET json = (:json :: jsonb) WHERE id = :id AND extension = :extension "
+                + "AND (json ->> 'version')::bigint = :version",
+        connectionType = POSTGRES)
+    int compareAndUpdateExtension(
+        @BindUUID("id") UUID id,
+        @Bind("extension") String extension,
+        @Bind("version") long version,
+        @BindJson("json") String json);
+
     @SqlQuery(
         "SELECT id, extension, json "
             + "FROM entity_extension "

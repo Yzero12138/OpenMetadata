@@ -30,6 +30,9 @@ import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
 export const IntegrationTargetTableForm = ({
   source,
   sourceConnectionId,
+  mode,
+  sourceQuery,
+  primaryKey,
   targetConnection,
   disabled,
   onBusyChange,
@@ -41,10 +44,32 @@ export const IntegrationTargetTableForm = ({
   const [targetTable, setTargetTable] = useState(() =>
     suggestIntegrationIdentifier(source.name)
   );
-  const [columns, setColumns] = useState(() => {
-    const used = new Set<string>();
+  const [columnDraft, setColumnDraft] = useState<
+    {
+      source: string;
+      target: string;
+      included: boolean;
+      primaryKey: boolean;
+    }[]
+  >([]);
+  const columns = (() => {
+    const used = new Set(
+      columnDraft
+        .filter((draft) =>
+          source.columns.some((column) => column.name === draft.source)
+        )
+        .map((draft) => draft.target)
+    );
 
     return source.columns.map((column) => {
+      const draft = columnDraft.find((item) => item.source === column.name);
+      if (draft) {
+        return {
+          ...draft,
+          primaryKey: column.primaryKey,
+          included: draft.included || column.primaryKey,
+        };
+      }
       const base = suggestIntegrationIdentifier(column.name);
       let target = base;
       let suffix = 1;
@@ -60,7 +85,8 @@ export const IntegrationTargetTableForm = ({
         primaryKey: column.primaryKey,
       };
     });
-  });
+  })();
+  const sourceColumnsKey = JSON.stringify(source.columns);
   const [preview, setPreview] = useState<IntegrationTargetTablePreview>();
   const [errorCode, setErrorCode] = useState<string>();
   const [validationError, setValidationError] = useState(false);
@@ -79,11 +105,13 @@ export const IntegrationTargetTableForm = ({
     fieldMappings: columns
       .filter((column) => column.included)
       .map(({ source, target }) => ({ source, target })),
+    ...(mode === 'SQL_T1' ? { mode, sourceQuery, primaryKey } : {}),
   };
   const inputKey = JSON.stringify(input);
   const latestInput = useRef(inputKey);
   latestInput.current = inputKey;
   const previewInput = useRef<string>();
+  const previewSource = useRef<string>();
 
   useEffect(() => {
     alive.current = true;
@@ -127,7 +155,10 @@ export const IntegrationTargetTableForm = ({
     setValidationError(!valid);
     if (
       !valid ||
-      (action === 'create' && (!preview || previewInput.current !== inputKey))
+      (action === 'create' &&
+        (!preview ||
+          previewInput.current !== inputKey ||
+          previewSource.current !== sourceColumnsKey))
     ) {
       return;
     }
@@ -156,6 +187,7 @@ export const IntegrationTargetTableForm = ({
           result.targetConnectionId === targetConnection.id
         ) {
           previewInput.current = capturedInput;
+          previewSource.current = sourceColumnsKey;
           setPreview(result);
         }
       } else if (preview) {
@@ -269,8 +301,8 @@ export const IntegrationTargetTableForm = ({
                   value={column.target}
                   onChange={(target) => {
                     invalidate();
-                    setColumns((current) =>
-                      current.map((item, i) =>
+                    setColumnDraft(
+                      columns.map((item, i) =>
                         i === index ? { ...item, target } : item
                       )
                     );
@@ -289,8 +321,8 @@ export const IntegrationTargetTableForm = ({
                   )}
                   onChange={(included) => {
                     invalidate();
-                    setColumns((current) =>
-                      current.map((item, i) =>
+                    setColumnDraft(
+                      columns.map((item, i) =>
                         i === index ? { ...item, included } : item
                       )
                     );
@@ -318,54 +350,58 @@ export const IntegrationTargetTableForm = ({
               )}
             </p>
           )}
-          {preview && previewInput.current === inputKey && (
-            <div
-              className="hospital-integration__target-preview"
-              data-testid="integration-target-preview">
-              <h3>{t('hospitalIntegration.targetTablePreview')}</h3>
-              <div className="hospital-integration__table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th scope="col">{t('label.name')}</th>
-                      <th scope="col">{t('label.type')}</th>
-                      <th scope="col">{t('label.primary-key')}</th>
-                      <th scope="col">{t('hospitalIntegration.nullable')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.table.columns.map((column) => (
-                      <tr key={column.name}>
-                        <td>{column.name}</td>
-                        <td>{column.dataType}</td>
-                        <td>
-                          {t(column.primaryKey ? 'label.yes' : 'label.no')}
-                        </td>
-                        <td>{t(column.nullable ? 'label.yes' : 'label.no')}</td>
+          {preview &&
+            previewInput.current === inputKey &&
+            previewSource.current === sourceColumnsKey && (
+              <div
+                className="hospital-integration__target-preview"
+                data-testid="integration-target-preview">
+                <h3>{t('hospitalIntegration.targetTablePreview')}</h3>
+                <div className="hospital-integration__table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">{t('label.name')}</th>
+                        <th scope="col">{t('label.type')}</th>
+                        <th scope="col">{t('label.primary-key')}</th>
+                        <th scope="col">{t('hospitalIntegration.nullable')}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {preview.table.columns.map((column) => (
+                        <tr key={column.name}>
+                          <td>{column.name}</td>
+                          <td>{column.dataType}</td>
+                          <td>
+                            {t(column.primaryKey ? 'label.yes' : 'label.no')}
+                          </td>
+                          <td>
+                            {t(column.nullable ? 'label.yes' : 'label.no')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <details>
+                  <summary>{t('hospitalIntegration.generatedDdl')}</summary>
+                  <pre
+                    className="hospital-integration__ddl"
+                    data-testid="integration-target-ddl">
+                    <code>{preview.ddl}</code>
+                  </pre>
+                </details>
+                <p className="hospital-integration__hint">
+                  {t('hospitalIntegration.targetTableCreateHint')}
+                </p>
+                <Button
+                  isDisabled={disabled || Boolean(pending)}
+                  isLoading={pending === 'create'}
+                  onClick={() => void perform('create')}>
+                  {t('hospitalIntegration.confirmCreateTargetTable')}
+                </Button>
               </div>
-              <details>
-                <summary>{t('hospitalIntegration.generatedDdl')}</summary>
-                <pre
-                  className="hospital-integration__ddl"
-                  data-testid="integration-target-ddl">
-                  <code>{preview.ddl}</code>
-                </pre>
-              </details>
-              <p className="hospital-integration__hint">
-                {t('hospitalIntegration.targetTableCreateHint')}
-              </p>
-              <Button
-                isDisabled={disabled || Boolean(pending)}
-                isLoading={pending === 'create'}
-                onClick={() => void perform('create')}>
-                {t('hospitalIntegration.confirmCreateTargetTable')}
-              </Button>
-            </div>
-          )}
+            )}
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 package org.openmetadata.service.integration;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -13,6 +14,20 @@ import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
 
 class IntegrationModelsTest {
   private static final ObjectMapper JSON = new ObjectMapper();
+
+  @Test
+  void acceptsBoundedSqlTaskConfigurationButRejectsCallerScheduleState() throws Exception {
+    ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+    input.put("mode", "SQL_T1");
+    input.put("sourceQuery", "SELECT id FROM public.visits WHERE day = :biz_date");
+    input.set(
+        "schedule",
+        JSON.readTree(
+            "{\"enabled\":false,\"dailyTime\":\"02:00\",\"timeZone\":\"Asia/Shanghai\"}"));
+    assertDoesNotThrow(() -> IntegrationModels.readInput(input, false));
+    input.putObject("scheduleState").put("nextRunAt", 1);
+    assertThrows(IntegrationException.class, () -> IntegrationModels.readInput(input, false));
+  }
 
   @Test
   void rejectsCallerSuppliedCredentialsAndEngineConfiguration() throws Exception {

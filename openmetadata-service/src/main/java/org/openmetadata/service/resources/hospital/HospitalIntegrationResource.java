@@ -25,6 +25,7 @@ import org.openmetadata.service.integration.IntegrationConfiguration;
 import org.openmetadata.service.integration.IntegrationException;
 import org.openmetadata.service.integration.IntegrationModels;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionUpdate;
+import org.openmetadata.service.integration.IntegrationModels.QuerySchemaInput;
 import org.openmetadata.service.integration.IntegrationModels.RunInput;
 import org.openmetadata.service.integration.IntegrationModels.StopInput;
 import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
@@ -157,6 +158,19 @@ public final class HospitalIntegrationResource {
   }
 
   @POST
+  @Path("/query/schema")
+  public Response querySchema(@Context SecurityContext securityContext, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.querySchema(
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), QuerySchemaInput.class)))
+                .build());
+  }
+
+  @POST
   @Path("/connections/{id}/tables/preview")
   public Response previewTargetTable(
       @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
@@ -255,7 +269,9 @@ public final class HospitalIntegrationResource {
           return Response.ok(
                   service.run(
                       id,
-                      request != null && IntegrationModels.read(request, RunInput.class).resume(),
+                      request == null
+                          ? new RunInput(false)
+                          : IntegrationModels.read(request, RunInput.class),
                       actor(securityContext)))
               .build();
         });

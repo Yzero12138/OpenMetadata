@@ -18,6 +18,7 @@ import { IntegrationTaskDetailProps } from './HospitalIntegrationPage.interface'
 import {
   canResumeIntegrationTask,
   integrationErrorKey,
+  integrationModeKey,
   isIntegrationRunBusy,
 } from './HospitalIntegrationUtils';
 
@@ -33,6 +34,7 @@ export const IntegrationTaskDetail = ({
   onEdit,
   onRefresh,
   onRun,
+  onRetry,
   onStop,
   onCatalog,
 }: IntegrationTaskDetailProps) => {
@@ -40,6 +42,11 @@ export const IntegrationTaskDetail = ({
   const run = task.latestRun;
   const active = isIntegrationRunBusy(run) || uncertain;
   const resumable = canResumeIntegrationTask(task.mode, run);
+  const sqlMode = task.mode === 'SQL_T1';
+  const canRetry =
+    sqlMode &&
+    Boolean(run?.businessDate) &&
+    ['FAILED', 'STOPPED', 'CANCELED', 'CANCELLED'].includes(run?.status ?? '');
   const timestamp = (value?: number) =>
     value === undefined
       ? t('hospitalIntegration.unavailable')
@@ -83,7 +90,11 @@ export const IntegrationTaskDetail = ({
       <dl className="hospital-integration__route-summary">
         <div>
           <dt>{t('hospitalIntegration.sourceTable')}</dt>
-          <dd>{`${task.sourceSchema}.${task.sourceTable}`}</dd>
+          <dd>
+            {sqlMode
+              ? `${task.sourceSchema} · ${t('hospitalIntegration.sqlResult')}`
+              : `${task.sourceSchema}.${task.sourceTable}`}
+          </dd>
           <small>
             {sourceConnectionName ?? t('hospitalIntegration.sourceConnection')}
           </small>
@@ -97,9 +108,7 @@ export const IntegrationTaskDetail = ({
         </div>
         <div>
           <dt>{t('label.mode')}</dt>
-          <dd>
-            {t(`hospitalIntegration.${task.mode === 'CDC' ? 'cdc' : 'full'}`)}
-          </dd>
+          <dd>{t(integrationModeKey(task.mode))}</dd>
           <small>
             {task.primaryKey
               ? `${t('label.primary-key')}: ${task.primaryKey}`
@@ -107,6 +116,69 @@ export const IntegrationTaskDetail = ({
           </small>
         </div>
       </dl>
+      {sqlMode && (
+        <section aria-labelledby="integration-schedule-detail-title">
+          <h2 id="integration-schedule-detail-title">{t('label.schedule')}</h2>
+          <dl className="hospital-integration__facts">
+            <div>
+              <dt>{t('label.status')}</dt>
+              <dd>
+                {t(
+                  task.schedule?.enabled
+                    ? 'label.enabled'
+                    : 'hospitalIntegration.scheduleDisabled'
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>{t('hospitalIntegration.dailyTime')}</dt>
+              <dd>
+                {task.schedule?.dailyTime ??
+                  t('hospitalIntegration.unavailable')}
+              </dd>
+            </div>
+            <div>
+              <dt>{t('label.timezone')}</dt>
+              <dd>
+                {task.schedule?.timeZone ??
+                  t('hospitalIntegration.unavailable')}
+              </dd>
+            </div>
+            <div>
+              <dt>{t('hospitalIntegration.nextRunAt')}</dt>
+              <dd>{timestamp(task.scheduleState?.nextRunAt)}</dd>
+            </div>
+            <div>
+              <dt>{t('hospitalIntegration.lastBusinessDate')}</dt>
+              <dd>
+                {task.scheduleState?.lastBusinessDate ??
+                  t('hospitalIntegration.unavailable')}
+              </dd>
+            </div>
+            <div>
+              <dt>{t('hospitalIntegration.pendingBusinessDate')}</dt>
+              <dd>
+                {task.scheduleState?.pendingBusinessDate ??
+                  t('hospitalIntegration.unavailable')}
+              </dd>
+            </div>
+          </dl>
+          {task.scheduleState?.lastError && (
+            <div className="hospital-integration__alert" role="alert">
+              {t(integrationErrorKey(task.scheduleState.lastError))}
+            </div>
+          )}
+          <p className="hospital-integration__hint">
+            {t('hospitalIntegration.mergeHint')}
+          </p>
+          <details>
+            <summary>{t('hospitalIntegration.sourceQuery')}</summary>
+            <pre className="hospital-integration__ddl">
+              <code>{task.sourceQuery}</code>
+            </pre>
+          </details>
+        </section>
+      )}
       <section aria-labelledby="integration-run-title">
         <div className="hospital-integration__section-heading">
           <h2 id="integration-run-title">
@@ -137,6 +209,28 @@ export const IntegrationTaskDetail = ({
               <dt>{t('hospitalIntegration.finishedAt')}</dt>
               <dd>{timestamp(run.finishedAt)}</dd>
             </div>
+            {sqlMode && (
+              <>
+                <div>
+                  <dt>{t('hospitalIntegration.businessDate')}</dt>
+                  <dd>
+                    {run.businessDate ?? t('hospitalIntegration.unavailable')}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('hospitalIntegration.windowStart')}</dt>
+                  <dd>
+                    {run.windowStart ?? t('hospitalIntegration.unavailable')}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t('hospitalIntegration.windowEnd')}</dt>
+                  <dd>
+                    {run.windowEnd ?? t('hospitalIntegration.unavailable')}
+                  </dd>
+                </div>
+              </>
+            )}
             <div>
               <dt>{t('hospitalIntegration.sourceCount')}</dt>
               <dd data-testid="integration-source-count">
@@ -171,7 +265,7 @@ export const IntegrationTaskDetail = ({
             isDisabled={busy || active || resumable || !engineAvailable}
             isLoading={loading.run}
             onClick={() => onRun(false)}>
-            {t('label.run')}
+            {t(sqlMode ? 'hospitalIntegration.backfill' : 'label.run')}
           </Button>
           <Button
             color="secondary"
@@ -186,22 +280,34 @@ export const IntegrationTaskDetail = ({
                 : 'label.stop'
             )}
           </Button>
-          <Button
-            color="secondary"
-            isDisabled={
-              busy ||
-              active ||
-              !engineAvailable ||
-              !canResumeIntegrationTask(task.mode, run)
-            }
-            isLoading={loading.resume}
-            onClick={() => onRun(true)}>
-            {t('label.resume')}
-          </Button>
+          {sqlMode ? (
+            <Button
+              color="secondary"
+              isDisabled={busy || active || !engineAvailable || !canRetry}
+              isLoading={loading.retry}
+              onClick={onRetry}>
+              {t('hospitalIntegration.retryBusinessDate')}
+            </Button>
+          ) : (
+            <Button
+              color="secondary"
+              isDisabled={
+                busy ||
+                active ||
+                !engineAvailable ||
+                !canResumeIntegrationTask(task.mode, run)
+              }
+              isLoading={loading.resume}
+              onClick={() => onRun(true)}>
+              {t('label.resume')}
+            </Button>
+          )}
         </div>
-        <p className="hospital-integration__hint">
-          {t('hospitalIntegration.recoveryHint')}
-        </p>
+        {!sqlMode && (
+          <p className="hospital-integration__hint">
+            {t('hospitalIntegration.recoveryHint')}
+          </p>
+        )}
         {resumable && (
           <p className="hospital-integration__hint" role="status">
             {t('hospitalIntegration.pausedHint')}
@@ -229,7 +335,7 @@ export const IntegrationTaskDetail = ({
           </div>
         )}
         <div className="hospital-integration__catalog-links">
-          {task.catalog.sourceFqn && (
+          {!sqlMode && task.catalog.sourceFqn && (
             <Link to={`/table/${encodeURIComponent(task.catalog.sourceFqn)}`}>
               {t('hospitalIntegration.sourceAsset')}
             </Link>
@@ -299,6 +405,9 @@ export const IntegrationTaskDetail = ({
                   <th scope="col">{t('label.status')}</th>
                   <th scope="col">{t('hospitalIntegration.submittedAt')}</th>
                   <th scope="col">{t('hospitalIntegration.finishedAt')}</th>
+                  {sqlMode && (
+                    <th scope="col">{t('hospitalIntegration.businessDate')}</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -308,6 +417,12 @@ export const IntegrationTaskDetail = ({
                     <td>{statusLabel(item)}</td>
                     <td>{timestamp(item.submittedAt)}</td>
                     <td>{timestamp(item.finishedAt)}</td>
+                    {sqlMode && (
+                      <td>
+                        {item.businessDate ??
+                          t('hospitalIntegration.unavailable')}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

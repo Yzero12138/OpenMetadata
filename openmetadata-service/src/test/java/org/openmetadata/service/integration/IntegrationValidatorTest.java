@@ -13,6 +13,48 @@ import org.openmetadata.service.integration.IntegrationModels.TaskInput;
 
 class IntegrationValidatorTest {
   @Test
+  void validatesSqlDeclaredKeyWithoutRequiringPhysicalKeyMetadata() {
+    TaskInput task = sqlInput();
+    var queryResult =
+        new TableDefinition(
+            "public",
+            "sql_result",
+            List.of(
+                column("id", "int8", true, false, Types.BIGINT, 19),
+                column("name", "varchar", true, false, Types.VARCHAR, 100)));
+    assertTrue(IntegrationValidator.validateTables(task, queryResult, target()).valid());
+    task.primaryKey = "missing";
+    assertTrue(
+        IntegrationValidator.validateTables(task, queryResult, target()).errors().stream()
+            .anyMatch(error -> error.code().equals("INVALID_PRIMARY_KEY")));
+    task.primaryKey = "name";
+    assertTrue(
+        IntegrationValidator.validateTables(task, queryResult, target()).errors().stream()
+            .anyMatch(error -> error.code().equals("INVALID_PRIMARY_KEY")));
+  }
+
+  @Test
+  void rejectsSqlQueryAndScheduleFieldsOnLegacyModesAndWrongVirtualResultName() {
+    TaskInput task = sqlInput();
+    task.sourceTable = "visits";
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task = validInput();
+    task.sourceQuery = "SELECT id FROM public.visits WHERE day = :biz_date";
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task.sourceQuery = null;
+    task.schedule = new IntegrationModels.ScheduleConfig();
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+  }
+
+  static TaskInput sqlInput() {
+    TaskInput task = validInput();
+    task.mode = "SQL_T1";
+    task.sourceTable = "sql_result";
+    task.sourceQuery = "SELECT id, name FROM public.visits WHERE day = :biz_date";
+    return task;
+  }
+
+  @Test
   void acceptsRealMappedPrimaryKeyAndCompatibleColumns() {
     TaskInput task = validInput();
     assertTrue(IntegrationValidator.validateTables(task, source(), target()).valid());

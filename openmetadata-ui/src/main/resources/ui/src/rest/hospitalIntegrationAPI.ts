@@ -19,7 +19,25 @@ export type IntegrationDatabaseType =
   | 'Mysql'
   | 'Postgres'
   | 'Doris';
-export type IntegrationMode = 'FULL' | 'CDC';
+export type IntegrationMode = 'FULL' | 'CDC' | 'SQL_T1';
+
+export interface IntegrationSchedule {
+  enabled: boolean;
+  dailyTime: string;
+  timeZone: string;
+}
+
+export interface IntegrationRunOptions {
+  businessDate?: string;
+  retry?: boolean;
+}
+
+export interface IntegrationQuerySchemaInput {
+  connectionId: string;
+  schema: string;
+  query: string;
+  businessDate?: string;
+}
 
 export interface IntegrationConnectionInput {
   name: string;
@@ -72,6 +90,9 @@ export interface IntegrationTargetTableInput {
   targetSchema: string;
   targetTable: string;
   fieldMappings: { source: string; target: string }[];
+  mode?: IntegrationMode;
+  sourceQuery?: string;
+  primaryKey?: string;
 }
 
 export interface IntegrationTargetTablePreview {
@@ -91,7 +112,9 @@ export interface IntegrationTaskInput {
   sourceTable: string;
   targetSchema: string;
   targetTable: string;
-  mode: 'FULL' | 'CDC';
+  mode: IntegrationMode;
+  sourceQuery?: string;
+  schedule?: IntegrationSchedule;
   primaryKey: string;
   fieldMappings: { source: string; target: string }[];
 }
@@ -107,6 +130,11 @@ export interface IntegrationRun {
   errorMessage?: string;
   savepointRequested?: boolean;
   canResume?: boolean;
+  businessDate?: string;
+  windowStart?: string;
+  windowEnd?: string;
+  trigger?: string;
+  scheduledFor?: number;
 }
 
 export interface IntegrationTask extends IntegrationTaskInput {
@@ -117,6 +145,12 @@ export interface IntegrationTask extends IntegrationTaskInput {
   updatedBy: string;
   latestRun?: IntegrationRun;
   runs: IntegrationRun[];
+  scheduleState?: {
+    nextRunAt?: number;
+    lastBusinessDate?: string;
+    pendingBusinessDate?: string;
+    lastError?: string;
+  };
   catalog: {
     status: 'PENDING' | 'SYNCED' | 'FAILED';
     syncedAt?: number;
@@ -240,6 +274,19 @@ export const getIntegrationTable = async (
   return data;
 };
 
+export const getIntegrationQuerySchema = async (
+  input: IntegrationQuerySchemaInput,
+  signal?: AbortSignal
+) => {
+  const { data } = await APIClient.post<IntegrationTable>(
+    `${PREFIX}/query/schema`,
+    input,
+    { signal }
+  );
+
+  return data;
+};
+
 export const previewIntegrationTargetTable = async (
   id: string,
   input: IntegrationTargetTableInput,
@@ -336,10 +383,14 @@ export const updateIntegrationTask = async (
   return data;
 };
 
-export const runIntegrationTask = async (id: string, resume = false) => {
+export const runIntegrationTask = async (
+  id: string,
+  resume = false,
+  options?: IntegrationRunOptions
+) => {
   const { data } = await APIClient.post<IntegrationTask>(
     `${PREFIX}/tasks/${encodeURIComponent(id)}/run`,
-    { resume }
+    { resume, ...options }
   );
 
   return data;
@@ -382,6 +433,14 @@ export const getIntegrationFailure = (error: unknown): IntegrationFailure => {
       'CONNECTION_DISABLED',
       'MODE_UNSUPPORTED',
       'DORIS_LABEL_INVALID',
+      'INVALID_SOURCE_QUERY',
+      'SQL_DATE_PARAMETER_REQUIRED',
+      'SQL_PARAMETER_UNSUPPORTED',
+      'SCHEMA_NOT_ALLOWED',
+      'INVALID_QUERY_COLUMNS',
+      'INVALID_SCHEDULE',
+      'BUSINESS_DATE_REQUIRED',
+      'BUSINESS_DATE_INVALID',
     ]);
 
     return {

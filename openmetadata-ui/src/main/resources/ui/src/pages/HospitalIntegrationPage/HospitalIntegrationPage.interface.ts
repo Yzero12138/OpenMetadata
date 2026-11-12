@@ -14,6 +14,7 @@ import { ReactNode } from 'react';
 import {
   IntegrationConnection,
   IntegrationConnectionInput,
+  IntegrationMode,
   IntegrationTable,
   IntegrationTargetTableInput,
   IntegrationTask,
@@ -29,6 +30,9 @@ export interface IntegrationTaskFormProps {
   connections: IntegrationConnection[];
   tablesLoading: boolean;
   onReloadTables: () => void;
+  queryLoading?: boolean;
+  queryErrorCode?: string;
+  onReadQuerySchema?: () => void;
   onTargetTableBusyChange: (busy: boolean) => void;
   onTargetTableDraftChange: (dirty: boolean) => void;
   onTargetTableCreated: (
@@ -51,6 +55,9 @@ export interface IntegrationTaskFormProps {
 export interface IntegrationTargetTableFormProps {
   source: IntegrationTable;
   sourceConnectionId: string;
+  mode?: IntegrationMode;
+  sourceQuery?: string;
+  primaryKey?: string;
   targetConnection: IntegrationConnection;
   disabled: boolean;
   onBusyChange: (busy: boolean) => void;
@@ -73,6 +80,7 @@ export interface IntegrationTaskDetailProps {
   onEdit: () => void;
   onRefresh: () => void;
   onRun: (resume: boolean) => void;
+  onRetry?: () => void;
   onStop: () => void;
   onCatalog: () => void;
 }

@@ -26,6 +26,7 @@ import {
   isIntegrationRunUncertain,
   suggestIntegrationIdentifier,
   toIntegrationConnectionInput,
+  toIntegrationTaskInput,
   validateIntegrationConnectionInput,
   validateIntegrationInput,
 } from './HospitalIntegrationUtils';
@@ -53,6 +54,91 @@ const input: IntegrationTaskInput = {
 };
 
 describe('Hospital integration validation and run safety', () => {
+  const sqlSource: IntegrationTable = {
+    ...source,
+    name: 'sql_result',
+    columns: source.columns.map((column) => ({ ...column, primaryKey: false })),
+  };
+  const sqlInput: IntegrationTaskInput = {
+    ...input,
+    mode: 'SQL_T1',
+    sourceTable: 'sql_result',
+    sourceQuery: 'SELECT id, value FROM public.encounter WHERE day = :biz_date',
+    schedule: { enabled: false, dailyTime: '02:00', timeZone: 'Asia/Shanghai' },
+  };
+
+  it('accepts an inspected SQL alias as the merge key and requires it to be mapped', () => {
+    expect(validateIntegrationInput(sqlInput, [sqlSource], [target])).toEqual(
+      []
+    );
+    expect(
+      validateIntegrationInput(
+        { ...sqlInput, primaryKey: 'missing' },
+        [sqlSource],
+        [target]
+      )
+    ).toContain('sqlPrimaryKeyRequired');
+    expect(
+      validateIntegrationInput(
+        { ...sqlInput, primaryKey: 'value' },
+        [sqlSource],
+        [target]
+      )
+    ).toContain('sqlPrimaryKeyRequired');
+    expect(
+      validateIntegrationInput(
+        { ...sqlInput, fieldMappings: [] },
+        [sqlSource],
+        [target]
+      )
+    ).toContain('sqlPrimaryKeyRequired');
+  });
+
+  it('requires fresh SQL columns, bounded query text and a valid daily schedule', () => {
+    expect(validateIntegrationInput(sqlInput, [], [target])).toContain(
+      'queryColumnsRequired'
+    );
+    expect(
+      validateIntegrationInput(
+        { ...sqlInput, sourceQuery: '' },
+        [sqlSource],
+        [target]
+      )
+    ).toContain('sourceQueryRequired');
+    expect(
+      validateIntegrationInput(
+        {
+          ...sqlInput,
+          schedule: {
+            enabled: true,
+            dailyTime: '25:00',
+            timeZone: 'Asia/Shanghai',
+          },
+        },
+        [sqlSource],
+        [target]
+      )
+    ).toContain('scheduleInvalid');
+  });
+
+  it('retains SQL and schedule when opening an existing task for edit', () => {
+    const task = {
+      ...sqlInput,
+      id: 'sql-task',
+      version: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      updatedBy: 'synthetic-admin',
+      runs: [],
+      catalog: { status: 'PENDING' as const },
+    };
+    const edited = toIntegrationTaskInput(task);
+
+    expect(edited.sourceQuery).toBe(sqlInput.sourceQuery);
+    expect(edited.schedule).toEqual(sqlInput.schedule);
+    expect(edited.schedule).not.toBe(task.schedule);
+  });
+
   it('keeps ambiguous failures blocked but permits retry after an explicit engine rejection', () => {
     expect(
       getIntegrationFailure({

@@ -46,7 +46,8 @@
   a:hover {
     text-decoration: underline;
   }
-  input {
+  input,
+  textarea {
     caret-color: var(--color-text-brand-primary);
   }
   :focus-visible {
@@ -152,6 +153,20 @@
   }
   &__field-wide {
     grid-column: ~'1 / -1';
+  }
+  &__query-field {
+    margin-bottom: 16px;
+  }
+  &__query {
+    min-height: 176px;
+    max-height: 320px;
+    resize: vertical;
+    font-family: var(--font-family-code, monospace);
+    line-height: 1.6;
+  }
+  &__schedule-toggle {
+    position: relative;
+    margin-bottom: 20px;
   }
   &__connection-actions {
     display: flex;

@@ -10,7 +10,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ReactNode } from 'react';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
@@ -41,6 +48,7 @@ jest.mock('../../rest/hospitalIntegrationAPI', () => ({
   deleteIntegrationConnection: jest.fn(),
   getIntegrationTableOptions: jest.fn(),
   getIntegrationTable: jest.fn(),
+  getIntegrationQuerySchema: jest.fn(),
   getIntegrationTasks: jest.fn(),
   getIntegrationTask: jest.fn(),
   validateIntegrationTask: jest.fn(),
@@ -1790,6 +1798,525 @@ describe('Hospital integration workbench behavior', () => {
       { source: 'department', target: 'department' },
     ],
   };
+  const sqlQuery =
+    'SELECT id, department FROM public.synthetic_encounter WHERE updated_at >= :window_start AND updated_at < :window_end';
+  const sqlTask: api.IntegrationTask = {
+    ...task,
+    name: 'synthetic_sql_t1',
+    mode: 'SQL_T1',
+    sourceTable: 'sql_result',
+    sourceQuery: sqlQuery,
+    targetSchema: dorisTable.schema,
+    targetTable: dorisTable.name,
+    schedule: { enabled: false, dailyTime: '02:00', timeZone: 'Asia/Shanghai' },
+    scheduleState: {
+      lastBusinessDate: '2026-11-09',
+      pendingBusinessDate: '2026-11-10',
+    },
+    latestRun: {
+      ...finished,
+      status: 'FAILED',
+      businessDate: '2026-11-10',
+      windowStart: '2026-11-10 00:00:00',
+      windowEnd: '2026-11-11 00:00:00',
+      trigger: 'SCHEDULED',
+    },
+  };
+  const sqlColumns = {
+    ...table,
+    name: 'sql_result',
+    columns: table.columns.map((column) => ({ ...column, primaryKey: false })),
+  };
+  const configureSql = async (connections?: api.IntegrationConnection[]) => {
+    mockApi.getIntegrationConnections.mockResolvedValue(
+      connections ?? [
+        sourceConnection,
+        targetConnection,
+        {
+          ...dorisConnection,
+          id: 'doris-target',
+          displayName: 'Synthetic Doris ODS',
+        },
+      ]
+    );
+    mockApi.getIntegrationQuerySchema.mockResolvedValue(sqlColumns);
+    await renderWorkspace();
+    await click(
+      screen.getByRole('button', { name: 'hospitalIntegration.createTask' })
+    );
+    await click(document.getElementById('integration-mode')!);
+    await click(
+      await screen.findByRole('option', { name: 'hospitalIntegration.sqlT1' })
+    );
+  };
+
+  it('reads SQL result columns only on request, starts scheduling disabled, and offers result aliases as keys', async () => {
+    await configureSql();
+    const query = screen.getByRole('textbox', {
+      name: /hospitalIntegration.sourceQuery/,
+    });
+
+    expect(query).toHaveAttribute('maxlength', '16384');
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'hospitalIntegration.enableSchedule',
+      })
+    ).not.toBeChecked();
+    expect(screen.getByLabelText(/hospitalIntegration.dailyTime/)).toHaveValue(
+      '02:00'
+    );
+    expect(screen.getByLabelText(/label.timezone/)).toHaveValue(
+      'Asia/Shanghai'
+    );
+    expect(screen.getByLabelText(/label.timezone/)).toHaveAttribute('readonly');
+
+    fireEvent.change(query, { target: { value: sqlQuery } });
+
+    expect(mockApi.getIntegrationQuerySchema).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', {
+        name: 'hospitalIntegration.createTargetFromSource',
+      })
+    ).not.toBeInTheDocument();
+
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.readQueryColumns',
+      })
+    );
+
+    expect(mockApi.getIntegrationQuerySchema).toHaveBeenCalledWith(
+      { connectionId: sourceConnection.id, schema: 'public', query: sqlQuery },
+      expect.any(AbortSignal)
+    );
+
+    await screen.findByText('hospitalIntegration.queryColumnsLoaded');
+    await click(document.getElementById('integration-primary-key')!);
+
+    expect(
+      await screen.findByRole('option', { name: 'id' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'department' })
+    ).toBeInTheDocument();
+
+    await click(screen.getByRole('option', { name: 'id' }));
+
+    expect(
+      mockApi.getIntegrationTable.mock.calls.some(
+        ([id, , name]) => id === sourceConnection.id && name === 'sql_result'
+      )
+    ).toBe(false);
+
+    await click(document.getElementById('integration-target-connection')!);
+
+    expect(
+      screen.queryByRole('option', { name: targetConnection.displayName })
+    ).not.toBeInTheDocument();
+
+    await click(
+      await screen.findByRole('option', { name: 'Synthetic Doris ODS' })
+    );
+    await screen.findByRole('button', {
+      name: 'hospitalIntegration.createTargetFromSource',
+    });
+
+    fireEvent.change(query, { target: { value: sqlQuery + ' ' } });
+
+    expect(
+      screen.queryByText('hospitalIntegration.queryColumnsLoaded')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: 'hospitalIntegration.createTargetFromSource',
+      })
+    ).not.toBeInTheDocument();
+    expect(
+      document.getElementById('integration-primary-key')
+    ).not.toHaveTextContent('id');
+  });
+
+  it('ignores SQL columns returned for an obsolete draft', async () => {
+    await configureSql();
+    let resolveColumns: (value: api.IntegrationTable) => void = () => undefined;
+    mockApi.getIntegrationQuerySchema.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveColumns = resolve;
+        })
+    );
+    const query = screen.getByRole('textbox', {
+      name: /hospitalIntegration.sourceQuery/,
+    });
+    fireEvent.change(query, { target: { value: sqlQuery } });
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.readQueryColumns',
+      })
+    );
+    fireEvent.change(query, { target: { value: sqlQuery + ' AND id > 10' } });
+    await act(async () => resolveColumns(sqlColumns));
+
+    expect(
+      screen.queryByText('hospitalIntegration.queryColumnsLoaded')
+    ).not.toBeInTheDocument();
+    expect(document.getElementById('integration-primary-key')).toBeDisabled();
+    expect(query).toHaveValue(sqlQuery + ' AND id > 10');
+  });
+
+  it('requires fresh result columns when editing SQL and saves an explicitly enabled daily schedule', async () => {
+    const editable = { ...sqlTask, fieldMappings: dorisPreview.fieldMappings };
+    mockApi.getIntegrationTasks.mockResolvedValue([editable]);
+    mockApi.getIntegrationTask.mockResolvedValue(editable);
+    mockApi.updateIntegrationTask.mockResolvedValue(editable);
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      sourceConnection,
+      dorisConnection,
+    ]);
+    mockApi.getIntegrationTableOptions.mockResolvedValue([
+      { ...dorisTable, columns: [] },
+    ]);
+    mockApi.getIntegrationTable.mockResolvedValue(dorisTable);
+    mockApi.getIntegrationQuerySchema.mockResolvedValue(sqlColumns);
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await click(screen.getByRole('button', { name: 'label.save' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'hospitalIntegration.queryColumnsRequired'
+    );
+    expect(mockApi.updateIntegrationTask).not.toHaveBeenCalled();
+
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.readQueryColumns',
+      })
+    );
+    await screen.findByText('hospitalIntegration.queryColumnsLoaded');
+    await click(
+      screen.getByRole('checkbox', {
+        name: 'hospitalIntegration.enableSchedule',
+      })
+    );
+    fireEvent.change(screen.getByLabelText(/hospitalIntegration.dailyTime/), {
+      target: { value: '03:15' },
+    });
+    await click(screen.getByRole('button', { name: 'label.save' }));
+
+    await waitFor(() =>
+      expect(mockApi.updateIntegrationTask).toHaveBeenCalledWith(
+        editable.id,
+        expect.objectContaining({
+          mode: 'SQL_T1',
+          sourceQuery: sqlQuery,
+          sourceTable: 'sql_result',
+          primaryKey: 'id',
+          schedule: {
+            enabled: true,
+            dailyTime: '03:15',
+            timeZone: 'Asia/Shanghai',
+          },
+        }),
+        editable.version
+      )
+    );
+  });
+
+  it.each(['success', 'failure', 'changed columns'] as const)(
+    'retains the exact Doris creation draft while unchanged SQL is refreshed: %s',
+    async (outcome) => {
+      const editable = {
+        ...sqlTask,
+        fieldMappings: dorisPreview.fieldMappings,
+      };
+      mockApi.getIntegrationTasks.mockResolvedValue([editable]);
+      mockApi.getIntegrationTask.mockResolvedValue(editable);
+      mockApi.getIntegrationConnections.mockResolvedValue([
+        sourceConnection,
+        dorisConnection,
+      ]);
+      mockApi.getIntegrationTableOptions.mockResolvedValue([
+        { ...dorisTable, columns: [] },
+      ]);
+      mockApi.getIntegrationTable.mockResolvedValue(dorisTable);
+      mockApi.getIntegrationQuerySchema.mockResolvedValue(sqlColumns);
+      mockApi.previewIntegrationTargetTable.mockResolvedValue(dorisPreview);
+      await renderWorkspace();
+      await openTask();
+      await click(screen.getByRole('button', { name: 'label.edit' }));
+      await click(
+        screen.getByRole('button', {
+          name: 'hospitalIntegration.readQueryColumns',
+        })
+      );
+      await click(
+        await screen.findByRole('button', {
+          name: 'hospitalIntegration.createTargetFromSource',
+        })
+      );
+      const tableName = document.getElementById(
+        'integration-new-target-table'
+      )!;
+      const idColumn = document.getElementById('integration-new-column-0')!;
+      const departmentColumn = document.getElementById(
+        'integration-new-column-1'
+      )!;
+      fireEvent.change(tableName, { target: { value: 'sql_daily_custom' } });
+      fireEvent.change(idColumn, { target: { value: 'custom_id' } });
+      fireEvent.change(departmentColumn, {
+        target: { value: 'custom_department' },
+      });
+      await click(
+        screen.getByRole('button', {
+          name: 'hospitalIntegration.previewTargetTable',
+        })
+      );
+      await screen.findByTestId('integration-target-ddl');
+      let resolveColumns: (value: api.IntegrationTable) => void = () =>
+        undefined;
+      let rejectColumns: (reason: unknown) => void = () => undefined;
+      mockApi.getIntegrationQuerySchema.mockImplementationOnce(
+        () =>
+          new Promise((resolve, reject) => {
+            resolveColumns = resolve;
+            rejectColumns = reject;
+          })
+      );
+      await click(
+        screen.getByRole('button', {
+          name: 'hospitalIntegration.readQueryColumns',
+        })
+      );
+
+      expect(document.getElementById('integration-new-target-table')).toBe(
+        tableName
+      );
+      expect(tableName).toHaveValue('sql_daily_custom');
+      expect(idColumn).toHaveValue('custom_id');
+      expect(departmentColumn).toHaveValue('custom_department');
+      expect(screen.getByRole('button', { name: 'label.save' })).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'label.validate' })
+      ).toBeDisabled();
+
+      await act(async () => {
+        if (outcome === 'failure') {
+          rejectColumns({
+            isAxiosError: true,
+            response: {
+              status: 503,
+              data: { errorCode: 'QUERY_METADATA_UNAVAILABLE' },
+            },
+          });
+        } else {
+          resolveColumns(
+            outcome === 'changed columns'
+              ? {
+                  ...sqlColumns,
+                  columns: [
+                    ...sqlColumns.columns,
+                    {
+                      name: 'updated_at',
+                      dataType: 'timestamp',
+                      nullable: true,
+                      primaryKey: false,
+                    },
+                  ],
+                }
+              : sqlColumns
+          );
+        }
+      });
+
+      expect(document.getElementById('integration-new-target-table')).toBe(
+        tableName
+      );
+      expect(tableName).toHaveValue('sql_daily_custom');
+      expect(document.getElementById('integration-new-column-0')).toHaveValue(
+        'custom_id'
+      );
+      expect(document.getElementById('integration-new-column-1')).toHaveValue(
+        'custom_department'
+      );
+
+      if (outcome === 'failure') {
+        expect(await screen.findByRole('alert')).toHaveTextContent(
+          'hospitalIntegration.errors.QUERY_METADATA_UNAVAILABLE'
+        );
+        expect(
+          screen.getByRole('button', { name: 'label.save' })
+        ).toBeDisabled();
+        expect(
+          screen.getByRole('button', { name: 'label.validate' })
+        ).toBeDisabled();
+
+        await click(
+          screen.getByRole('button', {
+            name: 'hospitalIntegration.readQueryColumns',
+          })
+        );
+        await waitFor(() =>
+          expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+        );
+
+        expect(document.getElementById('integration-new-target-table')).toBe(
+          tableName
+        );
+        expect(idColumn).toHaveValue('custom_id');
+      } else if (outcome === 'changed columns') {
+        expect(
+          screen.queryByTestId('integration-target-ddl')
+        ).not.toBeInTheDocument();
+        expect(document.getElementById('integration-new-column-2')).toHaveValue(
+          'updated_at'
+        );
+      } else {
+        expect(
+          screen.getByTestId('integration-target-ddl')
+        ).toBeInTheDocument();
+      }
+      await click(screen.getByRole('button', { name: 'label.cancel' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'message.unsaved-form-data'
+      );
+    }
+  );
+
+  it('invalidates SQL metadata after schema or source changes without reading automatically', async () => {
+    await configureSql([
+      { ...sourceConnection, schemas: ['public', 'audit'] },
+      { ...businessConnection, schemas: ['clinic'] },
+      { ...dorisConnection, id: 'doris-target' },
+    ]);
+    const query = screen.getByRole('textbox', {
+      name: /hospitalIntegration.sourceQuery/,
+    });
+    fireEvent.change(query, { target: { value: sqlQuery } });
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.readQueryColumns',
+      })
+    );
+    await screen.findByText('hospitalIntegration.queryColumnsLoaded');
+    await click(document.getElementById('integration-source-schema')!);
+    await click(await screen.findByRole('option', { name: 'audit' }));
+
+    expect(
+      screen.queryByText('hospitalIntegration.queryColumnsLoaded')
+    ).not.toBeInTheDocument();
+    expect(mockApi.getIntegrationQuerySchema).toHaveBeenCalledTimes(1);
+
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.readQueryColumns',
+      })
+    );
+    await screen.findByText('hospitalIntegration.queryColumnsLoaded');
+    await click(document.getElementById('integration-source-connection')!);
+    await click(
+      await screen.findByRole('option', {
+        name: businessConnection.displayName,
+      })
+    );
+
+    expect(
+      screen.queryByText('hospitalIntegration.queryColumnsLoaded')
+    ).not.toBeInTheDocument();
+    expect(
+      document.getElementById('integration-source-schema')
+    ).toHaveTextContent('clinic');
+    expect(mockApi.getIntegrationQuerySchema).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps SQL backfill in a right drawer and retries the exact failed business date', async () => {
+    mockApi.getIntegrationTasks.mockResolvedValue([sqlTask]);
+    mockApi.getIntegrationTask.mockResolvedValue(sqlTask);
+    mockApi.runIntegrationTask.mockResolvedValue(sqlTask);
+    await renderWorkspace();
+    await openTask();
+
+    expect(screen.getAllByText('2026-11-10').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText('hospitalIntegration.mergeHint')
+    ).toBeInTheDocument();
+
+    await click(
+      screen.getByRole('button', { name: 'hospitalIntegration.backfill' })
+    );
+    const drawer = await screen.findByTestId('integration-backfill-drawer');
+
+    expect(within(drawer).getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('integration-task-detail')).toBeInTheDocument();
+
+    fireEvent.change(
+      screen.getByLabelText(/hospitalIntegration.businessDate/),
+      { target: { value: '2026-11-08' } }
+    );
+    await click(within(drawer).getByRole('button', { name: 'label.run' }));
+    await waitFor(() =>
+      expect(mockApi.runIntegrationTask).toHaveBeenCalledWith(
+        sqlTask.id,
+        false,
+        { businessDate: '2026-11-08' }
+      )
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId('integration-backfill-drawer')
+      ).not.toBeInTheDocument()
+    );
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.retryBusinessDate',
+      })
+    );
+
+    expect(mockApi.runIntegrationTask).toHaveBeenLastCalledWith(
+      sqlTask.id,
+      false,
+      { businessDate: '2026-11-10', retry: true }
+    );
+  });
+
+  it('retains a failed backfill draft and blocks an invalid calendar date', async () => {
+    mockApi.getIntegrationTasks.mockResolvedValue([sqlTask]);
+    mockApi.getIntegrationTask.mockResolvedValue(sqlTask);
+    mockApi.runIntegrationTask.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 400, data: { errorCode: 'BUSINESS_DATE_INVALID' } },
+    });
+    await renderWorkspace();
+    await openTask();
+    await click(
+      screen.getByRole('button', { name: 'hospitalIntegration.backfill' })
+    );
+    const date = screen.getByLabelText(/hospitalIntegration.businessDate/);
+    fireEvent.change(date, { target: { value: '2026-02-30' } });
+    await click(
+      within(screen.getByTestId('integration-backfill-drawer')).getByRole(
+        'button',
+        { name: 'label.run' }
+      )
+    );
+
+    expect(mockApi.runIntegrationTask).not.toHaveBeenCalled();
+
+    fireEvent.change(date, { target: { value: '2026-11-08' } });
+    await click(
+      within(screen.getByTestId('integration-backfill-drawer')).getByRole(
+        'button',
+        { name: 'label.run' }
+      )
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'hospitalIntegration.errors.BUSINESS_DATE_INVALID'
+    );
+    expect(date).toHaveValue('2026-11-08');
+  });
+
   const openDorisCreate = async () => {
     mockApi.getIntegrationConnections.mockResolvedValue([
       sourceConnection,

@@ -51,6 +51,14 @@ final class DorisTableDdl {
         || !targetConnection.database.equals(input.targetSchema())) {
       throw new IntegrationException("SCHEMA_NOT_ALLOWED", 400);
     }
+    boolean sql = "SQL_T1".equals(input.mode());
+    if (sql) {
+      IntegrationSql.validate(
+          input.sourceQuery(),
+          Set.copyOf(sourceConnection.schemas),
+          input.sourceSchema(),
+          JdbcDialect.valueOf(sourceConnection.databaseType));
+    }
     if (source == null) {
       throw new IntegrationException("TABLE_NOT_FOUND", 404);
     }
@@ -70,10 +78,11 @@ final class DorisTableDdl {
     }
     List<ColumnDefinition> keys =
         source.columns().stream().filter(ColumnDefinition::primaryKey).toList();
-    if (keys.size() != 1 || keys.getFirst().nullable()) {
+    if ((!sql && (keys.size() != 1 || keys.getFirst().nullable()))
+        || (sql && !sourceColumns.containsKey(input.primaryKey()))) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
-    String key = keys.getFirst().name();
+    String key = sql ? input.primaryKey() : keys.getFirst().name();
     Set<String> from = new HashSet<>();
     Set<String> to = new HashSet<>();
     List<ColumnDefinition> columns = new ArrayList<>();
@@ -85,7 +94,11 @@ final class DorisTableDdl {
       if (column == null) {
         throw new IntegrationException("INVALID_CONFIGURATION", 400);
       }
-      columns.add(targetColumn(column, mapping.target(), sourceConnection.databaseType));
+      columns.add(
+          targetColumn(
+              sql ? declaredColumn(column, column.name().equals(key)) : column,
+              mapping.target(),
+              sourceConnection.databaseType));
     }
     if (!from.contains(key)) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
@@ -135,6 +148,18 @@ final class DorisTableDdl {
     }
     IntegrationValidator.requireTable(input.sourceSchema(), input.sourceTable());
     IntegrationValidator.requireTable(input.targetSchema(), input.targetTable());
+    if (input.mode() != null && !Set.of("FULL", "CDC", "SQL_T1").contains(input.mode())) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
+    if ("SQL_T1".equals(input.mode())) {
+      if (!"sql_result".equals(input.sourceTable())
+          || !IntegrationValidator.safeIdentifier(input.primaryKey())) {
+        throw new IntegrationException("INVALID_CONFIGURATION", 400);
+      }
+      IntegrationSql.references(input.sourceQuery(), input.sourceSchema());
+    } else if (input.sourceQuery() != null || input.primaryKey() != null) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
     DorisLoadLabel.requireTablePath(input.targetSchema(), input.targetTable());
     Set<String> sources = new HashSet<>();
     Set<String> targets = new HashSet<>();
@@ -235,6 +260,20 @@ final class DorisTableDdl {
         capacity);
   }
 
+  private static ColumnDefinition declaredColumn(ColumnDefinition column, boolean key) {
+    return new ColumnDefinition(
+        column.name(),
+        column.dataType(),
+        key ? false : column.nullable(),
+        key,
+        column.jdbcType(),
+        column.size(),
+        column.scale(),
+        column.hasDefault(),
+        column.unicodeSafeTarget(),
+        column.unicodeCapacity());
+  }
+
   private static IntegrationException unsupported() {
     return new IntegrationException("UNSUPPORTED_TARGET_TYPE", 400);
   }
@@ -271,6 +310,11 @@ final class DorisTableDdl {
         for (FieldMapping mapping : input.fieldMappings()) {
           string(data, mapping.source());
           string(data, mapping.target());
+        }
+        if ("SQL_T1".equals(input.mode())) {
+          string(data, input.mode());
+          string(data, input.sourceQuery());
+          string(data, input.primaryKey());
         }
       }
       return HexFormat.of()

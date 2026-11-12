@@ -2,6 +2,7 @@ package org.openmetadata.service.integration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,8 +12,117 @@ import org.junit.jupiter.api.Test;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionDefinition;
 import org.openmetadata.service.integration.IntegrationModels.FieldMapping;
 import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
+import org.openmetadata.service.integration.IntegrationModels.RunSummary;
 
 class SeaTunnelJobConfigTest {
+  @Test
+  void sqlT1SupportsEverySourceDialectAndUsesTheExplicitRunForDorisLabels() {
+    var targetDefinition = DorisTableDdlTest.targetConnection();
+    targetDefinition.host = "doris.example.internal";
+    targetDefinition.port = 9030;
+    targetDefinition.dorisHttpPort = 8030;
+    targetDefinition.username = "synthetic-writer";
+    targetDefinition.tlsMode = "DISABLED";
+    var target = new IntegrationConfiguration.JdbcEndpoint(targetDefinition, "synthetic-password");
+    for (String type : List.of("Oracle", "Mssql", "Mysql", "Postgres")) {
+      var definition = new ConnectionDefinition();
+      definition.copyInput(IntegrationConnectionsTest.input(type));
+      definition.id = "01234567-1234-1234-1234-123456789012";
+      var sourceEndpoint =
+          new IntegrationConfiguration.JdbcEndpoint(definition, "synthetic-password");
+      var task = IntegrationTask.from(IntegrationValidatorTest.sqlInput());
+      task.id = "12345678-1234-1234-1234-1234567890ab";
+      task.sourceConnectionId = definition.id;
+      task.sourceSchema = definition.schemas.getFirst();
+      task.targetConnectionId = targetDefinition.id;
+      task.targetSchema = "ods_validation";
+      task.targetTable = "visits";
+      String lower =
+          switch (type) {
+            case "Oracle" -> "TO_DATE(:window_start, 'YYYY-MM-DD HH24:MI:SS')";
+            case "Mssql" -> "CAST(:window_start AS datetime2)";
+            case "Mysql" -> "CAST(:window_start AS DATETIME)";
+            default -> ":window_start::timestamp";
+          };
+      task.sourceQuery =
+          "SELECT id, name FROM visits WHERE updated_at >= "
+              + lower
+              + " AND updated_at < "
+              + lower.replace(":window_start", ":window_end");
+      var builder =
+          new SeaTunnelJobConfig(id -> id.equals(definition.id) ? sourceEndpoint : target);
+      var run = new RunSummary();
+      run.businessDate = "2024-02-29";
+      run.jobId = "123456789";
+      var config = builder.build(task, run);
+      var source = (Map<?, ?>) ((List<?>) config.get("source")).getFirst();
+      var sink = (Map<?, ?>) ((List<?>) config.get("sink")).getFirst();
+      String query = (String) source.get("query");
+      assertTrue(query.contains(sourceEndpoint.dialect().quote(task.sourceSchema) + ".visits"));
+      assertTrue(query.contains("'2024-02-29 00:00:00'"));
+      assertTrue(query.contains("'2024-03-01 00:00:00'"));
+      assertEquals(sourceEndpoint.driver(), source.get("driver"));
+      if (type.equals("Oracle")) {
+        assertEquals("HospitalOracle", source.get("dialect"));
+        assertEquals(
+            "false", ((Map<?, ?>) source.get("properties")).get("oracle.jdbc.timezoneAsRegion"));
+      }
+      String firstLabel = (String) sink.get("sink.label-prefix");
+      run.jobId = "123456790";
+      var retrySink = (Map<?, ?>) ((List<?>) builder.build(task, run).get("sink")).getFirst();
+      assertNotEquals(firstLabel, retrySink.get("sink.label-prefix"));
+      assertEquals("2024-02-29", run.businessDate);
+    }
+  }
+
+  @Test
+  void sqlT1UsesSavedDateRawQueryAndAliasTransformWithNativeDorisUpsert() {
+    var task = IntegrationTask.from(IntegrationValidatorTest.sqlInput());
+    task.id = "12345678-1234-1234-1234-1234567890ab";
+    task.sourceQuery =
+        "WITH v AS (SELECT id, name FROM visits WHERE day = :biz_date) SELECT id, name FROM v";
+    task.targetConnectionId = "doris-ods-validation";
+    task.targetSchema = "ods_validation";
+    task.targetTable = "visits";
+    task.fieldMappings =
+        List.of(new FieldMapping("id", "visit_id"), new FieldMapping("name", "患者姓名"));
+    var definition = DorisTableDdlTest.targetConnection();
+    definition.host = "doris.example.internal";
+    definition.port = 9030;
+    definition.dorisHttpPort = 8030;
+    definition.username = "synthetic-writer";
+    definition.tlsMode = "DISABLED";
+    var endpoint = new IntegrationConfiguration.JdbcEndpoint(definition, "synthetic-password");
+    var builder =
+        new SeaTunnelJobConfig(
+            id -> id.equals(task.targetConnectionId) ? endpoint : configuration().endpoint(id));
+    var run = new RunSummary();
+    run.businessDate = "2025-12-31";
+    run.jobId = "123456789";
+    var config = builder.build(task, run);
+    var source = (Map<?, ?>) ((List<?>) config.get("source")).getFirst();
+    var transform = (Map<?, ?>) ((List<?>) config.get("transform")).getFirst();
+    var sink = (Map<?, ?>) ((List<?>) config.get("sink")).getFirst();
+    assertEquals(
+        "WITH v AS (SELECT id, name FROM \"public\".visits WHERE day = '2025-12-31') SELECT id, name FROM v",
+        source.get("query"));
+    assertEquals("SELECT `id` AS `visit_id`, `name` AS `患者姓名` FROM source", transform.get("query"));
+    assertEquals("mapped", sink.get("plugin_input"));
+    assertEquals("Doris", sink.get("plugin_name"));
+    assertEquals(false, sink.get("sink.enable-delete"));
+    assertEquals("APPEND_DATA", sink.get("data_save_mode"));
+    assertEquals("BATCH", ((Map<?, ?>) config.get("env")).get("job.mode"));
+    assertThrows(IntegrationException.class, () -> builder.build(task));
+    task.targetConnectionId = "synthetic-ods";
+    task.targetSchema = "public";
+    assertEquals(
+        "MODE_UNSUPPORTED",
+        assertThrows(
+                IntegrationException.class,
+                () -> new SeaTunnelJobConfig(configuration()).build(task, run))
+            .code());
+  }
+
   @Test
   void businessJdbcQueriesUseEachDatabaseDialectAndRejectUnimplementedCdc() throws Exception {
     for (String type : List.of("Oracle", "Mssql", "Mysql", "Postgres")) {

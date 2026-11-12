@@ -13,6 +13,24 @@ public final class IntegrationException extends RuntimeException {
               "Submission has not been confirmed. Reconcile this job before retrying."),
           Map.entry("JOB_NOT_FOUND", "The engine has no record of this job."),
           Map.entry("INVALID_CONFIGURATION", "The integration configuration is invalid."),
+          Map.entry(
+              "INVALID_SOURCE_QUERY",
+              "Use one read-only SELECT query within the configured source schemas."),
+          Map.entry(
+              "SQL_DATE_PARAMETER_REQUIRED",
+              "Include a supported business date or window parameter in the query."),
+          Map.entry("SQL_PARAMETER_UNSUPPORTED", "The query contains an unsupported parameter."),
+          Map.entry(
+              "QUERY_METADATA_UNAVAILABLE",
+              "Query columns could not be inspected. Check syntax, permissions and connectivity."),
+          Map.entry(
+              "INVALID_QUERY_COLUMNS", "Query columns must have unique supported names and types."),
+          Map.entry(
+              "BUSINESS_DATE_INVALID",
+              "Choose a valid business date before today; retries keep the original date."),
+          Map.entry(
+              "SCHEDULE_DATE_PENDING",
+              "Complete or retry the pending scheduled business date first."),
           Map.entry("VERSION_CONFLICT", "The task changed. Reload it before editing."),
           Map.entry("TASK_ACTIVE", "The task has an active, uncertain, or resumable run."),
           Map.entry("SAVEPOINT_UNAVAILABLE", "A completed savepoint has not been confirmed."),

@@ -16,10 +16,12 @@ import {
   createIntegrationTargetTable,
   deleteIntegrationConnection,
   getIntegrationConnection,
+  getIntegrationQuerySchema,
   getIntegrationTable,
   getIntegrationTableOptions,
   IntegrationConnectionInput,
   previewIntegrationTargetTable,
+  runIntegrationTask,
   updateIntegrationConnection,
 } from './hospitalIntegrationAPI';
 
@@ -157,5 +159,42 @@ describe('Hospital managed connection HTTP boundary', () => {
       ],
     ]);
     expect(client.post.mock.calls[1][1]).not.toHaveProperty('ddl');
+  });
+
+  it('inspects SQL columns explicitly without requesting source rows', async () => {
+    const definition = {
+      connectionId: 'source/id',
+      schema: 'public',
+      query: 'SELECT id FROM public.synthetic_visits WHERE day = :biz_date',
+    };
+    const controller = new AbortController();
+    await getIntegrationQuerySchema(definition, controller.signal);
+
+    expect(client.post).toHaveBeenCalledWith(
+      '/hospital/integration/query/schema',
+      definition,
+      { signal: controller.signal }
+    );
+  });
+
+  it('preserves legacy runs and sends an explicit business date for SQL backfill and retry', async () => {
+    await runIntegrationTask('task/id');
+    await runIntegrationTask('task/id', false, { businessDate: '2026-11-10' });
+    await runIntegrationTask('task/id', false, {
+      businessDate: '2026-11-10',
+      retry: true,
+    });
+
+    expect(client.post.mock.calls).toEqual([
+      ['/hospital/integration/tasks/task%2Fid/run', { resume: false }],
+      [
+        '/hospital/integration/tasks/task%2Fid/run',
+        { resume: false, businessDate: '2026-11-10' },
+      ],
+      [
+        '/hospital/integration/tasks/task%2Fid/run',
+        { resume: false, businessDate: '2026-11-10', retry: true },
+      ],
+    ]);
   });
 });

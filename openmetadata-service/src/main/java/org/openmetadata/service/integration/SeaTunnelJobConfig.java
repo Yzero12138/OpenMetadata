@@ -1,14 +1,18 @@
 package org.openmetadata.service.integration;
 
+import java.time.DateTimeException;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.openmetadata.service.integration.IntegrationConfiguration.JdbcEndpoint;
 import org.openmetadata.service.integration.IntegrationModels.FieldMapping;
 import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
+import org.openmetadata.service.integration.IntegrationModels.RunSummary;
 
 public final class SeaTunnelJobConfig {
   private final Function<String, JdbcEndpoint> endpoints;
@@ -22,12 +26,20 @@ public final class SeaTunnelJobConfig {
   }
 
   public Map<String, Object> build(IntegrationTask task) {
+    return build(task, task == null ? null : task.latestRun);
+  }
+
+  public Map<String, Object> build(IntegrationTask task, RunSummary run) {
     if (!IntegrationValidator.validateStructure(task).valid()) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
     JdbcEndpoint sourceConnection = endpoints.apply(task.sourceConnectionId);
     JdbcEndpoint targetConnection = endpoints.apply(task.targetConnectionId);
     boolean cdc = "CDC".equals(task.mode);
+    boolean sql = "SQL_T1".equals(task.mode);
+    if (sql && targetConnection.dialect() != JdbcDialect.Doris) {
+      throw new IntegrationException("MODE_UNSUPPORTED", 400);
+    }
     if (cdc
         && (sourceConnection.dialect() != JdbcDialect.Postgres
             || sourceConnection.database().contains("."))) {
@@ -74,18 +86,20 @@ public final class SeaTunnelJobConfig {
       source.put("query_timeout_sec", 60);
       source.put(
           "query",
-          "SELECT "
-              + task.fieldMappings.stream()
-                  .map(
-                      mapping ->
-                          sourceConnection.dialect().quote(mapping.source())
-                              + " AS "
-                              + sourceConnection.dialect().quote(mapping.target()))
-                  .collect(Collectors.joining(", "))
-              + " FROM "
-              + sourceConnection.dialect().quote(task.sourceSchema)
-              + "."
-              + sourceConnection.dialect().quote(task.sourceTable));
+          sql
+              ? sqlQuery(task, run, sourceConnection)
+              : "SELECT "
+                  + task.fieldMappings.stream()
+                      .map(
+                          mapping ->
+                              sourceConnection.dialect().quote(mapping.source())
+                                  + " AS "
+                                  + sourceConnection.dialect().quote(mapping.target()))
+                      .collect(Collectors.joining(", "))
+                  + " FROM "
+                  + sourceConnection.dialect().quote(task.sourceSchema)
+                  + "."
+                  + sourceConnection.dialect().quote(task.sourceTable));
       if (sourceConnection.dialect() == JdbcDialect.Oracle) {
         source.put("dialect", "HospitalOracle");
         source.put(
@@ -100,7 +114,7 @@ public final class SeaTunnelJobConfig {
       }
     }
     List<Map<String, Object>> transform = List.of();
-    if (cdc) {
+    if (cdc || sql) {
       String projection =
           task.fieldMappings.stream()
               .map(mapping -> "`" + mapping.source() + "` AS `" + mapping.target() + "`")
@@ -124,7 +138,7 @@ public final class SeaTunnelJobConfig {
             .findFirst()
             .orElseThrow(() -> new IntegrationException("INVALID_CONFIGURATION", 400));
     Map<String, Object> sink = new LinkedHashMap<>();
-    sink.put("plugin_input", cdc ? "mapped" : "source");
+    sink.put("plugin_input", cdc || sql ? "mapped" : "source");
     if (targetConnection.dialect() == JdbcDialect.Doris) {
       if (!"DISABLED".equals(targetConnection.tlsMode())) {
         throw new IntegrationException("INVALID_CONFIGURATION", 400);
@@ -138,7 +152,7 @@ public final class SeaTunnelJobConfig {
       sink.put("table", task.targetTable);
       sink.put("sink.enable-2pc", false);
       sink.put("sink.enable-delete", cdc);
-      sink.put("sink.label-prefix", DorisLoadLabel.prefix(task));
+      sink.put("sink.label-prefix", labelPrefix(task, run));
       sink.put("doris.batch.size", 100);
       sink.put(
           "doris.config",
@@ -205,5 +219,32 @@ public final class SeaTunnelJobConfig {
         transform,
         "sink",
         List.of(sink));
+  }
+
+  private static String sqlQuery(IntegrationTask task, RunSummary run, JdbcEndpoint source) {
+    IntegrationSql.validate(
+        task.sourceQuery, Set.copyOf(source.schemas()), task.sourceSchema, source.dialect());
+    LocalDate businessDate;
+    try {
+      businessDate =
+          run == null || run.businessDate == null ? null : LocalDate.parse(run.businessDate);
+      if (businessDate == null || !businessDate.toString().equals(run.businessDate)) {
+        throw new IntegrationException("BUSINESS_DATE_INVALID", 400);
+      }
+    } catch (DateTimeException e) {
+      throw new IntegrationException("BUSINESS_DATE_INVALID", 400);
+    }
+    return IntegrationSql.renderForSource(
+        task.sourceQuery, businessDate, task.sourceSchema, source.dialect());
+  }
+
+  private static String labelPrefix(IntegrationTask task, RunSummary run) {
+    if (run == task.latestRun) {
+      return DorisLoadLabel.prefix(task);
+    }
+    IntegrationTask context = IntegrationTask.from(task);
+    context.id = task.id;
+    context.latestRun = run;
+    return DorisLoadLabel.prefix(context);
   }
 }

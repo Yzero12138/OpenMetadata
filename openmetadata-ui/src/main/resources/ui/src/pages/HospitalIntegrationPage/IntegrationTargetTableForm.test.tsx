@@ -92,6 +92,55 @@ describe('Doris target table draft lifecycle', () => {
     jest.clearAllMocks();
   });
 
+  it('previews SQL result metadata with its query and declared alias key', async () => {
+    const query =
+      'SELECT ID, notes FROM public.synthetic WHERE day = :biz_date';
+    const sqlSource = {
+      ...source,
+      name: 'sql_result',
+      columns: source.columns.map((column) => ({
+        ...column,
+        primaryKey: false,
+      })),
+    };
+    render(
+      <IntegrationTaskForm
+        {...props}
+        sourceTables={[sqlSource]}
+        value={{
+          ...props.value,
+          mode: 'SQL_T1',
+          sourceTable: 'sql_result',
+          sourceQuery: query,
+          primaryKey: 'ID',
+          schedule: {
+            enabled: false,
+            dailyTime: '02:00',
+            timeZone: 'Asia/Shanghai',
+          },
+        }}
+      />
+    );
+    await open();
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.previewTargetTable',
+      })
+    );
+
+    expect(mockApi.previewIntegrationTargetTable).toHaveBeenCalledWith(
+      target.id,
+      expect.objectContaining({
+        mode: 'SQL_T1',
+        sourceQuery: query,
+        primaryKey: 'ID',
+        sourceSchema: 'public',
+        sourceTable: 'sql_result',
+      }),
+      expect.any(AbortSignal)
+    );
+  });
+
   it('ignores an old preview after the source column metadata changes', async () => {
     let resolvePreview: (
       value: api.IntegrationTargetTablePreview

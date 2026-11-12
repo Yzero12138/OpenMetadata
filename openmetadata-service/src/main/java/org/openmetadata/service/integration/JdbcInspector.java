@@ -4,12 +4,16 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
 import org.openmetadata.service.integration.IntegrationConfiguration.JdbcEndpoint;
@@ -21,9 +25,89 @@ public final class JdbcInspector {
   private static final int MAX_TABLES_WITH_COLUMNS = 200;
   private static final int MAX_COLUMNS = 128;
   private final Function<String, JdbcEndpoint> endpoints;
+  private final ConnectionFactory connections;
 
   public JdbcInspector(Function<String, JdbcEndpoint> endpoints) {
+    this(
+        endpoints,
+        (endpoint, properties) -> DriverManager.getConnection(endpoint.jdbcUrl(), properties));
+  }
+
+  JdbcInspector(Function<String, JdbcEndpoint> endpoints, ConnectionFactory connections) {
     this.endpoints = endpoints;
+    this.connections = connections;
+  }
+
+  public TableDefinition query(
+      JdbcEndpoint endpoint, String schema, String query, LocalDate businessDate) {
+    if (endpoint == null) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
+    IntegrationSql.validate(query, Set.copyOf(endpoint.schemas()), schema, endpoint.dialect());
+    String rendered =
+        IntegrationSql.renderForSource(query, businessDate, schema, endpoint.dialect());
+    if (endpoint.dialect() == JdbcDialect.Mssql) {
+      rendered = ";" + rendered;
+    }
+    try (Connection connection = open(endpoint, true);
+        var statement = connection.prepareStatement(rendered)) {
+      statement.setQueryTimeout(5);
+      statement.setMaxRows(1);
+      ResultSetMetaData metadata = statement.getMetaData();
+      if (metadata == null) {
+        throw new IntegrationException("QUERY_METADATA_UNAVAILABLE", 503);
+      }
+      int count = metadata.getColumnCount();
+      if (count < 1 || count > MAX_COLUMNS) {
+        throw new IntegrationException("INVALID_QUERY_COLUMNS", 400);
+      }
+      Set<String> names = new HashSet<>();
+      List<ColumnDefinition> columns = new ArrayList<>();
+      for (int index = 1; index <= count; index++) {
+        String name = metadata.getColumnLabel(index);
+        String type = metadata.getColumnTypeName(index);
+        if (!IntegrationValidator.safeIdentifier(name)
+            || !names.add(name.toLowerCase(Locale.ROOT))
+            || type == null
+            || type.isBlank()) {
+          throw new IntegrationException("INVALID_QUERY_COLUMNS", 400);
+        }
+        int jdbcType = metadata.getColumnType(index);
+        int size = metadata.getPrecision(index);
+        boolean national =
+            Set.of(Types.NCHAR, Types.NVARCHAR, Types.LONGNVARCHAR).contains(jdbcType);
+        int unicodeCapacity = national ? size : 0;
+        if (national
+            && Set.of(JdbcDialect.Mssql, JdbcDialect.Oracle).contains(endpoint.dialect())) {
+          unicodeCapacity = size / 2;
+        }
+        columns.add(
+            new ColumnDefinition(
+                name,
+                type,
+                metadata.isNullable(index) != ResultSetMetaData.columnNoNulls,
+                false,
+                jdbcType,
+                size,
+                metadata.getScale(index),
+                false,
+                national,
+                unicodeCapacity));
+      }
+      return new TableDefinition(schema, "sql_result", List.copyOf(columns));
+    } catch (SQLException e) {
+      throw new IntegrationException("QUERY_METADATA_UNAVAILABLE", 503);
+    }
+  }
+
+  public TableDefinition query(
+      String connectionId, String schema, String query, LocalDate businessDate) {
+    return query(endpoints.apply(connectionId), schema, query, businessDate);
+  }
+
+  @FunctionalInterface
+  interface ConnectionFactory {
+    Connection open(JdbcEndpoint endpoint, Properties properties) throws SQLException;
   }
 
   public boolean test(String connectionId) {
@@ -115,8 +199,17 @@ public final class JdbcInspector {
   }
 
   private Connection open(JdbcEndpoint endpoint) throws SQLException {
-    Connection connection =
-        DriverManager.getConnection(endpoint.jdbcUrl(), endpoint.connectionProperties());
+    return open(endpoint, false);
+  }
+
+  private Connection open(JdbcEndpoint endpoint, boolean queryMetadata) throws SQLException {
+    Properties properties = new Properties();
+    properties.putAll(endpoint.connectionProperties());
+    if (queryMetadata && endpoint.dialect() == JdbcDialect.Mysql) {
+      properties.setProperty("useServerPrepStmts", "true");
+      properties.setProperty("emulateUnsupportedPstmts", "false");
+    }
+    Connection connection = connections.open(endpoint, properties);
     try {
       connection.setReadOnly(true);
       return connection;

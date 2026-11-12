@@ -14,11 +14,24 @@ import {
   IntegrationConnection,
   IntegrationConnectionInput,
   IntegrationDatabaseType,
+  IntegrationMode,
   IntegrationRun,
   IntegrationTable,
   IntegrationTask,
   IntegrationTaskInput,
 } from '../../rest/hospitalIntegrationAPI';
+
+export const SQL_QUERY_MAX_BYTES = 16384;
+export const DEFAULT_INTEGRATION_SCHEDULE = {
+  enabled: false,
+  dailyTime: '02:00',
+  timeZone: 'Asia/Shanghai',
+};
+
+export const integrationModeKey = (mode: IntegrationMode) =>
+  `hospitalIntegration.${
+    mode === 'SQL_T1' ? 'sqlT1' : mode === 'CDC' ? 'cdc' : 'full'
+  }`;
 
 export const EMPTY_INTEGRATION_TASK: IntegrationTaskInput = {
   name: '',
@@ -81,6 +94,8 @@ export const toIntegrationTaskInput = (
   mode: task.mode,
   primaryKey: task.primaryKey,
   fieldMappings: task.fieldMappings.map((mapping) => ({ ...mapping })),
+  ...(task.sourceQuery !== undefined ? { sourceQuery: task.sourceQuery } : {}),
+  ...(task.schedule ? { schedule: { ...task.schedule } } : {}),
 });
 
 export const canResumeIntegrationTask = (
@@ -145,6 +160,31 @@ export const validateIntegrationInput = (
   ) {
     errors.push('primaryKeyRequired');
   }
+  if (input.mode === 'SQL_T1') {
+    if (!input.sourceQuery?.trim()) {
+      errors.push('sourceQueryRequired');
+    } else if (new Blob([input.sourceQuery]).size > SQL_QUERY_MAX_BYTES) {
+      errors.push('queryTooLong');
+    }
+    if (!source?.columns.length || input.sourceTable !== 'sql_result') {
+      errors.push('queryColumnsRequired');
+    }
+    if (
+      !source?.columns.some((column) => column.name === input.primaryKey) ||
+      !input.fieldMappings.some(
+        (mapping) => mapping.source === input.primaryKey
+      )
+    ) {
+      errors.push('sqlPrimaryKeyRequired');
+    }
+    if (
+      !input.schedule ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.schedule.dailyTime) ||
+      input.schedule.timeZone !== DEFAULT_INTEGRATION_SCHEDULE.timeZone
+    ) {
+      errors.push('scheduleInvalid');
+    }
+  }
 
   return errors;
 };
@@ -180,6 +220,14 @@ export const integrationErrorKey = (code?: string) => {
     'TABLE_PREVIEW_STALE',
     'UNSUPPORTED_TARGET_TYPE',
     'TARGET_TABLE_CREATE_FAILED',
+    'INVALID_SOURCE_QUERY',
+    'SQL_DATE_PARAMETER_REQUIRED',
+    'SQL_PARAMETER_UNSUPPORTED',
+    'QUERY_METADATA_UNAVAILABLE',
+    'INVALID_QUERY_COLUMNS',
+    'INVALID_SCHEDULE',
+    'BUSINESS_DATE_REQUIRED',
+    'BUSINESS_DATE_INVALID',
   ]);
 
   return `hospitalIntegration.errors.${

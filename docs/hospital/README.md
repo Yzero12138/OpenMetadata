@@ -2,6 +2,8 @@
 
 基线：OpenMetadata `2.0.4-release`。Fork：<https://github.com/Yzero12138/OpenMetadata>。
 
+SQL 定时采集见 [SQL T+1 配置与补跑](sql-t1-sync.md)，本轮验证边界见 [SQL T+1 验证记录](sql-t1-verification.md)。
+
 ## 工号统一登录
 
 员工在 **Integrate** 使用工号、密码登录，在 `/s/portal` 应用门户打开 `datahub` 应用。

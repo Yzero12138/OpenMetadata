@@ -92,8 +92,32 @@ public final class IntegrationValidator {
     identifier(errors, "sourceTable", input.sourceTable);
     identifier(errors, "targetTable", input.targetTable);
     identifier(errors, "primaryKey", input.primaryKey);
-    if (!Set.of("FULL", "CDC").contains(input.mode == null ? "" : input.mode)) {
-      error(errors, "mode", "INVALID_MODE", "Select FULL or CDC.");
+    if (!Set.of("FULL", "CDC", "SQL_T1").contains(input.mode == null ? "" : input.mode)) {
+      error(errors, "mode", "INVALID_MODE", "Select FULL, CDC or SQL_T1.");
+    }
+    if ("SQL_T1".equals(input.mode)) {
+      if (!"sql_result".equals(input.sourceTable)) {
+        error(errors, "sourceTable", "INVALID_CONFIGURATION", "SQL results must use sql_result.");
+      }
+      if (safeIdentifier(input.sourceSchema)) {
+        try {
+          IntegrationSql.references(input.sourceQuery, input.sourceSchema);
+        } catch (IntegrationException exception) {
+          error(
+              errors,
+              "sourceQuery",
+              exception.code(),
+              "Provide one bounded read-only query with a business-date parameter.");
+        }
+      }
+    } else {
+      if (input.sourceQuery != null) {
+        error(
+            errors, "sourceQuery", "INVALID_CONFIGURATION", "Source queries require SQL_T1 mode.");
+      }
+      if (input.schedule != null) {
+        error(errors, "schedule", "INVALID_CONFIGURATION", "Daily schedules require SQL_T1 mode.");
+      }
     }
     if (input.fieldMappings == null
         || input.fieldMappings.isEmpty()
@@ -118,7 +142,20 @@ public final class IntegrationValidator {
 
   public static ValidationResult validateTables(
       TaskInput input, TableDefinition source, TableDefinition target) {
+    return validateTables(input, source, target, input != null && "SQL_T1".equals(input.mode));
+  }
+
+  public static ValidationResult validateTablesSql(
+      TaskInput input, TableDefinition source, TableDefinition target) {
+    return validateTables(input, source, target, true);
+  }
+
+  private static ValidationResult validateTables(
+      TaskInput input, TableDefinition source, TableDefinition target, boolean sql) {
     List<ValidationError> errors = new ArrayList<>(validateStructure(input).errors());
+    if (sql && input != null && !"SQL_T1".equals(input.mode)) {
+      error(errors, "mode", "INVALID_MODE", "SQL result validation requires SQL_T1 mode.");
+    }
     if (!errors.isEmpty()) {
       return result(errors);
     }
@@ -146,7 +183,10 @@ public final class IntegrationValidator {
             "fieldMappings",
             "COLUMN_NOT_FOUND",
             "Each mapped column must exist in its selected table.");
-      } else if (!compatible(from, to) || (from.nullable() && !to.nullable())) {
+      } else if (!compatible(from, to)
+          || (from.nullable()
+              && !to.nullable()
+              && !(sql && from.name().equals(input.primaryKey)))) {
         error(
             errors,
             "fieldMappings",
@@ -164,15 +204,21 @@ public final class IntegrationValidator {
             .map(FieldMapping::target)
             .findFirst()
             .orElse(null);
-    if (sourceKeys.size() != 1
+    boolean invalidSourceKey =
+        sql
+            ? !sourceColumns.containsKey(input.primaryKey)
+            : sourceKeys.size() != 1 || !sourceKeys.getFirst().name().equals(input.primaryKey);
+    if (invalidSourceKey
         || targetKeys.size() != 1
-        || !sourceKeys.getFirst().name().equals(input.primaryKey)
-        || !targetKeys.getFirst().name().equals(mappedKey)) {
+        || !targetKeys.getFirst().name().equals(mappedKey)
+        || (sql && targetKeys.getFirst().nullable())) {
       error(
           errors,
           "primaryKey",
           "INVALID_PRIMARY_KEY",
-          "Map the actual single-column source primary key to the target primary key.");
+          sql
+              ? "Declare one non-null unique result key and map it to the target primary key."
+              : "Map the actual single-column source primary key to the target primary key.");
     }
     for (ColumnDefinition column : target.columns()) {
       if (!column.nullable() && !column.hasDefault() && !targets.contains(column.name())) {

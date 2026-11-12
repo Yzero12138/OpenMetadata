@@ -48,6 +48,8 @@ public final class IntegrationModels {
     public String targetTable;
     public String mode;
     public String primaryKey;
+    public String sourceQuery;
+    public ScheduleConfig schedule;
     public List<FieldMapping> fieldMappings;
 
     protected void copyInput(TaskInput input) {
@@ -61,6 +63,8 @@ public final class IntegrationModels {
       targetTable = input.targetTable;
       mode = input.mode;
       primaryKey = input.primaryKey;
+      sourceQuery = input.sourceQuery;
+      schedule = input.schedule == null ? null : input.schedule.copy();
       fieldMappings = input.fieldMappings == null ? null : List.copyOf(input.fieldMappings);
     }
   }
@@ -79,6 +83,7 @@ public final class IntegrationModels {
     public RunSummary latestRun;
     public List<RunSummary> runs = new ArrayList<>();
     public CatalogSummary catalog = new CatalogSummary();
+    public ScheduleState scheduleState;
 
     public static IntegrationTask from(TaskInput input) {
       IntegrationTask task = new IntegrationTask();
@@ -103,6 +108,33 @@ public final class IntegrationModels {
     public String errorMessage;
     public Boolean savepointRequested;
     public Boolean canResume;
+    public String businessDate;
+    public String windowStart;
+    public String windowEnd;
+    public String trigger;
+    public Long scheduledFor;
+  }
+
+  public static final class ScheduleConfig {
+    public boolean enabled;
+    public String dailyTime = "02:00";
+    public String timeZone = "Asia/Shanghai";
+
+    public ScheduleConfig copy() {
+      ScheduleConfig result = new ScheduleConfig();
+      result.enabled = enabled;
+      result.dailyTime = dailyTime;
+      result.timeZone = timeZone;
+      return result;
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public static final class ScheduleState {
+    public Long nextRunAt;
+    public String lastBusinessDate;
+    public String pendingBusinessDate;
+    public String lastError;
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -150,7 +182,34 @@ public final class IntegrationModels {
       String targetSchema,
       String targetTable,
       List<FieldMapping> fieldMappings,
-      String previewHash) {}
+      String previewHash,
+      String mode,
+      String sourceQuery,
+      String primaryKey) {
+    public TargetTableInput(
+        String sourceConnectionId,
+        String sourceSchema,
+        String sourceTable,
+        String targetSchema,
+        String targetTable,
+        List<FieldMapping> fieldMappings,
+        String previewHash) {
+      this(
+          sourceConnectionId,
+          sourceSchema,
+          sourceTable,
+          targetSchema,
+          targetTable,
+          fieldMappings,
+          previewHash,
+          null,
+          null,
+          null);
+    }
+  }
+
+  public record QuerySchemaInput(
+      String connectionId, String schema, String query, String businessDate) {}
 
   public record TargetTablePreview(
       String targetConnectionId,
@@ -230,7 +289,11 @@ public final class IntegrationModels {
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public record ConnectionStatus(boolean connected, String errorCode) {}
 
-  public record RunInput(boolean resume) {}
+  public record RunInput(boolean resume, String businessDate, boolean retry) {
+    public RunInput(boolean resume) {
+      this(resume, null, false);
+    }
+  }
 
   public record StopInput(boolean savepoint) {}
 

@@ -18,6 +18,68 @@ import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
 
 class DorisTableDdlTest {
   @Test
+  void sqlResultUsesDeclaredKeyAndFingerprintsQueryAndKey() {
+    var mappings =
+        List.of(new FieldMapping("id", "visit_id"), new FieldMapping("patient_name", "name"));
+    String query = "SELECT id, patient_name FROM public.visits WHERE day = :biz_date";
+    var input = sqlInput(mappings, query, "id");
+    var result =
+        new TableDefinition(
+            "public",
+            "sql_result",
+            List.of(
+                new ColumnDefinition("id", "bigint", true, false, Types.BIGINT, 19, 0, false),
+                new ColumnDefinition(
+                    "patient_name", "varchar", true, false, Types.VARCHAR, 100, 0, false)));
+    var preview = DorisTableDdl.preview(input, result, sourceConnection(), targetConnection(), 1);
+    assertTrue(preview.ddl().contains("`visit_id` BIGINT NOT NULL"));
+    assertTrue(preview.ddl().contains("UNIQUE KEY (`visit_id`)"));
+    assertTrue(result.columns().getFirst().nullable());
+    assertFalse(result.columns().getFirst().primaryKey());
+    assertNotEquals(
+        preview.previewHash(),
+        DorisTableDdl.preview(
+                sqlInput(mappings, query + " AND id > 0", "id"),
+                result,
+                sourceConnection(),
+                targetConnection(),
+                1)
+            .previewHash());
+    assertThrows(
+        IntegrationException.class,
+        () ->
+            DorisTableDdl.preview(
+                sqlInput(mappings, query, "missing"),
+                result,
+                sourceConnection(),
+                targetConnection(),
+                1));
+    assertNotEquals(
+        preview.previewHash(),
+        DorisTableDdl.preview(
+                sqlInput(mappings, query, "patient_name"),
+                result,
+                sourceConnection(),
+                targetConnection(),
+                1)
+            .previewHash());
+  }
+
+  private TargetTableInput sqlInput(List<FieldMapping> mappings, String query, String key) {
+    return new TargetTableInput(
+        "synthetic-source",
+        "public",
+        "sql_result",
+        "ods_validation",
+        "new_visits",
+        mappings,
+        null,
+        "SQL_T1",
+        query,
+        key);
+  }
+
+  @Test
   void rejectsAnUnusableStreamLoadLabelBeforeCreatingATargetTable() {
     var mappings = List.of(new FieldMapping("id", "id"));
     for (String name : List.of("t".repeat(54), "table$", "table#", "表名")) {

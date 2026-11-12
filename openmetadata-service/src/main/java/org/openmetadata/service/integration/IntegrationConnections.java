@@ -151,7 +151,8 @@ public final class IntegrationConnections {
     if (!Boolean.TRUE.equals(connection.enabled)) {
       throw new IntegrationException("CONNECTION_DISABLED", 409);
     }
-    if ("SOURCE".equals(role) && !connection.supportedModes.contains(mode)) {
+    if ("SOURCE".equals(role)
+        && !connection.supportedModes.contains("SQL_T1".equals(mode) ? "FULL" : mode)) {
       throw new IntegrationException("MODE_UNSUPPORTED", 400);
     }
   }
