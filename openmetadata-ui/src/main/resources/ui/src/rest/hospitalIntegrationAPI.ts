@@ -27,6 +27,31 @@ export interface IntegrationSchedule {
   timeZone: string;
 }
 
+export interface IntegrationInitializationConfig {
+  enabled: boolean;
+  startDate: string;
+  batchUnit: 'DAY' | 'MONTH';
+}
+
+export interface IntegrationInitializationState {
+  id: string;
+  status: 'PENDING' | 'RUNNING' | 'FAILED' | 'COMPLETED';
+  startDate: string;
+  cutoffDate: string;
+  nextDate: string;
+  batchUnit: 'DAY' | 'MONTH';
+  completedBatches: number;
+  totalBatches: number;
+  pendingStartDate?: string;
+  pendingEndDate?: string;
+  pendingJobId?: string;
+  startedAt?: number;
+  completedAt?: number;
+  lastError?: string;
+}
+
+export type IntegrationInitializationAction = 'PAUSE' | 'CONTINUE';
+
 export interface IntegrationRunOptions {
   businessDate?: string;
   retry?: boolean;
@@ -115,6 +140,7 @@ export interface IntegrationTaskInput {
   mode: IntegrationMode;
   sourceQuery?: string;
   schedule?: IntegrationSchedule;
+  initialization?: IntegrationInitializationConfig;
   primaryKey: string;
   fieldMappings: { source: string; target: string }[];
 }
@@ -135,6 +161,8 @@ export interface IntegrationRun {
   windowEnd?: string;
   trigger?: string;
   scheduledFor?: number;
+  initializationId?: string;
+  batchIndex?: number;
 }
 
 export interface IntegrationTask extends IntegrationTaskInput {
@@ -145,6 +173,7 @@ export interface IntegrationTask extends IntegrationTaskInput {
   updatedBy: string;
   latestRun?: IntegrationRun;
   runs: IntegrationRun[];
+  initializationState?: IntegrationInitializationState;
   scheduleState?: {
     nextRunAt?: number;
     lastBusinessDate?: string;
@@ -405,6 +434,19 @@ export const stopIntegrationTask = async (id: string, savepoint: boolean) => {
   return data;
 };
 
+export const updateIntegrationInitialization = async (
+  id: string,
+  action: IntegrationInitializationAction,
+  version: number
+) => {
+  const { data } = await APIClient.post<IntegrationTask>(
+    `${PREFIX}/tasks/${encodeURIComponent(id)}/initialization`,
+    { version, action }
+  );
+
+  return data;
+};
+
 export const syncIntegrationCatalog = async (id: string) => {
   const { data } = await APIClient.post<IntegrationTask>(
     `${PREFIX}/tasks/${encodeURIComponent(id)}/catalog`
@@ -441,6 +483,11 @@ export const getIntegrationFailure = (error: unknown): IntegrationFailure => {
       'INVALID_SCHEDULE',
       'BUSINESS_DATE_REQUIRED',
       'BUSINESS_DATE_INVALID',
+      'SQL_INITIALIZATION_PARAMETERS_REQUIRED',
+      'INITIALIZATION_STATE_INVALID',
+      'INITIALIZATION_IN_PROGRESS',
+      'INITIALIZATION_CONFIGURATION_LOCKED',
+      'INITIALIZATION_UNAVAILABLE',
     ]);
 
     return {

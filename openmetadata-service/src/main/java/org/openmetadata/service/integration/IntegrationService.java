@@ -2,9 +2,11 @@ package org.openmetadata.service.integration;
 
 import jakarta.ws.rs.core.UriInfo;
 import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -12,16 +14,20 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.openmetadata.service.integration.IntegrationConfiguration.JdbcEndpoint;
 import org.openmetadata.service.integration.IntegrationModels.CatalogSummary;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionDefinition;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionInput;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionStatus;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionUpdate;
 import org.openmetadata.service.integration.IntegrationModels.EngineStatus;
+import org.openmetadata.service.integration.IntegrationModels.InitializationConfig;
+import org.openmetadata.service.integration.IntegrationModels.InitializationInput;
 import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
 import org.openmetadata.service.integration.IntegrationModels.QuerySchemaInput;
 import org.openmetadata.service.integration.IntegrationModels.RunInput;
 import org.openmetadata.service.integration.IntegrationModels.RunSummary;
+import org.openmetadata.service.integration.IntegrationModels.ScheduleConfig;
 import org.openmetadata.service.integration.IntegrationModels.ScheduleState;
 import org.openmetadata.service.integration.IntegrationModels.TableDefinition;
 import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
@@ -48,6 +54,7 @@ public final class IntegrationService {
   private final IntegrationConnections connections;
   private final SeaTunnelJobConfig jobs;
   private final CatalogProjector catalog;
+  private final Clock clock;
   private SeaTunnelClient engine;
   private int listRefreshCursor;
 
@@ -63,6 +70,15 @@ public final class IntegrationService {
       IntegrationConfiguration configuration,
       IntegrationTaskStore store,
       IntegrationConnectionStore connectionStore) {
+    this(configuration, store, connectionStore, Clock.systemUTC());
+  }
+
+  IntegrationService(
+      IntegrationConfiguration configuration,
+      IntegrationTaskStore store,
+      IntegrationConnectionStore connectionStore,
+      Clock clock) {
+    this.clock = Objects.requireNonNull(clock);
     this.configuration = configuration;
     this.store = store;
     connections = new IntegrationConnections(configuration, connectionStore, store);
@@ -197,7 +213,7 @@ public final class IntegrationService {
                 connections.endpoint(input.sourceConnectionId()),
                 input.sourceSchema(),
                 input.sourceQuery(),
-                LocalDate.now(ZoneId.of("Asia/Shanghai")).minusDays(1))
+                LocalDate.now(clock.withZone(ZoneId.of("Asia/Shanghai"))).minusDays(1))
             : inspector.table(
                 input.sourceConnectionId(), input.sourceSchema(), input.sourceTable()),
         source,
@@ -219,6 +235,13 @@ public final class IntegrationService {
       return structure;
     }
     try {
+      if ("SQL_T1".equals(input.mode)) {
+        IntegrationInitialization.validate(input.initialization, input.schedule, clock.instant());
+        if (input.initialization != null && input.initialization.enabled) {
+          IntegrationSql.requireInitializationParameters(
+              input.sourceQuery, input.initialization.batchUnit);
+        }
+      }
       connections.requireRole(input.sourceConnectionId, "SOURCE", input.mode);
       connections.requireRole(input.targetConnectionId, "TARGET", input.mode);
       if ("SQL_T1".equals(input.mode)) {
@@ -270,11 +293,12 @@ public final class IntegrationService {
       requireUniqueRoute(input, null, existing);
       IntegrationTask task = IntegrationTask.from(input);
       task.id = UUID.randomUUID().toString();
-      task.createdAt = System.currentTimeMillis();
+      task.createdAt = clock.millis();
       task.updatedAt = task.createdAt;
       task.updatedBy = actor;
       task.version = 1;
-      configureSchedule(task, null, Instant.now());
+      configureSchedule(task, null, clock.instant());
+      configureInitialization(task, null, null, clock.instant());
       store.save(task);
       return task;
     }
@@ -300,6 +324,7 @@ public final class IntegrationService {
       if (blocked(task.latestRun) && !scheduleToggleOnly(task, input)) {
         throw new IntegrationException("TASK_ACTIVE", 409);
       }
+      requireInitializationEditable(task, input);
       requireValid(input);
       List<IntegrationTask> existing = store.list();
       if (existing.stream()
@@ -308,8 +333,10 @@ public final class IntegrationService {
       }
       requireUniqueRoute(input, task.id, existing);
       var previousSchedule = task.schedule;
+      var previousInitialization = task.initialization;
       task.replaceInput(input);
-      configureSchedule(task, previousSchedule, Instant.now());
+      configureSchedule(task, previousSchedule, clock.instant());
+      configureInitialization(task, previousInitialization, previousSchedule, clock.instant());
       if (task.scheduleState != null && task.scheduleState.pendingBusinessDate == null) {
         task.scheduleState.lastError = null;
       }
@@ -328,6 +355,9 @@ public final class IntegrationService {
     synchronized (TASK_LOCK) {
       IntegrationTask task = load(id);
       if ("SQL_T1".equals(task.mode)) {
+        if (IntegrationInitialization.active(task)) {
+          throw new IntegrationException("INITIALIZATION_IN_PROGRESS", 409);
+        }
         return runSql(task, request, actor, null);
       }
       if (request.businessDate() != null || request.retry()) {
@@ -358,7 +388,7 @@ public final class IntegrationService {
           throw new IntegrationException("SAVEPOINT_UNAVAILABLE", 409);
         }
         requireValid(task);
-        task.latestRun.submittedAt = System.currentTimeMillis();
+        task.latestRun.submittedAt = clock.millis();
         task.latestRun.finishedAt = null;
         submit(task, true, actor);
         return task;
@@ -370,7 +400,7 @@ public final class IntegrationService {
       RunSummary run = new RunSummary();
       run.jobId = newJobId();
       run.status = "SUBMITTING";
-      run.submittedAt = System.currentTimeMillis();
+      run.submittedAt = clock.millis();
       run.canResume = false;
       task.latestRun = run;
       task.runs.add(run);
@@ -459,7 +489,13 @@ public final class IntegrationService {
     task.latestRun.errorMessage = null;
     save(task, actor);
     try {
-      engine().submit(task.latestRun.jobId, task.name, jobs.build(task, task.latestRun), resume);
+      SeaTunnelJobConfig execution =
+          task.initializationState != null
+                  && IntegrationInitialization.started(task.initializationState)
+              ? new SeaTunnelJobConfig(id -> initializationEndpoint(task, id))
+              : jobs;
+      engine()
+          .submit(task.latestRun.jobId, task.name, execution.build(task, task.latestRun), resume);
       task.latestRun.status = resume ? "RESUMING" : "SUBMITTED";
     } catch (IntegrationException e) {
       task.latestRun.status =
@@ -467,7 +503,7 @@ public final class IntegrationService {
               ? (resume ? "RESUMPTION_UNKNOWN" : "SUBMISSION_UNKNOWN")
               : "FAILED";
       if ("FAILED".equals(task.latestRun.status)) {
-        task.latestRun.finishedAt = System.currentTimeMillis();
+        task.latestRun.finishedAt = clock.millis();
       }
       error(task.latestRun, e);
     }
@@ -497,7 +533,7 @@ public final class IntegrationService {
       boolean pendingResume =
           "RESUMING".equals(run.status)
               && "SAVEPOINT_DONE".equals(snapshot.status())
-              && System.currentTimeMillis() - run.submittedAt < 30000;
+              && clock.millis() - run.submittedAt < 30000;
       boolean pendingStop =
           "STOP_REQUESTED".equals(run.status) && !TERMINAL.contains(snapshot.status());
       boolean failedStop =
@@ -515,7 +551,7 @@ public final class IntegrationService {
       if (TERMINAL.contains(run.status)) {
         if (run.finishedAt == null) {
           // SeaTunnel 3.0 does not report a finish time; record the first terminal observation.
-          run.finishedAt = System.currentTimeMillis();
+          run.finishedAt = clock.millis();
         }
         if ("FAILED".equals(run.status)) {
           error(run, new IntegrationException("ENGINE_JOB_FAILED", 409));
@@ -557,7 +593,16 @@ public final class IntegrationService {
   }
 
   private void requireValid(TaskInput input) {
+    if (input instanceof IntegrationTask task
+        && IntegrationInitialization.started(task.initializationState)) {
+      initializationEndpoint(task, task.sourceConnectionId);
+      initializationEndpoint(task, task.targetConnectionId);
+    }
     ValidationResult result = validate(input);
+    if (result.errors().stream()
+        .anyMatch(error -> "SQL_INITIALIZATION_PARAMETERS_REQUIRED".equals(error.code()))) {
+      throw new IntegrationException("SQL_INITIALIZATION_PARAMETERS_REQUIRED", 400);
+    }
     if (result.errors().stream().anyMatch(error -> "DORIS_LABEL_INVALID".equals(error.code()))) {
       throw new IntegrationException("DORIS_LABEL_INVALID", 400);
     }
@@ -584,7 +629,9 @@ public final class IntegrationService {
   private boolean needsRefresh(RunSummary run) {
     return run != null
         && (!TERMINAL.contains(run.status)
-            || ("SAVEPOINT_DONE".equals(run.status) && !Boolean.TRUE.equals(run.canResume)));
+            || ("SAVEPOINT_DONE".equals(run.status)
+                && !"INITIALIZATION".equals(run.trigger)
+                && !Boolean.TRUE.equals(run.canResume)));
   }
 
   private Duration remaining(long deadline) {
@@ -594,7 +641,7 @@ public final class IntegrationService {
   private boolean blocked(RunSummary run) {
     return run != null
         && (!TERMINAL.contains(run.status)
-            || "SAVEPOINT_DONE".equals(run.status)
+            || ("SAVEPOINT_DONE".equals(run.status) && !"INITIALIZATION".equals(run.trigger))
             || Boolean.TRUE.equals(run.canResume));
   }
 
@@ -606,7 +653,7 @@ public final class IntegrationService {
   private void save(IntegrationTask task, String actor) {
     long previousVersion = task.version;
     task.version++;
-    task.updatedAt = System.currentTimeMillis();
+    task.updatedAt = clock.millis();
     task.updatedBy = actor;
     if (task.latestRun != null && !task.runs.isEmpty()) {
       task.runs.set(task.runs.size() - 1, task.latestRun);
@@ -652,11 +699,11 @@ public final class IntegrationService {
         connections.endpoint(input.sourceConnectionId),
         input.sourceSchema,
         input.sourceQuery,
-        LocalDate.now(ZoneId.of("Asia/Shanghai")).minusDays(1));
+        LocalDate.now(clock.withZone(ZoneId.of("Asia/Shanghai"))).minusDays(1));
   }
 
   private LocalDate businessDate(String value, String timeZone) {
-    LocalDate today = LocalDate.now(ZoneId.of(timeZone));
+    LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(timeZone)));
     if (value == null) {
       return today.minusDays(1);
     }
@@ -694,10 +741,182 @@ public final class IntegrationService {
     if (task.scheduleState == null) {
       task.scheduleState = new ScheduleState();
     }
+    if (task.initializationState != null) {
+      if (IntegrationInitialization.active(task)) {
+        return;
+      }
+      if (task.scheduleState.nextRunAt != null
+          && previous != null
+          && task.scheduleState.pendingBusinessDate == null) {
+        LocalDate executionDate =
+            Instant.ofEpochMilli(task.scheduleState.nextRunAt)
+                .atZone(ZoneId.of(previous.timeZone))
+                .toLocalDate();
+        task.scheduleState.nextRunAt =
+            executionDate
+                .atTime(LocalTime.parse(task.schedule.dailyTime))
+                .atZone(ZoneId.of(task.schedule.timeZone))
+                .toInstant()
+                .toEpochMilli();
+        return;
+      }
+    }
     if (task.scheduleState.pendingBusinessDate == null) {
       task.scheduleState.nextRunAt = IntegrationSchedule.initialize(task.schedule, now);
       task.scheduleState.lastError = null;
     }
+  }
+
+  private void requireInitializationEditable(IntegrationTask task, TaskInput input) {
+    if (task.initializationState == null
+        || !IntegrationInitialization.started(task.initializationState)) {
+      return;
+    }
+    InitializationConfig before = task.initialization;
+    InitializationConfig after = input.initialization;
+    boolean sameConfiguration =
+        before != null
+            && after != null
+            && before.enabled == after.enabled
+            && Objects.equals(before.startDate, after.startDate)
+            && Objects.equals(before.batchUnit, after.batchUnit);
+    boolean sameFlow =
+        Objects.equals(task.mode, input.mode)
+            && Objects.equals(task.sourceConnectionId, input.sourceConnectionId)
+            && Objects.equals(task.sourceSchema, input.sourceSchema)
+            && Objects.equals(task.sourceTable, input.sourceTable)
+            && Objects.equals(task.targetConnectionId, input.targetConnectionId)
+            && Objects.equals(task.targetSchema, input.targetSchema)
+            && Objects.equals(task.targetTable, input.targetTable)
+            && Objects.equals(task.primaryKey, input.primaryKey)
+            && Objects.equals(task.fieldMappings, input.fieldMappings)
+            && task.schedule != null
+            && input.schedule != null
+            && Objects.equals(task.schedule.timeZone, input.schedule.timeZone);
+    if (!sameConfiguration || !sameFlow) {
+      throw new IntegrationException("INITIALIZATION_CONFIGURATION_LOCKED", 409);
+    }
+  }
+
+  private void configureInitialization(
+      IntegrationTask task,
+      InitializationConfig previous,
+      ScheduleConfig previousSchedule,
+      Instant now) {
+    if (!"SQL_T1".equals(task.mode)
+        || task.initialization == null
+        || !task.initialization.enabled) {
+      if (task.initializationState != null) {
+        task.initializationState = null;
+        if (task.scheduleState != null) {
+          task.scheduleState.nextRunAt = IntegrationSchedule.initialize(task.schedule, now);
+        }
+      }
+      return;
+    }
+    if (task.initializationState == null) {
+      if (task.scheduleState != null && task.scheduleState.pendingBusinessDate != null) {
+        throw new IntegrationException("INITIALIZATION_CONFIGURATION_LOCKED", 409);
+      }
+      task.initializationState =
+          IntegrationInitialization.create(task.initialization, task.schedule, now);
+    } else if (!IntegrationInitialization.started(task.initializationState)
+        && (previous == null
+            || !Objects.equals(previous.startDate, task.initialization.startDate)
+            || !Objects.equals(previous.batchUnit, task.initialization.batchUnit)
+            || (previousSchedule != null
+                && !Objects.equals(previousSchedule.timeZone, task.schedule.timeZone)))) {
+      task.initializationState =
+          IntegrationInitialization.create(task.initialization, task.schedule, now);
+    }
+    if (IntegrationInitialization.active(task)) {
+      task.scheduleState.nextRunAt = null;
+      task.scheduleState.lastError = null;
+    }
+  }
+
+  public IntegrationTask initialization(String id, InitializationInput input, String actor) {
+    configuration.requireReady();
+    if (input == null
+        || input.version() == null
+        || input.version() < 1
+        || !Set.of("PAUSE", "CONTINUE").contains(input.action() == null ? "" : input.action())) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
+    synchronized (TASK_LOCK) {
+      IntegrationTask task = load(id);
+      if (task.version != input.version()) {
+        throw new IntegrationException("VERSION_CONFLICT", 409);
+      }
+      if (!"SQL_T1".equals(task.mode)
+          || !IntegrationInitialization.active(task)
+          || task.schedule == null) {
+        throw new IntegrationException("INITIALIZATION_UNAVAILABLE", 409);
+      }
+      if ("PAUSE".equals(input.action())) {
+        task.schedule.enabled = false;
+      } else {
+        task.schedule.enabled = true;
+        if ("FAILED".equals(task.initializationState.status)) {
+          if (blocked(task.latestRun)) {
+            throw new IntegrationException("TASK_ACTIVE", 409);
+          }
+          task.initializationState.status = "PENDING";
+          task.initializationState.lastError = null;
+        }
+      }
+      save(task, actor);
+      return task;
+    }
+  }
+
+  private void runInitialization(
+      IntegrationTask task, IntegrationInitialization.Batch batch, String actor) {
+    bindInitializationConnections(task);
+    requireValid(task);
+    RunSummary run = new RunSummary();
+    run.jobId = newJobId();
+    run.status = "SUBMITTING";
+    run.submittedAt = clock.millis();
+    run.canResume = false;
+    IntegrationInitialization.reserve(task, run, batch, clock.instant());
+    task.latestRun = run;
+    task.runs.add(run);
+    if (task.runs.size() > MAX_RUNS) {
+      task.runs = new ArrayList<>(task.runs.subList(task.runs.size() - MAX_RUNS, task.runs.size()));
+    }
+    submit(task, false, actor);
+    String before = IntegrationModels.serialize(task);
+    completeScheduledRun(task);
+    if (!before.equals(IntegrationModels.serialize(task))) {
+      save(task, actor);
+    }
+  }
+
+  private void bindInitializationConnections(IntegrationTask task) {
+    if (!IntegrationInitialization.started(task.initializationState)) {
+      task.initializationState.sourceRouteHash =
+          IntegrationConnectionFingerprint.of(connections.endpoint(task.sourceConnectionId));
+      task.initializationState.targetRouteHash =
+          IntegrationConnectionFingerprint.of(connections.endpoint(task.targetConnectionId));
+    }
+    initializationEndpoint(task, task.sourceConnectionId);
+    initializationEndpoint(task, task.targetConnectionId);
+  }
+
+  private JdbcEndpoint initializationEndpoint(IntegrationTask task, String id) {
+    JdbcEndpoint endpoint = connections.endpoint(id);
+    String bound =
+        id.equals(task.sourceConnectionId)
+            ? task.initializationState.sourceRouteHash
+            : id.equals(task.targetConnectionId) ? task.initializationState.targetRouteHash : null;
+    if (bound == null) {
+      throw new IntegrationException("INITIALIZATION_STATE_INVALID", 409);
+    }
+    if (!bound.equals(IntegrationConnectionFingerprint.of(endpoint))) {
+      throw new IntegrationException("INITIALIZATION_CONFIGURATION_LOCKED", 409);
+    }
+    return endpoint;
   }
 
   private IntegrationTask runSql(
@@ -713,11 +932,11 @@ public final class IntegrationService {
     }
     if (uncertain && result == RefreshResult.NOT_FOUND) {
       // A live submitter owns this durable reservation for at least its HTTP timeout.
-      if (System.currentTimeMillis() - task.latestRun.submittedAt < 30000) {
+      if (clock.millis() - task.latestRun.submittedAt < 30000) {
         return task;
       }
       requireValid(task);
-      task.latestRun.submittedAt = System.currentTimeMillis();
+      task.latestRun.submittedAt = clock.millis();
       submit(
           task, false, actor); // Same job ID and business date; never allocate a new uncertain job.
       return task;
@@ -757,7 +976,7 @@ public final class IntegrationService {
     RunSummary run = new RunSummary();
     run.jobId = newJobId();
     run.status = "SUBMITTING";
-    run.submittedAt = System.currentTimeMillis();
+    run.submittedAt = clock.millis();
     run.canResume = false;
     run.businessDate = date.toString();
     run.windowStart = date + " 00:00:00";
@@ -779,6 +998,7 @@ public final class IntegrationService {
   }
 
   private void completeScheduledRun(IntegrationTask task) {
+    IntegrationInitialization.complete(task, clock.instant());
     RunSummary run = task.latestRun;
     ScheduleState state = task.scheduleState;
     if (!"SQL_T1".equals(task.mode)
@@ -841,6 +1061,14 @@ public final class IntegrationService {
             }
             continue;
           }
+          if (IntegrationInitialization.active(task)) {
+            var batch = IntegrationInitialization.nextBatch(task);
+            if (batch.isPresent() && !blocked(task.latestRun)) {
+              runInitialization(task, batch.get(), "system:sql-t1");
+              submitted++;
+            }
+            continue;
+          }
           var due = IntegrationSchedule.due(task.schedule, task.scheduleState, now);
           if (due.isPresent() && !blocked(task.latestRun)) {
             runSql(
@@ -863,6 +1091,14 @@ public final class IntegrationService {
   private void recordScheduleError(String id, long attemptedVersion, String code) {
     try {
       IntegrationTask task = load(id);
+      if (task.version == attemptedVersion && IntegrationInitialization.active(task)) {
+        if (!blocked(task.latestRun)) {
+          task.initializationState.status = "FAILED";
+        }
+        task.initializationState.lastError = code;
+        save(task, "system:sql-t1");
+        return;
+      }
       if (task.version == attemptedVersion
           && task.scheduleState != null
           && !Objects.equals(task.scheduleState.lastError, code)) {

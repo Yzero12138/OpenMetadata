@@ -23,6 +23,7 @@ import {
   previewIntegrationTargetTable,
   runIntegrationTask,
   updateIntegrationConnection,
+  updateIntegrationInitialization,
 } from './hospitalIntegrationAPI';
 
 jest.mock('.', () => ({
@@ -194,6 +195,22 @@ describe('Hospital managed connection HTTP boundary', () => {
       [
         '/hospital/integration/tasks/task%2Fid/run',
         { resume: false, businessDate: '2026-11-10', retry: true },
+      ],
+    ]);
+  });
+
+  it('pauses and continues initialization with only the encoded task, action and original CAS version', async () => {
+    await updateIntegrationInitialization('task/id', 'PAUSE', 7);
+    await updateIntegrationInitialization('task/id', 'CONTINUE', 8);
+
+    expect(client.post.mock.calls).toEqual([
+      [
+        '/hospital/integration/tasks/task%2Fid/initialization',
+        { version: 7, action: 'PAUSE' },
+      ],
+      [
+        '/hospital/integration/tasks/task%2Fid/initialization',
+        { version: 8, action: 'CONTINUE' },
       ],
     ]);
   });

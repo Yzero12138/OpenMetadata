@@ -13,6 +13,22 @@ import org.openmetadata.service.integration.IntegrationModels.TaskInput;
 
 class IntegrationValidatorTest {
   @Test
+  void initializationConfigurationBelongsOnlyToSqlTasks() {
+    TaskInput task = validInput();
+    task.initialization = new IntegrationModels.InitializationConfig();
+    task.initialization.enabled = true;
+    task.initialization.startDate = "2024-02-14";
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task.mode = "CDC";
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task = sqlInput();
+    task.initialization = new IntegrationModels.InitializationConfig();
+    task.initialization.enabled = true;
+    task.initialization.startDate = "2024-02-14";
+    assertTrue(IntegrationValidator.validateStructure(task).valid());
+  }
+
+  @Test
   void validatesSqlDeclaredKeyWithoutRequiringPhysicalKeyMetadata() {
     TaskInput task = sqlInput();
     var queryResult =

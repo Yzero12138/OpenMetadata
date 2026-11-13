@@ -14,6 +14,21 @@ public final class IntegrationException extends RuntimeException {
           Map.entry("JOB_NOT_FOUND", "The engine has no record of this job."),
           Map.entry("INVALID_CONFIGURATION", "The integration configuration is invalid."),
           Map.entry(
+              "INITIALIZATION_IN_PROGRESS",
+              "Finish or continue historical initialization before starting another SQL run."),
+          Map.entry(
+              "INITIALIZATION_CONFIGURATION_LOCKED",
+              "Historical progress is already bound to this configuration. Keep its dates, flow, key, mappings and time zone unchanged."),
+          Map.entry(
+              "INITIALIZATION_UNAVAILABLE",
+              "This task has no incomplete historical initialization."),
+          Map.entry(
+              "INITIALIZATION_STATE_INVALID",
+              "The saved initialization context is inconsistent. No progress was advanced."),
+          Map.entry(
+              "SQL_INITIALIZATION_PARAMETERS_REQUIRED",
+              "Monthly initialization requires both window parameters and cannot use the single-day business date parameter."),
+          Map.entry(
               "INVALID_SOURCE_QUERY",
               "Use one read-only SELECT query within the configured source schemas."),
           Map.entry(

@@ -29,12 +29,14 @@ import {
   getIntegrationTasks,
   IntegrationConnection,
   IntegrationEngineStatus,
+  IntegrationInitializationAction,
   IntegrationRunOptions,
   IntegrationTask,
   IntegrationTaskInput,
   runIntegrationTask,
   stopIntegrationTask,
   syncIntegrationCatalog,
+  updateIntegrationInitialization,
   updateIntegrationTask,
   validateIntegrationTask,
 } from '../../rest/hospitalIntegrationAPI';
@@ -51,6 +53,7 @@ import {
   EMPTY_INTEGRATION_TASK,
   integrationErrorKey,
   integrationModeKey,
+  isIntegrationInitializing,
   isIntegrationRunBusy,
   isIntegrationRunUncertain,
   toIntegrationTaskInput,
@@ -241,7 +244,12 @@ export const HospitalIntegrationWorkspace = ({
 
   useEffect(() => {
     const needsPolling = tasks.some(
-      (task) => isIntegrationRunBusy(task.latestRun) || uncertainTasks[task.id]
+      (task) =>
+        isIntegrationRunBusy(task.latestRun) ||
+        uncertainTasks[task.id] ||
+        (isIntegrationInitializing(task) &&
+          task.schedule?.enabled &&
+          task.initializationState?.status !== 'FAILED')
     );
     if (!isAdmin || !needsPolling) {
       return;
@@ -388,6 +396,9 @@ export const HospitalIntegrationWorkspace = ({
     closeBackfill();
   };
   const openBackfill = () => {
+    if (!selected || isIntegrationInitializing(selected) || mutation.current) {
+      return;
+    }
     const date =
       selected?.latestRun?.businessDate ??
       selected?.scheduleState?.pendingBusinessDate ??
@@ -573,7 +584,10 @@ export const HospitalIntegrationWorkspace = ({
       key === 'resume' ||
       key === 'backfill' ||
       key === 'retry';
-    if (submits && (active || !engineAvailable)) {
+    if (
+      submits &&
+      (active || !engineAvailable || isIntegrationInitializing(task))
+    ) {
       return;
     }
     if (key === 'run' && canResumeIntegrationTask(task.mode, task.latestRun)) {
@@ -583,6 +597,9 @@ export const HospitalIntegrationWorkspace = ({
       key === 'resume' &&
       !canResumeIntegrationTask(task.mode, task.latestRun)
     ) {
+      return;
+    }
+    if (key === 'retry' && task.latestRun?.trigger === 'INITIALIZATION') {
       return;
     }
     const requestEpoch = epoch.current;
@@ -615,6 +632,42 @@ export const HospitalIntegrationWorkspace = ({
         }
       }
     });
+  };
+  const initializationAction = async (
+    action: IntegrationInitializationAction
+  ) => {
+    if (
+      !selected ||
+      !isIntegrationInitializing(selected) ||
+      !selected.initializationState ||
+      confirmDiscard
+    ) {
+      return;
+    }
+    const task = selected;
+    const requestEpoch = epoch.current;
+    await perform(
+      action === 'PAUSE' ? 'initializationPause' : 'initializationContinue',
+      async () => {
+        try {
+          const result = await updateIntegrationInitialization(
+            task.id,
+            action,
+            task.version
+          );
+          if (requestEpoch === epoch.current) {
+            acceptTask(result);
+            setConflict(false);
+          }
+        } catch (error) {
+          if (requestEpoch === epoch.current) {
+            const failure = getIntegrationFailure(error);
+            setErrorCode(failure.code);
+            setConflict(failure.code === 'VERSION_CONFLICT');
+          }
+        }
+      }
+    );
   };
   const submitBackfill = () => {
     const date = new Date(businessDate + 'T00:00:00Z');
@@ -748,7 +801,9 @@ export const HospitalIntegrationWorkspace = ({
           {errorCode && !taskEditorOpen && !backfillOpen && (
             <div className="hospital-integration__alert" role="alert">
               <p>{t(integrationErrorKey(errorCode))}</p>
-              {conflict && <p>{t('hospitalIntegration.conflictHint')}</p>}
+              {conflict && (
+                <p>{t('hospitalIntegration.initializationConflictHint')}</p>
+              )}
               {routeTaskId && !selected && (
                 <Button
                   color="link-gray"
@@ -1040,6 +1095,14 @@ export const HospitalIntegrationWorkspace = ({
               connections={connections}
               disabled={busy || confirmDiscard}
               errors={formErrors}
+              initializationState={
+                view === 'edit' ? selected?.initializationState : undefined
+              }
+              initializationUnavailable={
+                view === 'edit' &&
+                !selected?.initialization?.enabled &&
+                Boolean(selected?.scheduleState?.pendingBusinessDate)
+              }
               queryErrorCode={queryData.errorCode}
               queryLoading={queryData.loading}
               saving={loading.save}
@@ -1150,7 +1213,8 @@ export const HospitalIntegrationWorkspace = ({
                       !engineAvailable ||
                       Boolean(
                         selected &&
-                          (isIntegrationRunBusy(selected.latestRun) ||
+                          (isIntegrationInitializing(selected) ||
+                            isIntegrationRunBusy(selected.latestRun) ||
                             uncertainTasks[selected.id])
                       )
                     }
@@ -1203,6 +1267,7 @@ export const HospitalIntegrationWorkspace = ({
                   setEditingVersion(selected.version);
                   changeView('edit');
                 }}
+                onInitialization={(action) => void initializationAction(action)}
                 onRefresh={() => void taskAction('refresh')}
                 onRetry={() => {
                   if (selected.latestRun?.businessDate) {

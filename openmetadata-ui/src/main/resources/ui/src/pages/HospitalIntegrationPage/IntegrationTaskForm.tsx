@@ -24,9 +24,12 @@ import { IntegrationTaskFormProps } from './HospitalIntegrationPage.interface';
 import {
   DEFAULT_INTEGRATION_SCHEDULE,
   findIntegrationTable,
+  getIntegrationInitializationPreview,
   integrationErrorKey,
   integrationModeKey,
   integrationTableKey,
+  integrationToday,
+  isIntegrationInitializationLocked,
   SQL_QUERY_MAX_BYTES,
 } from './HospitalIntegrationUtils';
 import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
@@ -41,6 +44,8 @@ export const IntegrationTaskForm = ({
   queryLoading = false,
   queryErrorCode,
   onReadQuerySchema,
+  initializationState,
+  initializationUnavailable = false,
   onTargetTableBusyChange,
   onTargetTableDraftChange,
   onTargetTableCreated,
@@ -58,6 +63,23 @@ export const IntegrationTaskForm = ({
   const { t } = useTranslation();
   const sqlMode = value.mode === 'SQL_T1';
   const schedule = value.schedule ?? DEFAULT_INTEGRATION_SCHEDULE;
+  const initialization = value.initialization ?? {
+    enabled: false,
+    startDate: '',
+    batchUnit: 'DAY' as const,
+  };
+  const routeLocked = isIntegrationInitializationLocked(initializationState);
+  const routeDisabled = disabled || routeLocked;
+  const initializationUnchanged =
+    initializationState?.startDate === initialization.startDate &&
+    initializationState?.batchUnit === initialization.batchUnit;
+  const cutoffDate =
+    initializationState && (routeLocked || initializationUnchanged)
+      ? initializationState.cutoffDate
+      : integrationToday();
+  const preview = initialization.enabled
+    ? getIntegrationInitializationPreview(initialization, cutoffDate)
+    : undefined;
   const source = findIntegrationTable(
     sourceTables,
     value.sourceSchema,
@@ -155,6 +177,11 @@ export const IntegrationTaskForm = ({
         <h2 id="integration-route-title">
           {t('hospitalIntegration.transferRoute')}
         </h2>
+        {routeLocked && (
+          <p className="hospital-integration__hint" role="status">
+            {t('hospitalIntegration.initializationLockedHint')}
+          </p>
+        )}
         <div className="hospital-integration__actions hospital-integration__table-tools">
           <Button
             color="link-gray"
@@ -177,7 +204,7 @@ export const IntegrationTaskForm = ({
               isRequired
               emptyState={t('hospitalIntegration.noConnections')}
               id="integration-source-connection"
-              isDisabled={disabled}
+              isDisabled={routeDisabled}
               items={connections
                 .filter(
                   (connection) =>
@@ -216,6 +243,7 @@ export const IntegrationTaskForm = ({
                   mode,
                   sourceQuery: nextSql ? value.sourceQuery : undefined,
                   schedule: nextSql ? value.schedule : undefined,
+                  initialization: nextSql ? value.initialization : undefined,
                 });
               }}>
               {(item) => <Select.Item {...item} />}
@@ -224,7 +252,7 @@ export const IntegrationTaskForm = ({
               <Select
                 isRequired
                 id="integration-source-schema"
-                isDisabled={disabled || !sourceConnection}
+                isDisabled={routeDisabled || !sourceConnection}
                 items={(sourceConnection?.schemas ?? []).map((schema) => ({
                   id: schema,
                   label: schema,
@@ -247,7 +275,7 @@ export const IntegrationTaskForm = ({
                 isRequired
                 emptyState={t('hospitalIntegration.noTables')}
                 id="integration-source-table"
-                isDisabled={disabled || sourceTables.length === 0}
+                isDisabled={routeDisabled || sourceTables.length === 0}
                 items={tableItems(sourceTables)}
                 label={t('hospitalIntegration.sourceTable')}
                 placeholder={t('hospitalIntegration.chooseTable')}
@@ -262,7 +290,7 @@ export const IntegrationTaskForm = ({
               isRequired
               emptyState={t('hospitalIntegration.noConnections')}
               id="integration-target-connection"
-              isDisabled={disabled}
+              isDisabled={routeDisabled}
               items={connections
                 .filter(
                   (connection) =>
@@ -295,7 +323,7 @@ export const IntegrationTaskForm = ({
               isRequired
               emptyState={t('hospitalIntegration.noTables')}
               id="integration-target-table"
-              isDisabled={disabled || targetTables.length === 0}
+              isDisabled={routeDisabled || targetTables.length === 0}
               items={tableItems(targetTables)}
               label={t('hospitalIntegration.targetTable')}
               placeholder={t('hospitalIntegration.chooseTable')}
@@ -315,7 +343,7 @@ export const IntegrationTaskForm = ({
               }`
             )}
             id="integration-mode"
-            isDisabled={disabled || !sourceConnection}
+            isDisabled={routeDisabled || !sourceConnection}
             items={modes.map((mode) => ({
               id: mode,
               label: t(integrationModeKey(mode)),
@@ -352,6 +380,7 @@ export const IntegrationTaskForm = ({
                   schedule: nextSql
                     ? value.schedule ?? { ...DEFAULT_INTEGRATION_SCHEDULE }
                     : undefined,
+                  initialization: nextSql ? value.initialization : undefined,
                   primaryKey: '',
                   fieldMappings: [],
                 });
@@ -366,7 +395,7 @@ export const IntegrationTaskForm = ({
                 : 'hospitalIntegration.primaryKeyHint'
             )}
             id="integration-primary-key"
-            isDisabled={disabled || !source}
+            isDisabled={routeDisabled || !source}
             isRequired={value.mode === 'CDC' || sqlMode}
             items={(
               source?.columns.filter(
@@ -404,8 +433,8 @@ export const IntegrationTaskForm = ({
                 onChange({
                   ...value,
                   sourceQuery,
-                  primaryKey: '',
-                  fieldMappings: [],
+                  primaryKey: routeLocked ? value.primaryKey : '',
+                  fieldMappings: routeLocked ? value.fieldMappings : [],
                 })
               }
             />
@@ -443,7 +472,127 @@ export const IntegrationTaskForm = ({
             <h2 id="integration-schedule-title">{t('label.schedule')}</h2>
             <Checkbox
               className="hospital-integration__schedule-toggle"
-              isDisabled={disabled}
+              isDisabled={disabled || routeLocked || initializationUnavailable}
+              isSelected={initialization.enabled}
+              label={t('hospitalIntegration.initializeBeforeDaily')}
+              onChange={(enabled) =>
+                onChange({
+                  ...value,
+                  initialization: { ...initialization, enabled },
+                  schedule: enabled ? { ...schedule, enabled: true } : schedule,
+                })
+              }
+            />
+            {initializationUnavailable && (
+              <p className="hospital-integration__hint">
+                {t('hospitalIntegration.initializationPendingDailyHint')}
+              </p>
+            )}
+            {initialization.enabled && (
+              <div className="hospital-integration__initialization-config">
+                <div className="hospital-integration__field-grid">
+                  <div className="hospital-integration__date-field">
+                    <label htmlFor="integration-initialization-start">
+                      {t('hospitalIntegration.initializationStartDate')}
+                    </label>
+                    <input
+                      required
+                      aria-describedby="integration-initialization-date-hint"
+                      disabled={routeDisabled}
+                      id="integration-initialization-start"
+                      max={new Date(
+                        new Date(integrationToday() + 'T00:00:00Z').getTime() -
+                          86400000
+                      )
+                        .toISOString()
+                        .slice(0, 10)}
+                      min="2000-01-01"
+                      type="date"
+                      value={initialization.startDate}
+                      onChange={(event) =>
+                        onChange({
+                          ...value,
+                          initialization: {
+                            ...initialization,
+                            startDate: event.target.value,
+                          },
+                        })
+                      }
+                    />
+                    <p id="integration-initialization-date-hint">
+                      {t('hospitalIntegration.initializationDateHint')}
+                    </p>
+                  </div>
+                  <Select
+                    id="integration-initialization-unit"
+                    isDisabled={routeDisabled}
+                    items={[
+                      {
+                        id: 'DAY',
+                        label: t('hospitalIntegration.initializationDay'),
+                      },
+                      {
+                        id: 'MONTH',
+                        label: t('hospitalIntegration.initializationMonth'),
+                      },
+                    ]}
+                    label={t('hospitalIntegration.initializationBatchUnit')}
+                    selectedKey={initialization.batchUnit}
+                    onSelectionChange={(key) => {
+                      if (key === 'DAY' || key === 'MONTH') {
+                        onChange({
+                          ...value,
+                          initialization: { ...initialization, batchUnit: key },
+                        });
+                      }
+                    }}>
+                    {(item) => <Select.Item {...item} />}
+                  </Select>
+                </div>
+                <p className="hospital-integration__hint">
+                  {t(
+                    initialization.batchUnit === 'MONTH'
+                      ? 'hospitalIntegration.initializationMonthlyHint'
+                      : 'hospitalIntegration.initializationDailyHint'
+                  )}
+                </p>
+                {preview && (
+                  <div data-testid="integration-initialization-preview">
+                    <p>
+                      {t('hospitalIntegration.initializationPreviewHint', {
+                        cutoff: cutoffDate,
+                        count: preview.totalBatches,
+                      })}
+                    </p>
+                    <dl className="hospital-integration__facts">
+                      <div>
+                        <dt>
+                          {t('hospitalIntegration.initializationFirstBatch')}
+                        </dt>
+                        <dd>
+                          [{preview.firstStartDate}, {preview.firstEndDate})
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>
+                          {t('hospitalIntegration.initializationLastBatch')}
+                        </dt>
+                        <dd>
+                          [{preview.lastStartDate}, {preview.lastEndDate})
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                )}
+              </div>
+            )}
+            <Checkbox
+              className="hospital-integration__schedule-toggle"
+              isDisabled={
+                disabled ||
+                (initialization.enabled &&
+                  initializationState?.status !== 'COMPLETED')
+              }
               isSelected={schedule.enabled}
               label={t('hospitalIntegration.enableSchedule')}
               onChange={(enabled) =>
@@ -477,6 +626,7 @@ export const IntegrationTaskForm = ({
         </>
       )}
       {targetConnection?.databaseType === 'Doris' &&
+      !routeLocked &&
       source?.columns.length &&
       (!sqlMode || value.primaryKey) ? (
         <section aria-labelledby="integration-target-create-title">
@@ -551,7 +701,7 @@ export const IntegrationTaskForm = ({
                   aria-label={t('hospitalIntegration.mappingFor', {
                     field: column.name,
                   })}
-                  isDisabled={disabled}
+                  isDisabled={routeDisabled}
                   items={[
                     {
                       id: '__omit__',

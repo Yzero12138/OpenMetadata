@@ -50,6 +50,7 @@ public final class IntegrationModels {
     public String primaryKey;
     public String sourceQuery;
     public ScheduleConfig schedule;
+    public InitializationConfig initialization;
     public List<FieldMapping> fieldMappings;
 
     protected void copyInput(TaskInput input) {
@@ -65,6 +66,7 @@ public final class IntegrationModels {
       primaryKey = input.primaryKey;
       sourceQuery = input.sourceQuery;
       schedule = input.schedule == null ? null : input.schedule.copy();
+      initialization = input.initialization == null ? null : input.initialization.copy();
       fieldMappings = input.fieldMappings == null ? null : List.copyOf(input.fieldMappings);
     }
   }
@@ -84,6 +86,7 @@ public final class IntegrationModels {
     public List<RunSummary> runs = new ArrayList<>();
     public CatalogSummary catalog = new CatalogSummary();
     public ScheduleState scheduleState;
+    public InitializationState initializationState;
 
     public static IntegrationTask from(TaskInput input) {
       IntegrationTask task = new IntegrationTask();
@@ -113,7 +116,45 @@ public final class IntegrationModels {
     public String windowEnd;
     public String trigger;
     public Long scheduledFor;
+    public String initializationId;
+    public Long batchIndex;
   }
+
+  public static final class InitializationConfig {
+    public boolean enabled;
+    public String startDate;
+    public String batchUnit = "DAY";
+
+    public InitializationConfig copy() {
+      InitializationConfig result = new InitializationConfig();
+      result.enabled = enabled;
+      result.startDate = startDate;
+      result.batchUnit = batchUnit;
+      return result;
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public static final class InitializationState {
+    public String id;
+    public String status;
+    public String startDate;
+    public String cutoffDate;
+    public String nextDate;
+    public String batchUnit;
+    public long completedBatches;
+    public long totalBatches;
+    public String pendingStartDate;
+    public String pendingEndDate;
+    public String pendingJobId;
+    public String sourceRouteHash;
+    public String targetRouteHash;
+    public Long startedAt;
+    public Long completedAt;
+    public String lastError;
+  }
+
+  public record InitializationInput(String action, Long version) {}
 
   public static final class ScheduleConfig {
     public boolean enabled;

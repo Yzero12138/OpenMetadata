@@ -14,6 +14,8 @@ import { ReactNode } from 'react';
 import {
   IntegrationConnection,
   IntegrationConnectionInput,
+  IntegrationInitializationAction,
+  IntegrationInitializationState,
   IntegrationMode,
   IntegrationTable,
   IntegrationTargetTableInput,
@@ -33,6 +35,8 @@ export interface IntegrationTaskFormProps {
   queryLoading?: boolean;
   queryErrorCode?: string;
   onReadQuerySchema?: () => void;
+  initializationState?: IntegrationInitializationState;
+  initializationUnavailable?: boolean;
   onTargetTableBusyChange: (busy: boolean) => void;
   onTargetTableDraftChange: (dirty: boolean) => void;
   onTargetTableCreated: (
@@ -83,6 +87,7 @@ export interface IntegrationTaskDetailProps {
   onRetry?: () => void;
   onStop: () => void;
   onCatalog: () => void;
+  onInitialization?: (action: IntegrationInitializationAction) => void;
 }
 
 export interface IntegrationConnectionsProps {

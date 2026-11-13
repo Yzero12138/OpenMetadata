@@ -114,6 +114,24 @@ public final class IntegrationConnections {
       if (tasks.list().stream().anyMatch(task -> references(task, id) && blocked(task))) {
         throw new IntegrationException("TASK_ACTIVE", 409);
       }
+      ConnectionDefinition proposed = new ConnectionDefinition();
+      proposed.copyInput(input);
+      String proposedRoute = IntegrationConnectionFingerprint.of(new JdbcEndpoint(proposed, ""));
+      for (IntegrationTask task : tasks.list()) {
+        if (references(task, id) && IntegrationInitialization.started(task.initializationState)) {
+          String boundRoute =
+              id.equals(task.sourceConnectionId)
+                  ? task.initializationState.sourceRouteHash
+                  : task.initializationState.targetRouteHash;
+          if (boundRoute == null) {
+            boundRoute =
+                IntegrationConnectionFingerprint.of(new JdbcEndpoint(stored.definition, ""));
+          }
+          if (!boundRoute.equals(proposedRoute)) {
+            throw new IntegrationException("INITIALIZATION_CONFIGURATION_LOCKED", 409);
+          }
+        }
+      }
       uniqueName(input.name, id, store.list());
       stored.definition.copyInput(input);
       stored.definition.version++;
@@ -278,6 +296,12 @@ public final class IntegrationConnections {
   }
 
   private boolean blocked(IntegrationTask task) {
+    if (task.latestRun != null
+        && "INITIALIZATION".equals(task.latestRun.trigger)
+        && "SAVEPOINT_DONE".equals(task.latestRun.status)
+        && !Boolean.TRUE.equals(task.latestRun.canResume)) {
+      return false;
+    }
     return task.latestRun != null
         && (!TERMINAL.contains(task.latestRun.status)
             || Boolean.TRUE.equals(task.latestRun.canResume));

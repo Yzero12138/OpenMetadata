@@ -54,6 +54,7 @@ jest.mock('../../rest/hospitalIntegrationAPI', () => ({
   validateIntegrationTask: jest.fn(),
   createIntegrationTask: jest.fn(),
   updateIntegrationTask: jest.fn(),
+  updateIntegrationInitialization: jest.fn(),
   runIntegrationTask: jest.fn(),
   stopIntegrationTask: jest.fn(),
   syncIntegrationCatalog: jest.fn(),
@@ -1849,6 +1850,492 @@ describe('Hospital integration workbench behavior', () => {
       await screen.findByRole('option', { name: 'hospitalIntegration.sqlT1' })
     );
   };
+
+  const historyState: NonNullable<api.IntegrationTask['initializationState']> =
+    {
+      id: 'initialization-fixture',
+      status: 'FAILED',
+      startDate: '2024-02-14',
+      cutoffDate: '2024-04-03',
+      nextDate: '2024-03-01',
+      batchUnit: 'MONTH',
+      completedBatches: 1,
+      totalBatches: 3,
+      pendingStartDate: '2024-03-01',
+      pendingEndDate: '2024-04-01',
+      pendingJobId: '9223372036854775807',
+      startedAt: 1,
+      lastError: 'CONNECTION_UNAVAILABLE',
+    };
+  const historyTask: api.IntegrationTask = {
+    ...sqlTask,
+    fieldMappings: dorisPreview.fieldMappings,
+    initialization: {
+      enabled: true,
+      startDate: historyState.startDate,
+      batchUnit: 'MONTH',
+    },
+    initializationState: historyState,
+    scheduleState: {},
+    latestRun: {
+      ...sqlTask.latestRun!,
+      trigger: 'INITIALIZATION',
+      initializationId: historyState.id,
+      batchIndex: 2,
+    },
+  };
+  const configureSqlEdit = async (editable: api.IntegrationTask) => {
+    mockApi.getIntegrationTasks.mockResolvedValue([editable]);
+    mockApi.getIntegrationTask.mockResolvedValue(editable);
+    mockApi.updateIntegrationTask.mockResolvedValue(editable);
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      sourceConnection,
+      dorisConnection,
+    ]);
+    mockApi.getIntegrationTableOptions.mockResolvedValue([
+      { ...dorisTable, columns: [] },
+    ]);
+    mockApi.getIntegrationTable.mockResolvedValue(dorisTable);
+    mockApi.getIntegrationQuerySchema.mockResolvedValue(sqlColumns);
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+  };
+
+  it('keeps history optional and enables daily scheduling when historical initialization is selected', async () => {
+    await configureSql();
+    const history = screen.getByRole('checkbox', {
+      name: 'hospitalIntegration.initializeBeforeDaily',
+    });
+
+    expect(history).not.toBeChecked();
+    expect(
+      document.getElementById('integration-initialization-start')
+    ).not.toBeInTheDocument();
+
+    await click(history);
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'hospitalIntegration.enableSchedule',
+      })
+    ).toBeChecked();
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'hospitalIntegration.enableSchedule',
+      })
+    ).toBeDisabled();
+    expect(
+      screen.getByLabelText(/hospitalIntegration.initializationStartDate/)
+    ).toHaveAttribute('type', 'date');
+    expect(
+      document.getElementById('integration-initialization-unit')
+    ).toHaveTextContent('hospitalIntegration.initializationDay');
+
+    fireEvent.change(
+      screen.getByLabelText(/hospitalIntegration.initializationStartDate/),
+      { target: { value: '2024-02-14' } }
+    );
+    await click(document.getElementById('integration-initialization-unit')!);
+    await click(
+      await screen.findByRole('option', {
+        name: 'hospitalIntegration.initializationMonth',
+      })
+    );
+
+    expect(
+      screen.getByTestId('integration-initialization-preview')
+    ).toHaveTextContent('2024-03-01');
+    expect(
+      screen.getByText('hospitalIntegration.initializationMonthlyHint')
+    ).toBeInTheDocument();
+  });
+
+  it('saves initialization configuration and an enabled schedule without server progress', async () => {
+    await configureSqlEdit({
+      ...sqlTask,
+      fieldMappings: dorisPreview.fieldMappings,
+      scheduleState: {},
+    });
+    await click(
+      screen.getByRole('checkbox', {
+        name: 'hospitalIntegration.initializeBeforeDaily',
+      })
+    );
+    fireEvent.change(
+      screen.getByLabelText(/hospitalIntegration.initializationStartDate/),
+      { target: { value: '2024-02-14' } }
+    );
+    await click(document.getElementById('integration-initialization-unit')!);
+    await click(
+      await screen.findByRole('option', {
+        name: 'hospitalIntegration.initializationMonth',
+      })
+    );
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.readQueryColumns',
+      })
+    );
+    await screen.findByText('hospitalIntegration.queryColumnsLoaded');
+    await click(screen.getByRole('button', { name: 'label.save' }));
+    await waitFor(() =>
+      expect(mockApi.updateIntegrationTask).toHaveBeenCalled()
+    );
+    const payload = mockApi.updateIntegrationTask.mock.calls[0][1];
+
+    expect(payload).toMatchObject({
+      initialization: {
+        enabled: true,
+        startDate: '2024-02-14',
+        batchUnit: 'MONTH',
+      },
+      schedule: {
+        enabled: true,
+        dailyTime: '02:00',
+        timeZone: 'Asia/Shanghai',
+      },
+    });
+    expect(payload).not.toHaveProperty('initializationState');
+    expect(payload).not.toHaveProperty('latestRun');
+  });
+
+  it.each(['label.validate', 'label.save'])(
+    'retains the SQL repair draft when authoritative monthly validation rejects it: %s',
+    async (action) => {
+      await configureSqlEdit(historyTask);
+      const sourceQuery =
+        'SELECT id, department FROM public.synthetic_encounter WHERE day = :biz_date';
+      const query = screen.getByRole('textbox', {
+        name: /hospitalIntegration.sourceQuery/,
+      });
+      fireEvent.change(query, { target: { value: sourceQuery } });
+      await click(
+        screen.getByRole('button', {
+          name: 'hospitalIntegration.readQueryColumns',
+        })
+      );
+      await screen.findByText('hospitalIntegration.queryColumnsLoaded');
+      mockApi.validateIntegrationTask.mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          status: 400,
+          data: { errorCode: 'SQL_INITIALIZATION_PARAMETERS_REQUIRED' },
+        },
+      });
+      await click(screen.getByRole('button', { name: action }));
+
+      await waitFor(() =>
+        expect(mockApi.validateIntegrationTask).toHaveBeenCalledWith(
+          expect.objectContaining({
+            sourceQuery,
+            initialization: historyTask.initialization,
+          })
+        )
+      );
+      const error = await screen.findByText(
+        'hospitalIntegration.errors.SQL_INITIALIZATION_PARAMETERS_REQUIRED'
+      );
+      const alert = error.closest('[role="alert"]') as HTMLElement;
+      expectRevealedError(alert);
+
+      expect(query).toHaveValue(sourceQuery);
+      expect(
+        screen.getByLabelText(/hospitalIntegration.initializationStartDate/)
+      ).toHaveValue(historyState.startDate);
+      expect(
+        document.getElementById('integration-initialization-unit')
+      ).toHaveTextContent('hospitalIntegration.initializationMonth');
+      expect(
+        screen.getByRole('checkbox', {
+          name: 'hospitalIntegration.enableSchedule',
+        })
+      ).not.toBeChecked();
+      expect(mockApi.updateIntegrationTask).not.toHaveBeenCalled();
+      expect(mockApi.createIntegrationTask).not.toHaveBeenCalled();
+    }
+  );
+
+  it('shows batch progress and continues the failed window using CAS without source metadata or an available engine', async () => {
+    mockApi.getIntegrationTasks.mockResolvedValue([historyTask]);
+    mockApi.getIntegrationTask.mockResolvedValue(historyTask);
+    mockApi.getIntegrationStatus.mockResolvedValue({
+      enabled: true,
+      reachable: false,
+    });
+    let resolveAction: (value: api.IntegrationTask) => void = () => undefined;
+    mockApi.updateIntegrationInitialization.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAction = resolve;
+        })
+    );
+    await renderWorkspace();
+    await openTask();
+
+    expect(
+      screen.getByTestId('integration-initialization-progress')
+    ).toHaveTextContent('1 / 3');
+    expect(
+      screen.getByTestId('integration-initialization-next-window')
+    ).toHaveTextContent('[2024-03-01, 2024-04-01)');
+    expect(
+      screen.getByText('hospitalIntegration.errors.CONNECTION_UNAVAILABLE')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'hospitalIntegration.backfill' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', {
+        name: 'hospitalIntegration.retryBusinessDate',
+      })
+    ).not.toBeInTheDocument();
+
+    const continueButton = screen.getByRole('button', {
+      name: 'hospitalIntegration.continueInitialization',
+    });
+
+    expect(continueButton).toBeEnabled();
+
+    await act(async () => {
+      fireEvent.click(continueButton);
+      fireEvent.click(continueButton);
+    });
+
+    expect(mockApi.updateIntegrationInitialization).toHaveBeenCalledTimes(1);
+    expect(mockApi.updateIntegrationInitialization).toHaveBeenCalledWith(
+      historyTask.id,
+      'CONTINUE',
+      7
+    );
+
+    await act(async () =>
+      resolveAction({
+        ...historyTask,
+        version: 8,
+        schedule: { ...historyTask.schedule!, enabled: true },
+        initializationState: {
+          ...historyState,
+          status: 'PENDING',
+          lastError: undefined,
+        },
+      })
+    );
+
+    expect(
+      screen.getByTestId('integration-initialization-progress')
+    ).toHaveTextContent('1 / 3');
+    expect(mockApi.getIntegrationQuerySchema).not.toHaveBeenCalled();
+    expect(mockApi.getIntegrationTable).not.toHaveBeenCalled();
+    expect(mockApi.runIntegrationTask).not.toHaveBeenCalled();
+
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.pauseInitialization',
+      })
+    );
+
+    expect(mockApi.updateIntegrationInitialization).toHaveBeenLastCalledWith(
+      historyTask.id,
+      'PAUSE',
+      8
+    );
+
+    await act(async () => resolveAction({ ...historyTask, version: 9 }));
+  });
+
+  it('keeps failed progress after a pause race and refreshes the CAS version before continuing', async () => {
+    mockApi.getIntegrationTasks.mockResolvedValue([historyTask]);
+    mockApi.getIntegrationTask.mockResolvedValue(historyTask);
+    mockApi.updateIntegrationInitialization.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 409, data: { errorCode: 'VERSION_CONFLICT' } },
+    });
+    await renderWorkspace();
+    await openTask();
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.continueInitialization',
+      })
+    );
+
+    expect(
+      await screen.findByText('hospitalIntegration.errors.VERSION_CONFLICT')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId('integration-initialization-progress')
+    ).toHaveTextContent('1 / 3');
+
+    mockApi.getIntegrationTask.mockResolvedValue({
+      ...historyTask,
+      version: 9,
+    });
+    await click(screen.getByRole('button', { name: 'label.refresh' }));
+    mockApi.updateIntegrationInitialization.mockResolvedValue({
+      ...historyTask,
+      version: 10,
+    });
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.continueInitialization',
+      })
+    );
+
+    expect(mockApi.updateIntegrationInitialization).toHaveBeenLastCalledWith(
+      historyTask.id,
+      'CONTINUE',
+      9
+    );
+  });
+
+  it('freezes initialized routing and dates while allowing SQL repair without resetting mappings or pause state', async () => {
+    await configureSqlEdit(historyTask);
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'hospitalIntegration.initializeBeforeDaily',
+      })
+    ).toBeDisabled();
+    expect(
+      screen.getByLabelText(/hospitalIntegration.initializationStartDate/)
+    ).toBeDisabled();
+
+    for (const id of [
+      'integration-initialization-unit',
+      'integration-source-connection',
+      'integration-source-schema',
+      'integration-target-connection',
+      'integration-target-table',
+      'integration-primary-key',
+      'integration-mode',
+    ]) {
+      expect(document.getElementById(id)).toBeDisabled();
+    }
+
+    expect(
+      screen.getByTestId('integration-initialization-preview')
+    ).toHaveTextContent('2024-04-03');
+
+    const query = screen.getByRole('textbox', {
+      name: /hospitalIntegration.sourceQuery/,
+    });
+
+    expect(query).toBeEnabled();
+
+    fireEvent.change(query, { target: { value: sqlQuery + ' AND id > 0' } });
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.readQueryColumns',
+      })
+    );
+    await screen.findByText('hospitalIntegration.queryColumnsLoaded');
+
+    expect(
+      document.getElementById('integration-primary-key')
+    ).toHaveTextContent('id');
+
+    await click(screen.getByRole('button', { name: 'label.save' }));
+    await waitFor(() =>
+      expect(mockApi.updateIntegrationTask).toHaveBeenCalledWith(
+        historyTask.id,
+        expect.objectContaining({
+          initialization: historyTask.initialization,
+          schedule: historyTask.schedule,
+          fieldMappings: historyTask.fieldMappings,
+          primaryKey: 'id',
+          sourceQuery: sqlQuery + ' AND id > 0',
+        }),
+        7
+      )
+    );
+  });
+
+  it('retains completed initialization and restores ordinary backfill without offering a historical run retry', async () => {
+    const completedTask: api.IntegrationTask = {
+      ...historyTask,
+      initializationState: {
+        ...historyState,
+        status: 'COMPLETED',
+        completedBatches: 3,
+        nextDate: '2024-04-03',
+      },
+    };
+    mockApi.getIntegrationTasks.mockResolvedValue([completedTask]);
+    mockApi.getIntegrationTask.mockResolvedValue(completedTask);
+    await renderWorkspace();
+    await openTask();
+
+    expect(
+      screen.getByTestId('integration-initialization-progress')
+    ).toHaveTextContent('3 / 3');
+    expect(
+      screen.getByRole('button', { name: 'hospitalIntegration.backfill' })
+    ).toBeEnabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.retryBusinessDate',
+      })
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole('button', {
+        name: 'hospitalIntegration.continueInitialization',
+      })
+    ).not.toBeInTheDocument();
+  });
+
+  it('requires resolution of a pending daily window before enabling initialization on an existing task', async () => {
+    await configureSqlEdit({
+      ...sqlTask,
+      fieldMappings: dorisPreview.fieldMappings,
+    });
+
+    expect(
+      screen.getByRole('checkbox', {
+        name: 'hospitalIntegration.initializeBeforeDaily',
+      })
+    ).toBeDisabled();
+    expect(
+      screen.getByText('hospitalIntegration.initializationPendingDailyHint')
+    ).toBeInTheDocument();
+  });
+
+  it('allows daily scheduling to be disabled after historical initialization completes', async () => {
+    await configureSqlEdit({
+      ...historyTask,
+      schedule: { ...historyTask.schedule!, enabled: true },
+      initializationState: {
+        ...historyState,
+        status: 'COMPLETED',
+        completedBatches: 3,
+        nextDate: historyState.cutoffDate,
+      },
+      latestRun: { ...historyTask.latestRun!, status: 'FINISHED' },
+    });
+    const schedule = screen.getByRole('checkbox', {
+      name: 'hospitalIntegration.enableSchedule',
+    });
+
+    expect(schedule).toBeEnabled();
+
+    await click(schedule);
+    await click(
+      screen.getByRole('button', {
+        name: 'hospitalIntegration.readQueryColumns',
+      })
+    );
+    await screen.findByText('hospitalIntegration.queryColumnsLoaded');
+    await click(screen.getByRole('button', { name: 'label.save' }));
+    await waitFor(() =>
+      expect(mockApi.updateIntegrationTask).toHaveBeenCalledWith(
+        historyTask.id,
+        expect.objectContaining({
+          initialization: historyTask.initialization,
+          schedule: { ...historyTask.schedule!, enabled: false },
+        }),
+        7
+      )
+    );
+  });
 
   it('reads SQL result columns only on request, starts scheduling disabled, and offers result aliases as keys', async () => {
     await configureSql();

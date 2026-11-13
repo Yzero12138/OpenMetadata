@@ -118,6 +118,13 @@ public final class IntegrationValidator {
       if (input.schedule != null) {
         error(errors, "schedule", "INVALID_CONFIGURATION", "Daily schedules require SQL_T1 mode.");
       }
+      if (input.initialization != null) {
+        error(
+            errors,
+            "initialization",
+            "INVALID_CONFIGURATION",
+            "Historical initialization requires SQL_T1 mode.");
+      }
     }
     if (input.fieldMappings == null
         || input.fieldMappings.isEmpty()

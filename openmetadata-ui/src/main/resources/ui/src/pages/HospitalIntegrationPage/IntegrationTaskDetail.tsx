@@ -17,8 +17,10 @@ import { IntegrationRun } from '../../rest/hospitalIntegrationAPI';
 import { IntegrationTaskDetailProps } from './HospitalIntegrationPage.interface';
 import {
   canResumeIntegrationTask,
+  getIntegrationInitializationPreview,
   integrationErrorKey,
   integrationModeKey,
+  isIntegrationInitializing,
   isIntegrationRunBusy,
 } from './HospitalIntegrationUtils';
 
@@ -37,14 +39,33 @@ export const IntegrationTaskDetail = ({
   onRetry,
   onStop,
   onCatalog,
+  onInitialization,
 }: IntegrationTaskDetailProps) => {
   const { t, i18n } = useTranslation();
   const run = task.latestRun;
   const active = isIntegrationRunBusy(run) || uncertain;
   const resumable = canResumeIntegrationTask(task.mode, run);
   const sqlMode = task.mode === 'SQL_T1';
+  const initialization = task.initializationState;
+  const initializing = isIntegrationInitializing(task);
+  const nextBatch =
+    initialization && initialization.status !== 'COMPLETED'
+      ? getIntegrationInitializationPreview(
+          {
+            enabled: true,
+            startDate: initialization.nextDate,
+            batchUnit: initialization.batchUnit,
+          },
+          initialization.cutoffDate
+        )
+      : undefined;
+  const pendingStart =
+    initialization?.pendingStartDate ?? nextBatch?.firstStartDate;
+  const pendingEnd = initialization?.pendingEndDate ?? nextBatch?.firstEndDate;
   const canRetry =
     sqlMode &&
+    !initializing &&
+    run?.trigger !== 'INITIALIZATION' &&
     Boolean(run?.businessDate) &&
     ['FAILED', 'STOPPED', 'CANCELED', 'CANCELLED'].includes(run?.status ?? '');
   const timestamp = (value?: number) =>
@@ -116,6 +137,114 @@ export const IntegrationTaskDetail = ({
           </small>
         </div>
       </dl>
+      {sqlMode && initialization && (
+        <section aria-labelledby="integration-initialization-detail-title">
+          <div className="hospital-integration__section-heading">
+            <h2 id="integration-initialization-detail-title">
+              {t('hospitalIntegration.historicalInitialization')}
+            </h2>
+            <span
+              className="hospital-integration__status"
+              data-status={initialization.status}>
+              {t(
+                `hospitalIntegration.initializationStatus.${initialization.status}`
+              )}
+            </span>
+          </div>
+          <dl className="hospital-integration__facts">
+            <div>
+              <dt>{t('hospitalIntegration.initializationBatchProgress')}</dt>
+              <dd data-testid="integration-initialization-progress">
+                {count(initialization.completedBatches)} /{' '}
+                {count(initialization.totalBatches)}
+              </dd>
+            </div>
+            <div>
+              <dt>{t('hospitalIntegration.initializationBatchUnit')}</dt>
+              <dd>
+                {t(
+                  initialization.batchUnit === 'MONTH'
+                    ? 'hospitalIntegration.initializationMonth'
+                    : 'hospitalIntegration.initializationDay'
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>{t('hospitalIntegration.initializationCoveredWindow')}</dt>
+              <dd>
+                {initialization.completedBatches > 0
+                  ? `[${initialization.startDate}, ${initialization.nextDate})`
+                  : t('hospitalIntegration.initializationNoneCovered')}
+              </dd>
+            </div>
+            <div>
+              <dt>{t('hospitalIntegration.initializationCutoffDate')}</dt>
+              <dd>{initialization.cutoffDate}</dd>
+            </div>
+            {initialization.status !== 'COMPLETED' && (
+              <div>
+                <dt>{t('hospitalIntegration.initializationNextWindow')}</dt>
+                <dd data-testid="integration-initialization-next-window">
+                  {pendingStart && pendingEnd
+                    ? `[${pendingStart}, ${pendingEnd})`
+                    : t('hospitalIntegration.unavailable')}
+                </dd>
+              </div>
+            )}
+            {initialization.pendingJobId &&
+              initialization.status !== 'COMPLETED' && (
+                <div className="hospital-integration__job-id">
+                  <dt>{t('hospitalIntegration.jobId')}</dt>
+                  <dd>{initialization.pendingJobId}</dd>
+                </div>
+              )}
+          </dl>
+          {initialization.lastError &&
+            initialization.status !== 'COMPLETED' && (
+              <div className="hospital-integration__alert" role="alert">
+                {t(integrationErrorKey(initialization.lastError))}
+              </div>
+            )}
+          <p className="hospital-integration__hint">
+            {t(
+              initialization.status === 'COMPLETED'
+                ? 'hospitalIntegration.initializationCompleteHint'
+                : 'hospitalIntegration.initializationProgressHint'
+            )}
+          </p>
+          {initializing && (
+            <>
+              <div className="hospital-integration__actions">
+                {task.schedule?.enabled && (
+                  <Button
+                    color="secondary"
+                    isDisabled={busy}
+                    isLoading={loading.initializationPause}
+                    onClick={() => onInitialization?.('PAUSE')}>
+                    {t('hospitalIntegration.pauseInitialization')}
+                  </Button>
+                )}
+                {(!task.schedule?.enabled ||
+                  initialization.status === 'FAILED') && (
+                  <Button
+                    isDisabled={busy}
+                    isLoading={loading.initializationContinue}
+                    onClick={() => onInitialization?.('CONTINUE')}>
+                    {t('hospitalIntegration.continueInitialization')}
+                  </Button>
+                )}
+              </div>
+              <p className="hospital-integration__hint">
+                {t(
+                  task.schedule?.enabled
+                    ? 'hospitalIntegration.initializationPauseHint'
+                    : 'hospitalIntegration.initializationPausedHint'
+                )}
+              </p>
+            </>
+          )}
+        </section>
+      )}
       {sqlMode && (
         <section aria-labelledby="integration-schedule-detail-title">
           <h2 id="integration-schedule-detail-title">{t('label.schedule')}</h2>
@@ -261,12 +390,14 @@ export const IntegrationTaskDetail = ({
           </div>
         )}
         <div className="hospital-integration__actions">
-          <Button
-            isDisabled={busy || active || resumable || !engineAvailable}
-            isLoading={loading.run}
-            onClick={() => onRun(false)}>
-            {t(sqlMode ? 'hospitalIntegration.backfill' : 'label.run')}
-          </Button>
+          {!initializing && (
+            <Button
+              isDisabled={busy || active || resumable || !engineAvailable}
+              isLoading={loading.run}
+              onClick={() => onRun(false)}>
+              {t(sqlMode ? 'hospitalIntegration.backfill' : 'label.run')}
+            </Button>
+          )}
           <Button
             color="secondary"
             isDisabled={
@@ -277,17 +408,21 @@ export const IntegrationTaskDetail = ({
             {t(
               task.mode === 'CDC'
                 ? 'hospitalIntegration.stopWithSavepoint'
+                : initializing
+                ? 'hospitalIntegration.stopCurrentBatch'
                 : 'label.stop'
             )}
           </Button>
           {sqlMode ? (
-            <Button
-              color="secondary"
-              isDisabled={busy || active || !engineAvailable || !canRetry}
-              isLoading={loading.retry}
-              onClick={onRetry}>
-              {t('hospitalIntegration.retryBusinessDate')}
-            </Button>
+            !initializing && (
+              <Button
+                color="secondary"
+                isDisabled={busy || active || !engineAvailable || !canRetry}
+                isLoading={loading.retry}
+                onClick={onRetry}>
+                {t('hospitalIntegration.retryBusinessDate')}
+              </Button>
+            )
           ) : (
             <Button
               color="secondary"

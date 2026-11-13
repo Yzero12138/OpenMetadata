@@ -107,6 +107,53 @@ public final class IntegrationSql {
     }
   }
 
+  public static String render(
+      String query, LocalDate businessDate, LocalDate windowStart, LocalDate windowEnd) {
+    if (businessDate == null
+        || businessDate.getYear() < 1
+        || businessDate.getYear() > 9998
+        || !businessDate.equals(windowStart)
+        || windowEnd == null
+        || windowEnd.getYear() > 9999
+        || !windowEnd.isAfter(windowStart)
+        || windowEnd.isAfter(windowStart.plusDays(31))) {
+      throw invalid();
+    }
+    Lexed lexed = lex(query);
+    StringBuilder result = new StringBuilder(query);
+    for (int i = lexed.parameters().size() - 1; i >= 0; i--) {
+      Parameter parameter = lexed.parameters().get(i);
+      String value =
+          switch (parameter.name()) {
+            case "biz_date" -> businessDate.toString();
+            case "window_start" -> windowStart + " 00:00:00";
+            default -> windowEnd + " 00:00:00";
+          };
+      result.replace(parameter.start(), parameter.end(), "'" + value + "'");
+    }
+    return result.toString();
+  }
+
+  public static Set<String> parameters(String query) {
+    return lex(query).parameters().stream()
+        .map(Parameter::name)
+        .collect(Collectors.toUnmodifiableSet());
+  }
+
+  public static void requireInitializationParameters(String query, String batchUnit) {
+    Set<String> parameters = parameters(query);
+    if ("MONTH".equals(batchUnit)) {
+      if (!parameters.containsAll(Set.of("window_start", "window_end"))
+          || parameters.contains("biz_date")) {
+        throw new IntegrationException("SQL_INITIALIZATION_PARAMETERS_REQUIRED", 400);
+      }
+    } else if (!"DAY".equals(batchUnit)) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    } else if (parameters.isEmpty()) {
+      throw new IntegrationException("SQL_DATE_PARAMETER_REQUIRED", 400);
+    }
+  }
+
   public static List<TableReference> references(String query, String defaultSchema) {
     return List.copyOf(
         parse(query, defaultSchema).tables().stream()
@@ -135,6 +182,21 @@ public final class IntegrationSql {
 
   public static String renderForSource(
       String query, LocalDate businessDate, String defaultSchema, JdbcDialect dialect) {
+    return render(qualifyForSource(query, defaultSchema, dialect), businessDate);
+  }
+
+  public static String renderForSource(
+      String query,
+      LocalDate businessDate,
+      LocalDate windowStart,
+      LocalDate windowEnd,
+      String defaultSchema,
+      JdbcDialect dialect) {
+    return render(
+        qualifyForSource(query, defaultSchema, dialect), businessDate, windowStart, windowEnd);
+  }
+
+  private static String qualifyForSource(String query, String defaultSchema, JdbcDialect dialect) {
     if (dialect == null) {
       throw invalid();
     }
@@ -154,7 +216,7 @@ public final class IntegrationSql {
                     dialect.quote(table.reference().schema()));
               }
             });
-    return render(qualified.toString(), businessDate);
+    return qualified.toString();
   }
 
   private static Parsed parse(String query, String defaultSchema) {

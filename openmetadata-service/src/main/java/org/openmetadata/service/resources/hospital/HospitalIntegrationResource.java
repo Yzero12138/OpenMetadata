@@ -25,6 +25,7 @@ import org.openmetadata.service.integration.IntegrationConfiguration;
 import org.openmetadata.service.integration.IntegrationException;
 import org.openmetadata.service.integration.IntegrationModels;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionUpdate;
+import org.openmetadata.service.integration.IntegrationModels.InitializationInput;
 import org.openmetadata.service.integration.IntegrationModels.QuerySchemaInput;
 import org.openmetadata.service.integration.IntegrationModels.RunInput;
 import org.openmetadata.service.integration.IntegrationModels.StopInput;
@@ -275,6 +276,22 @@ public final class HospitalIntegrationResource {
                       actor(securityContext)))
               .build();
         });
+  }
+
+  @POST
+  @Path("/tasks/{id}/initialization")
+  public Response initialization(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.initialization(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), InitializationInput.class),
+                        actor(securityContext)))
+                .build());
   }
 
   @POST

@@ -18,6 +18,136 @@ class IntegrationSqlTest {
   private static final LocalDate BUSINESS_DATE = LocalDate.of(2025, 12, 31);
 
   @Test
+  void rendersARealPartialMonthWindowInEverySupportedSourceDialect() {
+    LocalDate start = LocalDate.of(2024, 2, 14);
+    LocalDate end = LocalDate.of(2024, 3, 1);
+    String query =
+        "SELECT id FROM visits WHERE updated_at >= :window_start AND updated_at < :window_end";
+    for (JdbcDialect dialect :
+        List.of(JdbcDialect.Oracle, JdbcDialect.Mssql, JdbcDialect.Mysql, JdbcDialect.Postgres)) {
+      assertEquals(
+          "SELECT id FROM "
+              + dialect.quote("clinical")
+              + ".visits WHERE updated_at >= '2024-02-14 00:00:00' AND updated_at < '2024-03-01 00:00:00'",
+          IntegrationSql.renderForSource(query, start, start, end, "clinical", dialect));
+    }
+    assertEquals(
+        "SELECT '2024-02-14', '2024-02-14 00:00:00', '2024-03-01 00:00:00'",
+        IntegrationSql.render("SELECT :biz_date, :window_start, :window_end", start, start, end));
+    assertEquals(
+        "SELECT '2026-01-01 00:00:00'",
+        IntegrationSql.render(
+            "SELECT :window_end",
+            BUSINESS_DATE.withDayOfMonth(1),
+            BUSINESS_DATE.withDayOfMonth(1),
+            BUSINESS_DATE.plusDays(1)));
+  }
+
+  @Test
+  void actualMonthlyReadsIncludeTheLeapDayAndExcludeBothOutsideBoundaries() throws Exception {
+    LocalDate start = LocalDate.of(2024, 2, 14);
+    LocalDate end = LocalDate.of(2024, 3, 1);
+    for (JdbcDialect dialect :
+        List.of(JdbcDialect.Oracle, JdbcDialect.Mssql, JdbcDialect.Mysql, JdbcDialect.Postgres)) {
+      String mode =
+          switch (dialect) {
+            case Oracle -> "Oracle";
+            case Mssql -> "MSSQLServer";
+            case Mysql -> "MySQL";
+            default -> "PostgreSQL";
+          };
+      try (var connection =
+              DriverManager.getConnection("jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=" + mode);
+          var statement = connection.createStatement()) {
+        String schema = dialect.quote("clinical");
+        statement.execute("CREATE SCHEMA " + schema);
+        statement.execute("CREATE TABLE " + schema + ".visits (id BIGINT, updated_at TIMESTAMP)");
+        statement.execute(
+            "INSERT INTO "
+                + schema
+                + ".visits VALUES (1, '2024-02-13 23:59:59'), (2, '2024-02-14 00:00:00'), "
+                + "(3, '2024-02-29 23:59:59'), (4, '2024-03-01 00:00:00')");
+        String query =
+            IntegrationSql.renderForSource(
+                "SELECT id FROM visits WHERE updated_at >= CAST(:window_start AS TIMESTAMP) "
+                    + "AND updated_at < CAST(:window_end AS TIMESTAMP) ORDER BY id",
+                start,
+                start,
+                end,
+                "clinical",
+                dialect);
+        try (var rows = statement.executeQuery(query)) {
+          assertTrue(rows.next(), dialect.name());
+          assertEquals(2, rows.getInt(1), dialect.name());
+          assertTrue(rows.next(), dialect.name());
+          assertEquals(3, rows.getInt(1), dialect.name());
+          assertFalse(rows.next(), dialect.name());
+        }
+      }
+    }
+  }
+
+  @Test
+  void rejectsUnboundedOrInconsistentExplicitWindows() {
+    LocalDate start = LocalDate.of(2024, 2, 14);
+    for (LocalDate end : List.of(start.minusDays(1), start, start.plusDays(32))) {
+      assertThrows(
+          IntegrationException.class,
+          () -> IntegrationSql.render("SELECT :window_start, :window_end", start, start, end));
+    }
+    assertThrows(
+        IntegrationException.class,
+        () ->
+            IntegrationSql.render(
+                "SELECT :window_end", start.plusDays(1), start, start.plusDays(2)));
+    assertThrows(
+        IntegrationException.class,
+        () -> IntegrationSql.render("SELECT :window_end", start, null, start.plusDays(1)));
+    assertThrows(
+        IntegrationException.class,
+        () -> IntegrationSql.render("SELECT :window_end", start, start, null));
+    assertThrows(
+        IntegrationException.class,
+        () ->
+            IntegrationSql.render(
+                "SELECT :window_end",
+                LocalDate.of(0, 1, 1),
+                LocalDate.of(0, 1, 1),
+                LocalDate.of(0, 1, 2)));
+  }
+
+  @Test
+  void initializationParametersIgnoreEveryQuotedAndCommentRegion() {
+    String query =
+        "SELECT ':biz_date', q'[patient's :biz_date]', NQ'{:biz_date}', E'patient\\'s :biz_date', "
+            + "$$:biz_date$$, $tag$:biz_date$tag$, \":biz_date\", `:biz_date`, [:biz_date], id::text "
+            + "FROM visits -- :biz_date\nWHERE updated_at >= :window_start "
+            + "/* nested /* :biz_date */ */ AND updated_at < :window_end";
+    assertEquals(Set.of("window_start", "window_end"), IntegrationSql.parameters(query));
+    assertDoesNotThrow(() -> IntegrationSql.requireInitializationParameters(query, "MONTH"));
+    assertDoesNotThrow(
+        () -> IntegrationSql.requireInitializationParameters("SELECT :biz_date", "DAY"));
+    assertEquals(Set.of("biz_date"), IntegrationSql.parameters("SELECT :biz_date::date"));
+  }
+
+  @Test
+  void monthlyParameterValidationRequiresAnActualPairAndNoBusinessDate() {
+    for (String query :
+        List.of(
+            "SELECT :biz_date",
+            "SELECT :window_start, ':window_end'",
+            "SELECT :window_end /* :window_start */",
+            "SELECT :window_start, :window_end, :biz_date")) {
+      assertEquals(
+          "SQL_INITIALIZATION_PARAMETERS_REQUIRED",
+          assertThrows(
+                  IntegrationException.class,
+                  () -> IntegrationSql.requireInitializationParameters(query, "MONTH"))
+              .code());
+    }
+  }
+
+  @Test
   void acceptsOneSelectWithJoinsSubqueriesAndConfiguredSchemas() {
     assertDoesNotThrow(
         () ->

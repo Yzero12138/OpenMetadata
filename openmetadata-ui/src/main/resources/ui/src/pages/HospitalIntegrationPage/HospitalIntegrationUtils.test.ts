@@ -14,6 +14,7 @@ import {
   getIntegrationFailure,
   IntegrationRun,
   IntegrationTable,
+  IntegrationTask,
   IntegrationTaskInput,
 } from '../../rest/hospitalIntegrationAPI';
 import {
@@ -21,7 +22,10 @@ import {
   changeIntegrationDatabaseType,
   emptyIntegrationConnection,
   EMPTY_INTEGRATION_TASK,
+  getIntegrationInitializationPreview,
   integrationErrorKey,
+  integrationToday,
+  isIntegrationInitializationLocked,
   isIntegrationRunBusy,
   isIntegrationRunUncertain,
   suggestIntegrationIdentifier,
@@ -137,6 +141,166 @@ describe('Hospital integration validation and run safety', () => {
     expect(edited.sourceQuery).toBe(sqlInput.sourceQuery);
     expect(edited.schedule).toEqual(sqlInput.schedule);
     expect(edited.schedule).not.toBe(task.schedule);
+  });
+
+  it('clones initialization settings without leaking server progress into edit payloads', () => {
+    const task: IntegrationTask = {
+      ...sqlInput,
+      initialization: {
+        enabled: true,
+        startDate: '2024-02-14',
+        batchUnit: 'MONTH',
+      },
+      initializationState: {
+        id: 'history-1',
+        status: 'FAILED',
+        startDate: '2024-02-14',
+        cutoffDate: '2024-04-03',
+        nextDate: '2024-03-01',
+        batchUnit: 'MONTH',
+        completedBatches: 1,
+        totalBatches: 3,
+        startedAt: 1,
+      },
+      id: 'sql-task',
+      version: 4,
+      createdAt: 1,
+      updatedAt: 1,
+      updatedBy: 'synthetic-admin',
+      runs: [],
+      catalog: { status: 'PENDING' },
+    };
+    const edited = toIntegrationTaskInput(task);
+
+    expect(edited.initialization).toEqual(task.initialization);
+    expect(edited.initialization).not.toBe(task.initialization);
+    expect(edited).not.toHaveProperty('initializationState');
+  });
+
+  it('previews leap-day and partial-month windows against an explicit frozen cutoff', () => {
+    expect(
+      getIntegrationInitializationPreview(
+        { enabled: true, startDate: '2024-02-14', batchUnit: 'MONTH' },
+        '2024-04-03'
+      )
+    ).toEqual({
+      totalBatches: 3,
+      firstStartDate: '2024-02-14',
+      firstEndDate: '2024-03-01',
+      lastStartDate: '2024-04-01',
+      lastEndDate: '2024-04-03',
+    });
+    expect(
+      getIntegrationInitializationPreview(
+        { enabled: true, startDate: '2024-02-28', batchUnit: 'DAY' },
+        '2024-03-01'
+      )
+    ).toMatchObject({
+      totalBatches: 2,
+      firstEndDate: '2024-02-29',
+      lastStartDate: '2024-02-29',
+    });
+    expect(
+      getIntegrationInitializationPreview(
+        { enabled: true, startDate: '2024-02-30', batchUnit: 'DAY' },
+        '2024-03-01'
+      )
+    ).toBeUndefined();
+  });
+
+  it('uses Shanghai calendar dates rather than the browser time zone', () => {
+    expect(integrationToday(new Date('2026-11-12T16:01:00Z'))).toBe(
+      '2026-11-13'
+    );
+  });
+
+  it('validates historical dates without changing legacy daily SQL', () => {
+    const initialized: IntegrationTaskInput = {
+      ...sqlInput,
+      initialization: {
+        enabled: true,
+        startDate: '2024-02-14',
+        batchUnit: 'MONTH',
+      },
+    };
+
+    for (const startDate of [
+      '1999-12-31',
+      '2024-02-30',
+      integrationToday(),
+      '2999-01-01',
+      '',
+    ]) {
+      expect(
+        validateIntegrationInput(
+          {
+            ...initialized,
+            initialization: { ...initialized.initialization!, startDate },
+          },
+          [sqlSource],
+          [target]
+        )
+      ).toContain('initializationDateInvalid');
+    }
+
+    expect(validateIntegrationInput(sqlInput, [sqlSource], [target])).toEqual(
+      []
+    );
+  });
+
+  it.each([
+    'SELECT id, $$ :biz_date $$ AS note FROM encounter WHERE at >= :window_start AND at < :window_end',
+    "SELECT id, q'[patient's :biz_date]' AS note FROM encounter WHERE at >= :window_start AND at < :window_end",
+    'SELECT id /* outer /* nested */ :biz_date */ FROM encounter WHERE at >= :window_start AND at < :window_end',
+  ])(
+    'defers monthly parameter validation for SQL dialect literals and comments to the server: %s',
+    (sourceQuery) => {
+      expect(
+        validateIntegrationInput(
+          {
+            ...sqlInput,
+            sourceQuery,
+            initialization: {
+              enabled: true,
+              startDate: '2024-02-14',
+              batchUnit: 'MONTH',
+            },
+          },
+          [sqlSource],
+          [target]
+        )
+      ).toEqual([]);
+    }
+  );
+
+  it('locks historical routing after the first reservation and keeps completed history frozen', () => {
+    const state: NonNullable<IntegrationTask['initializationState']> = {
+      id: 'history-1',
+      status: 'PENDING',
+      startDate: '2024-01-01',
+      cutoffDate: '2024-03-01',
+      nextDate: '2024-01-01',
+      batchUnit: 'MONTH',
+      completedBatches: 0,
+      totalBatches: 2,
+    };
+
+    expect(isIntegrationInitializationLocked(state)).toBe(false);
+    expect(isIntegrationInitializationLocked({ ...state, startedAt: 1 })).toBe(
+      true
+    );
+    expect(
+      isIntegrationInitializationLocked({
+        ...state,
+        pendingJobId: '9223372036854775807',
+      })
+    ).toBe(true);
+    expect(
+      isIntegrationInitializationLocked({ ...state, completedBatches: 1 })
+    ).toBe(true);
+    expect(
+      isIntegrationInitializationLocked({ ...state, status: 'COMPLETED' })
+    ).toBe(true);
   });
 
   it('keeps ambiguous failures blocked but permits retry after an explicit engine rejection', () => {

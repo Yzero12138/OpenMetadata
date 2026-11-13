@@ -16,6 +16,22 @@ class IntegrationModelsTest {
   private static final ObjectMapper JSON = new ObjectMapper();
 
   @Test
+  void acceptsInitializationConfigurationButNotCallerOwnedProgress() throws Exception {
+    ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+    input.put("mode", "SQL_T1");
+    input.put("sourceQuery", "SELECT id FROM public.visits WHERE day = :biz_date");
+    input.set(
+        "initialization",
+        JSON.readTree("{\"enabled\":true,\"startDate\":\"2024-01-15\",\"batchUnit\":\"DAY\"}"));
+    var task = IntegrationModels.readInput(input, false);
+    var stored =
+        JSON.readTree(IntegrationModels.serialize(IntegrationModels.IntegrationTask.from(task)));
+    assertEquals("2024-01-15", stored.path("initialization").path("startDate").asText());
+    input.putObject("initializationState").put("completedBatches", 999);
+    assertThrows(IntegrationException.class, () -> IntegrationModels.readInput(input, false));
+  }
+
+  @Test
   void acceptsBoundedSqlTaskConfigurationButRejectsCallerScheduleState() throws Exception {
     ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
     input.put("mode", "SQL_T1");

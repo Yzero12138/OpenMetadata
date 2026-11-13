@@ -32,6 +32,7 @@ class HospitalIntegrationResourceTest {
     assertThrows(AuthenticationException.class, () -> resource.task(null, null));
     assertThrows(AuthenticationException.class, () -> resource.update(null, null, null));
     assertThrows(AuthenticationException.class, () -> resource.run(null, null, null));
+    assertThrows(AuthenticationException.class, () -> resource.initialization(null, null, null));
     assertThrows(AuthenticationException.class, () -> resource.stop(null, null, null));
     assertThrows(AuthenticationException.class, () -> resource.catalog(null, null, null));
   }

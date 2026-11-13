@@ -14,6 +14,8 @@ import {
   IntegrationConnection,
   IntegrationConnectionInput,
   IntegrationDatabaseType,
+  IntegrationInitializationConfig,
+  IntegrationInitializationState,
   IntegrationMode,
   IntegrationRun,
   IntegrationTable,
@@ -32,6 +34,82 @@ export const integrationModeKey = (mode: IntegrationMode) =>
   `hospitalIntegration.${
     mode === 'SQL_T1' ? 'sqlT1' : mode === 'CDC' ? 'cdc' : 'full'
   }`;
+
+export const integrationToday = (now = new Date()) =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: DEFAULT_INTEGRATION_SCHEDULE.timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+
+const integrationDate = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return undefined;
+  }
+  const date = new Date(value + 'T00:00:00Z');
+
+  return Number.isFinite(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value
+    ? date
+    : undefined;
+};
+
+const dateString = (date: Date) => date.toISOString().slice(0, 10);
+
+export const getIntegrationInitializationPreview = (
+  initialization: IntegrationInitializationConfig,
+  cutoffDate: string
+) => {
+  const start = integrationDate(initialization.startDate);
+  const cutoff = integrationDate(cutoffDate);
+  if (!start || !cutoff || start >= cutoff) {
+    return undefined;
+  }
+  const monthly = initialization.batchUnit === 'MONTH';
+  const end = new Date(start);
+  const last = new Date(cutoff);
+  last.setUTCDate(last.getUTCDate() - 1);
+  let totalBatches: number;
+  if (monthly) {
+    end.setUTCDate(1);
+    end.setUTCMonth(end.getUTCMonth() + 1);
+    last.setUTCDate(1);
+    totalBatches =
+      (last.getUTCFullYear() - start.getUTCFullYear()) * 12 +
+      last.getUTCMonth() -
+      start.getUTCMonth() +
+      1;
+  } else {
+    end.setUTCDate(end.getUTCDate() + 1);
+    totalBatches = (cutoff.getTime() - start.getTime()) / 86400000;
+  }
+
+  return {
+    totalBatches,
+    firstStartDate: initialization.startDate,
+    firstEndDate: dateString(end < cutoff ? end : cutoff),
+    lastStartDate: dateString(last > start ? last : start),
+    lastEndDate: cutoffDate,
+  };
+};
+
+export const isIntegrationInitializationLocked = (
+  state?: IntegrationInitializationState
+) =>
+  Boolean(
+    state &&
+      (state.status === 'COMPLETED' ||
+        state.startedAt !== undefined ||
+        state.pendingStartDate ||
+        state.pendingJobId ||
+        state.completedBatches > 0)
+  );
+
+export const isIntegrationInitializing = (task: IntegrationTask) =>
+  task.mode === 'SQL_T1' &&
+  task.initialization?.enabled === true &&
+  task.initializationState?.status !== 'COMPLETED';
 
 export const EMPTY_INTEGRATION_TASK: IntegrationTaskInput = {
   name: '',
@@ -96,6 +174,9 @@ export const toIntegrationTaskInput = (
   fieldMappings: task.fieldMappings.map((mapping) => ({ ...mapping })),
   ...(task.sourceQuery !== undefined ? { sourceQuery: task.sourceQuery } : {}),
   ...(task.schedule ? { schedule: { ...task.schedule } } : {}),
+  ...(task.initialization
+    ? { initialization: { ...task.initialization } }
+    : {}),
 });
 
 export const canResumeIntegrationTask = (
@@ -184,6 +265,16 @@ export const validateIntegrationInput = (
     ) {
       errors.push('scheduleInvalid');
     }
+    if (input.initialization?.enabled) {
+      const { startDate } = input.initialization;
+      if (
+        !integrationDate(startDate) ||
+        startDate < '2000-01-01' ||
+        startDate >= integrationToday()
+      ) {
+        errors.push('initializationDateInvalid');
+      }
+    }
   }
 
   return errors;
@@ -228,6 +319,11 @@ export const integrationErrorKey = (code?: string) => {
     'INVALID_SCHEDULE',
     'BUSINESS_DATE_REQUIRED',
     'BUSINESS_DATE_INVALID',
+    'SQL_INITIALIZATION_PARAMETERS_REQUIRED',
+    'INITIALIZATION_STATE_INVALID',
+    'INITIALIZATION_IN_PROGRESS',
+    'INITIALIZATION_CONFIGURATION_LOCKED',
+    'INITIALIZATION_UNAVAILABLE',
   ]);
 
   return `hospitalIntegration.errors.${

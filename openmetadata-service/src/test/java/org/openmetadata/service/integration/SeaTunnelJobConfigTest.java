@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionDefinition;
 import org.openmetadata.service.integration.IntegrationModels.FieldMapping;
@@ -15,6 +16,112 @@ import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
 import org.openmetadata.service.integration.IntegrationModels.RunSummary;
 
 class SeaTunnelJobConfigTest {
+  @Test
+  void initializationUsesThePersistedPartialMonthAndRetriesExactlyTheSameWindow() {
+    var task = initializationTask("MONTH");
+    var builder = sqlBuilder(task);
+    var first = builder.build(task, task.latestRun);
+    String query = sourceQuery(first);
+    assertTrue(query.contains("'2024-02-14 00:00:00'"));
+    assertTrue(query.contains("'2024-03-01 00:00:00'"));
+    assertFalse(query.contains("'2024-02-15 00:00:00'"));
+    task.latestRun.status = "FAILED";
+    task.latestRun.jobId = "123456790";
+    task.initializationState.pendingJobId = task.latestRun.jobId;
+    assertEquals(query, sourceQuery(builder.build(task, task.latestRun)));
+    var sink = (Map<?, ?>) ((List<?>) first.get("sink")).getFirst();
+    assertEquals("Doris", sink.get("plugin_name"));
+    assertEquals(false, sink.get("sink.enable-delete"));
+    assertEquals("APPEND_DATA", sink.get("data_save_mode"));
+  }
+
+  @Test
+  void initializationDayKeepsTheLegacyBusinessDateParameter() {
+    var task = initializationTask("DAY");
+    task.sourceQuery = "SELECT id, name FROM visits WHERE day = :biz_date";
+    task.initializationState.pendingEndDate = "2024-02-15";
+    task.latestRun.windowEnd = "2024-02-15 00:00:00";
+    assertTrue(sourceQuery(sqlBuilder(task).build(task)).contains("day = '2024-02-14'"));
+  }
+
+  @Test
+  void initializationRejectsStaleOrForgedRunIdentityAndWindowContext() {
+    List<Consumer<IntegrationTask>> corruptions =
+        List.of(
+            task -> task.latestRun.initializationId = "another-initialization",
+            task -> task.initializationState.id = null,
+            task -> task.initialization.enabled = false,
+            task -> task.initialization.batchUnit = "DAY",
+            task -> task.initialization.startDate = "2024-02-13",
+            task -> task.initializationState.status = "COMPLETED",
+            task -> task.initializationState.completedBatches = 2,
+            task -> task.latestRun.batchIndex = null,
+            task -> task.latestRun.batchIndex = 2L,
+            task -> task.initializationState.pendingJobId = "old-job",
+            task -> task.latestRun.jobId = null,
+            task -> task.initializationState.pendingStartDate = "2024-02-13",
+            task -> task.initializationState.pendingEndDate = "2024-03-02",
+            task -> task.latestRun.businessDate = "2024-02-15",
+            task -> task.latestRun.windowStart = "2024-02-15 00:00:00",
+            task -> task.latestRun.windowEnd = "2024-03-01 00:00:00' OR 1=1 -- ",
+            task -> task.latestRun.windowEnd = "2024-03-01 01:00:00",
+            task -> task.latestRun.windowEnd = "2024-03-01T00:00:00",
+            task -> task.latestRun.windowEnd = "2024-2-29 00:00:00",
+            task -> task.latestRun.windowEnd = null,
+            task -> task.latestRun.trigger = "DAILY",
+            task -> task.initializationState = null);
+    for (int i = 0; i < corruptions.size(); i++) {
+      var task = initializationTask("MONTH");
+      corruptions.get(i).accept(task);
+      assertThrows(
+          IntegrationException.class,
+          () -> sqlBuilder(task).build(task, task.latestRun),
+          "corruption " + i);
+    }
+  }
+
+  @Test
+  void initializationRejectsAWindowOverOneMonthEvenWhenTheSavedContextAgrees() {
+    var task = initializationTask("MONTH");
+    task.latestRun.windowEnd = "2024-03-17 00:00:00";
+    task.initializationState.pendingEndDate = "2024-03-17";
+    assertThrows(IntegrationException.class, () -> sqlBuilder(task).build(task));
+  }
+
+  @Test
+  void monthlyInitializationRequiresBothRealWindowParametersAndRejectsBusinessDate() {
+    for (String predicate :
+        List.of(
+            "day = :biz_date",
+            "updated_at >= :window_start",
+            "updated_at < :window_end",
+            "updated_at >= :window_start AND updated_at < :window_end AND day = :biz_date")) {
+      var task = initializationTask("MONTH");
+      task.sourceQuery = "SELECT id, name FROM visits WHERE " + predicate;
+      assertThrows(IntegrationException.class, () -> sqlBuilder(task).build(task), predicate);
+    }
+  }
+
+  @Test
+  void dailyRunsRejectSavedWindowsThatDoNotMatchTheirOneDayBusinessDate() {
+    var task = initializationTask("DAY");
+    task.initialization = null;
+    task.initializationState = null;
+    task.latestRun.initializationId = null;
+    task.latestRun.batchIndex = null;
+    task.latestRun.trigger = "DAILY";
+    task.latestRun.windowEnd = "2024-02-15 00:00:00";
+    var builder = sqlBuilder(task);
+    assertTrue(sourceQuery(builder.build(task)).contains("'2024-02-15 00:00:00'"));
+    task.latestRun.windowEnd = "2024-03-01 00:00:00";
+    assertThrows(IntegrationException.class, () -> builder.build(task));
+    task.latestRun.windowStart = null;
+    task.latestRun.windowEnd = null;
+    assertTrue(sourceQuery(builder.build(task)).contains("'2024-02-15 00:00:00'"));
+    task.latestRun.windowStart = "2024-02-14 00:00:00";
+    assertThrows(IntegrationException.class, () -> builder.build(task));
+  }
+
   @Test
   void sqlT1SupportsEverySourceDialectAndUsesTheExplicitRunForDorisLabels() {
     var targetDefinition = DorisTableDdlTest.targetConnection();
@@ -72,6 +179,19 @@ class SeaTunnelJobConfigTest {
       var retrySink = (Map<?, ?>) ((List<?>) builder.build(task, run).get("sink")).getFirst();
       assertNotEquals(firstLabel, retrySink.get("sink.label-prefix"));
       assertEquals("2024-02-29", run.businessDate);
+      var initialization = initializationTask("MONTH");
+      task.initialization = initialization.initialization;
+      task.initializationState = initialization.initializationState;
+      task.latestRun = initialization.latestRun;
+      RunSummary restoredRun =
+          IntegrationModels.deserialize(IntegrationModels.serialize(task)).latestRun;
+      String initializationQuery = sourceQuery(builder.build(task, restoredRun));
+      assertTrue(initializationQuery.contains("'2024-02-14 00:00:00'"), type);
+      assertTrue(initializationQuery.contains("'2024-03-01 00:00:00'"), type);
+      assertTrue(
+          initializationQuery.contains(
+              sourceEndpoint.dialect().quote(task.sourceSchema) + ".visits"),
+          type);
     }
   }
 
@@ -274,6 +394,58 @@ class SeaTunnelJobConfigTest {
     IntegrationTask task = IntegrationTask.from(IntegrationValidatorTest.validInput());
     task.id = "12345678-1234-1234-1234-1234567890ab";
     return task;
+  }
+
+  private IntegrationTask initializationTask(String batchUnit) {
+    var task = IntegrationTask.from(IntegrationValidatorTest.sqlInput());
+    task.id = "12345678-1234-1234-1234-1234567890ab";
+    task.targetConnectionId = "doris-ods-validation";
+    task.targetSchema = "ods_validation";
+    task.targetTable = "visits";
+    task.sourceQuery =
+        "SELECT id, name FROM visits WHERE updated_at >= :window_start AND updated_at < :window_end";
+    task.initialization = new IntegrationModels.InitializationConfig();
+    task.initialization.enabled = true;
+    task.initialization.startDate = "2024-02-14";
+    task.initialization.batchUnit = batchUnit;
+    task.schedule = new IntegrationModels.ScheduleConfig();
+    task.schedule.enabled = true;
+    task.initializationState = new IntegrationModels.InitializationState();
+    task.initializationState.id = "initialization-1";
+    task.initializationState.status = "RUNNING";
+    task.initializationState.startDate = "2024-02-14";
+    task.initializationState.cutoffDate = "2024-04-01";
+    task.initializationState.nextDate = "2024-02-14";
+    task.initializationState.batchUnit = batchUnit;
+    task.initializationState.totalBatches = 2;
+    task.initializationState.pendingStartDate = "2024-02-14";
+    task.initializationState.pendingEndDate = "2024-03-01";
+    task.initializationState.pendingJobId = "123456789";
+    task.latestRun = new RunSummary();
+    task.latestRun.jobId = task.initializationState.pendingJobId;
+    task.latestRun.businessDate = "2024-02-14";
+    task.latestRun.windowStart = "2024-02-14 00:00:00";
+    task.latestRun.windowEnd = "2024-03-01 00:00:00";
+    task.latestRun.trigger = "INITIALIZATION";
+    task.latestRun.initializationId = task.initializationState.id;
+    task.latestRun.batchIndex = 1L;
+    return task;
+  }
+
+  private SeaTunnelJobConfig sqlBuilder(IntegrationTask task) {
+    var definition = DorisTableDdlTest.targetConnection();
+    definition.host = "doris.example.internal";
+    definition.port = 9030;
+    definition.dorisHttpPort = 8030;
+    definition.username = "synthetic-writer";
+    definition.tlsMode = "DISABLED";
+    var endpoint = new IntegrationConfiguration.JdbcEndpoint(definition, "synthetic-password");
+    return new SeaTunnelJobConfig(
+        id -> id.equals(task.targetConnectionId) ? endpoint : configuration().endpoint(id));
+  }
+
+  private String sourceQuery(Map<String, Object> config) {
+    return (String) ((Map<?, ?>) ((List<?>) config.get("source")).getFirst()).get("query");
   }
 
   private IntegrationConfiguration configuration() {

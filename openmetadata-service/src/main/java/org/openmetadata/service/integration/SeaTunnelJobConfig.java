@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -234,8 +235,71 @@ public final class SeaTunnelJobConfig {
     } catch (DateTimeException e) {
       throw new IntegrationException("BUSINESS_DATE_INVALID", 400);
     }
+    if ("INITIALIZATION".equals(run.trigger)) {
+      var state = task.initializationState;
+      if (state == null
+          || task.initialization == null
+          || !task.initialization.enabled
+          || !"RUNNING".equals(state.status)
+          || run.initializationId == null
+          || run.initializationId.isBlank()
+          || !run.initializationId.equals(state.id)
+          || run.jobId == null
+          || run.jobId.isBlank()
+          || !run.jobId.equals(state.pendingJobId)
+          || state.completedBatches < 0
+          || state.completedBatches >= state.totalBatches
+          || run.batchIndex == null
+          || run.batchIndex != state.completedBatches + 1
+          || !Objects.equals(task.initialization.batchUnit, state.batchUnit)
+          || !Objects.equals(task.initialization.startDate, state.startDate)) {
+        throw new IntegrationException("INITIALIZATION_STATE_INVALID", 400);
+      }
+      LocalDate start = windowDate(run.windowStart, "INITIALIZATION_STATE_INVALID");
+      LocalDate end = windowDate(run.windowEnd, "INITIALIZATION_STATE_INVALID");
+      if (!businessDate.equals(start)
+          || !start.toString().equals(state.pendingStartDate)
+          || !end.toString().equals(state.pendingEndDate)
+          || !end.isAfter(start)
+          || end.isAfter(start.plusDays(31))
+          || ("DAY".equals(state.batchUnit) && !end.equals(start.plusDays(1)))) {
+        throw new IntegrationException("INITIALIZATION_STATE_INVALID", 400);
+      }
+      IntegrationSql.requireInitializationParameters(task.sourceQuery, state.batchUnit);
+      return IntegrationSql.renderForSource(
+          task.sourceQuery, businessDate, start, end, task.sourceSchema, source.dialect());
+    }
+    if (run.initializationId != null
+        || run.batchIndex != null
+        || (task.initializationState != null
+            && task.initializationState.pendingJobId != null
+            && task.initializationState.pendingJobId.equals(run.jobId))) {
+      throw new IntegrationException("INITIALIZATION_STATE_INVALID", 400);
+    }
+    if (run.windowStart != null || run.windowEnd != null) {
+      LocalDate start = windowDate(run.windowStart, "BUSINESS_DATE_INVALID");
+      LocalDate end = windowDate(run.windowEnd, "BUSINESS_DATE_INVALID");
+      if (!start.equals(businessDate) || !end.equals(businessDate.plusDays(1))) {
+        throw new IntegrationException("BUSINESS_DATE_INVALID", 400);
+      }
+    }
     return IntegrationSql.renderForSource(
         task.sourceQuery, businessDate, task.sourceSchema, source.dialect());
+  }
+
+  private static LocalDate windowDate(String value, String errorCode) {
+    try {
+      if (value == null || value.length() != 19) {
+        throw new IntegrationException(errorCode, 400);
+      }
+      LocalDate date = LocalDate.parse(value.substring(0, 10));
+      if (date.getYear() < 1 || date.getYear() > 9999 || !value.equals(date + " 00:00:00")) {
+        throw new IntegrationException(errorCode, 400);
+      }
+      return date;
+    } catch (DateTimeException e) {
+      throw new IntegrationException(errorCode, 400);
+    }
   }
 
   private static String labelPrefix(IntegrationTask task, RunSummary run) {
