@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "status": "awaiting-publication-and-test-rollout-approval",
+  "sourceRevision": "a0a487a0ae805b3d87609c997def72d594826c57",
+  "published": false,
+  "deployed": false,
+  "application": {
+    "localTag": "hospital-openmetadata:2.0.4-integrate-v15-oracle-cdc-20261113",
+    "publicationTag": "harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v15-oracle-cdc-20261113",
+    "localImageId": "sha256:f457fc6b80ffb9ae32ef32eca6ec671595dcd1e63eecb1934f3671a6fa1267fe",
+    "remoteManifestDigest": null,
+    "baseImage": "harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:f9fac7c3c8230093c501e9730be4486234fd17e1e498b928fc9e36b9f559b518",
+    "serviceArchiveSha256": "5293a39c9f826e62fec07bfa50bda801cae2623295c1ec233dcd84c99e49c887",
+    "uiArchiveSha256": "3664243b68a8b4b56e9be562783d5bfd06588085f1092817957dff34016874a7",
+    "productionDistManifestSha256": "570564c99d0697f346dd26317a1576d973178e7a6ecca909083d8a992fea8383",
+    "runtimeUid": 1000,
+    "runtimeGid": 1000,
+    "inheritedRuntimeVerified": true,
+    "packagedArchiveDigestsVerified": true
+  },
+  "engine": {
+    "localTag": "hospital-seatunnel:3.0.0-oracle-cdc-v1",
+    "publicationTag": "harbor.qcrmyy.local/coop/hospital-seatunnel:3.0.0-oracle-cdc-v1",
+    "localImageId": "sha256:2d9a15cd94ec3e878acfce177c9224a1647199b8dcccb080093683178b46f67c",
+    "remoteManifestDigest": null,
+    "baseImage": "harbor.qcrmyy.local/coop/hospital-seatunnel@sha256:477f41ca16167c9fbec07f188235a781aa7bf6ec844de4826c31016b638367c0",
+    "connectorSha256": "a9333a2f03c9207ba7a5a96cc839831000c000343a50473942338c7686f1df4f",
+    "factoryAndValueSmokeVerified": true,
+    "nativeSqlAndDorisSerializationVerified": true
+  },
+  "verification": {
+    "backendTests": 402,
+    "backendTestClasses": 35,
+    "backendSkippedOrAborted": 0,
+    "externalFixtureClassesExcludedBeforeDiscovery": 4,
+    "frontendTests": 188,
+    "frontendTestSuites": 13,
+    "frontendFailedOrPending": 0,
+    "locales": 20,
+    "cdcKeysPerLocale": 77,
+    "productionFiles": 4424,
+    "compressedVariantsMatched": 2536,
+    "finalPcSyntheticCaptures": 22,
+    "realOracleCdcAccepted": false,
+    "sourceDmlPerformed": false,
+    "residentLocalTestServicesStarted": false
+  },
+  "metadataBackup": {
+    "namespace": "datahub-open-test",
+    "deployment": "hospital-metadata-postgres",
+    "pvc": "hospital-metadata-postgres-data",
+    "directory": "/var/lib/postgresql/data/hospital-integration-upgrades",
+    "exactExtension": "hospital.integration.task",
+    "backupScriptSha256": "49356be3db7d7759d86f727b5627ee9c21a50950732231e6dd063d68e8976ee2",
+    "restoreScriptSha256": "4cda3dde172a17794b82117ce7147be69c5753e33aecb2b3b73062295467d7f9",
+    "databaseScriptsExecuted": false
+  }
+}
