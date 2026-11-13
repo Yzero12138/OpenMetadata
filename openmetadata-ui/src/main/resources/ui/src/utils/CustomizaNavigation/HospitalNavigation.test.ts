@@ -20,6 +20,7 @@ import {
 
 const SOURCES = '/hospital/integration/sources';
 const TASKS = '/hospital/integration/tasks';
+const TARGET_TABLES = ROUTES.HOSPITAL_INTEGRATION_TARGET_TABLES;
 const nav = (
   id: string,
   isHidden = false,
@@ -57,6 +58,7 @@ describe('hospital workspace navigation', () => {
       )?.children?.map((item) => [item.key, item.redirect_url])
     ).toEqual([
       [SOURCES, SOURCES],
+      [TARGET_TABLES, TARGET_TABLES],
       [TASKS, TASKS],
     ]);
   });
@@ -71,9 +73,14 @@ describe('hospital workspace navigation', () => {
       edited
         .find((item) => item.key === ROUTES.HOSPITAL_INTEGRATION)
         ?.children?.map((item) => item.key)
-    ).toEqual([SOURCES, TASKS]);
+    ).toEqual([SOURCES, TARGET_TABLES, TASKS]);
     expect(getHiddenKeysFromNavigationItems(saved)).toEqual(
-      expect.arrayContaining([ROUTES.HOSPITAL_INTEGRATION, SOURCES, TASKS])
+      expect.arrayContaining([
+        ROUTES.HOSPITAL_INTEGRATION,
+        SOURCES,
+        TASKS,
+        TARGET_TABLES,
+      ])
     );
   });
 

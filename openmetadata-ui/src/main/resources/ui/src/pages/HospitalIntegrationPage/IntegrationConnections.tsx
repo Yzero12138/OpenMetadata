@@ -13,6 +13,7 @@
 import { Button } from '@openmetadata/ui-core-components';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import FormDrawer from '../../components/common/atoms/drawer/FormDrawer';
 import {
   createIntegrationConnection,
@@ -34,6 +35,7 @@ import {
 import { IntegrationConnectionForm } from './IntegrationConnectionForm';
 import { IntegrationDiscardConfirmation } from './IntegrationDiscardConfirmation';
 import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
+import { IntegrationSourcePreflight } from './IntegrationSourcePreflight';
 import { useIntegrationNavigationGuard } from './useIntegrationNavigationGuard';
 
 type ConnectionTestState = {
@@ -50,8 +52,21 @@ export const IntegrationConnections = ({
   createRequest,
   onChange,
   onBusyChange,
+  isAdmin = true,
 }: IntegrationConnectionsProps) => {
   const { t } = useTranslation();
+  const location = useLocation();
+  const [preflightId, setPreflightId] = useState<string>();
+  const preflightConnection = isAdmin
+    ? connections.find(
+        (item) =>
+          item.id === preflightId &&
+          item.role === 'SOURCE' &&
+          item.enabled &&
+          item.supportedModes.includes('CDC') &&
+          (item.databaseType === 'Oracle' || item.databaseType === 'Postgres')
+      )
+    : undefined;
   const [editor, setEditor] = useState<IntegrationConnection | 'create'>();
   const [draft, setDraft] = useState(emptyIntegrationConnection);
   const [schemasText, setSchemasText] = useState('public');
@@ -469,6 +484,22 @@ export const IntegrationConnections = ({
                             onClick={() => void test(connection)}>
                             {t('hospitalIntegration.testConnection')}
                           </Button>
+                          {connection.role === 'SOURCE' &&
+                            connection.supportedModes.includes('CDC') &&
+                            (connection.databaseType === 'Oracle' ||
+                              connection.databaseType === 'Postgres') && (
+                              <Button
+                                color="link-color"
+                                isDisabled={
+                                  !isAdmin ||
+                                  busy ||
+                                  loading ||
+                                  !connection.enabled
+                                }
+                                onClick={() => setPreflightId(connection.id)}>
+                                {t('hospitalCdc.sourcePreflight')}
+                              </Button>
+                            )}
                           {!connection.managed && (
                             <>
                               <Button
@@ -540,6 +571,25 @@ export const IntegrationConnections = ({
           </div>
         )}
       </section>
+      {preflightConnection && (
+        <IntegrationSourcePreflight
+          connection={preflightConnection}
+          key={JSON.stringify([
+            location.key,
+            location.pathname,
+            location.search,
+            preflightConnection.id,
+            preflightConnection.version,
+          ])}
+          scope={JSON.stringify([
+            isAdmin,
+            location.key,
+            location.pathname,
+            location.search,
+          ])}
+          onClose={() => setPreflightId(undefined)}
+        />
+      )}
       <FormDrawer
         destroyOnClose
         className="hospital-integration hospital-integration--drawer"

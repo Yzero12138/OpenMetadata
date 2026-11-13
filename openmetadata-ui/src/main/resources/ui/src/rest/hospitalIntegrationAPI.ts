@@ -21,6 +21,53 @@ export type IntegrationDatabaseType =
   | 'Doris';
 export type IntegrationMode = 'FULL' | 'CDC' | 'SQL_T1';
 
+export interface IntegrationCdcOptions {
+  databaseName?: string;
+  serverTimeZone?: string;
+  pdbName?: string;
+  rootServiceName?: string;
+}
+
+export interface IntegrationRuntimeOptions {
+  fetchSize?: number | null;
+  splitSize?: number | null;
+  sinkBatchSize?: number | null;
+  checkpointIntervalSeconds?: number | null;
+  checkpointTimeoutSeconds?: number | null;
+}
+
+export interface IntegrationCdcCheck {
+  id: string;
+  status: 'PASS' | 'FAIL' | 'UNKNOWN' | 'NOT_APPLICABLE';
+  code: string;
+  required: boolean;
+}
+
+export interface IntegrationCdcPreflightResult {
+  connectionId: string;
+  databaseType: IntegrationDatabaseType;
+  databaseVersion?: string;
+  databaseName?: string;
+  implemented: boolean;
+  ready: boolean;
+  checks: IntegrationCdcCheck[];
+}
+
+export interface IntegrationCdcPreflightInput {
+  schema?: string;
+  table?: string;
+  columns?: string[];
+  cdc?: IntegrationCdcOptions;
+  targetConnectionId?: string;
+  targetSchema?: string;
+  targetTable?: string;
+}
+
+export interface IntegrationTargetCount {
+  count: number;
+  checkedAt: number;
+}
+
 export interface IntegrationSchedule {
   enabled: boolean;
   dailyTime: string;
@@ -221,6 +268,8 @@ export interface IntegrationTaskInput {
   initialization?: IntegrationInitializationConfig;
   primaryKey: string;
   fieldMappings: { source: string; target: string }[];
+  cdc?: IntegrationCdcOptions;
+  runtime?: IntegrationRuntimeOptions;
 }
 
 export interface IntegrationRun {
@@ -241,6 +290,17 @@ export interface IntegrationRun {
   scheduledFor?: number;
   initializationId?: string;
   batchIndex?: number;
+  checkpoints?: {
+    triggered: number;
+    completed: number;
+    failed: number;
+    restored: number;
+    latestCompletedAt?: number | null;
+    latestSavepointAt?: number | null;
+    updatedAt?: number | null;
+  };
+  checkpointsCheckedAt?: number;
+  configurationFingerprint?: string;
 }
 
 export interface IntegrationTask extends IntegrationTaskInput {
@@ -288,6 +348,45 @@ export interface IntegrationFailure {
 }
 
 const PREFIX = '/hospital/integration';
+
+export const preflightIntegrationConnection = async (
+  id: string,
+  input: IntegrationCdcPreflightInput,
+  signal?: AbortSignal
+): Promise<IntegrationCdcPreflightResult> => {
+  const { data } = await APIClient.post<IntegrationCdcPreflightResult>(
+    `${PREFIX}/connections/${encodeURIComponent(id)}/cdc-preflight`,
+    input,
+    { signal }
+  );
+
+  return data;
+};
+
+export const preflightIntegrationTask = async (
+  input: IntegrationTaskInput,
+  signal?: AbortSignal
+): Promise<IntegrationCdcPreflightResult> => {
+  const { data } = await APIClient.post<IntegrationCdcPreflightResult>(
+    `${PREFIX}/tasks/cdc-preflight`,
+    input,
+    { signal }
+  );
+
+  return data;
+};
+
+export const getIntegrationTargetCount = async (
+  id: string,
+  signal?: AbortSignal
+): Promise<IntegrationTargetCount> => {
+  const { data } = await APIClient.get<IntegrationTargetCount>(
+    `${PREFIX}/tasks/${encodeURIComponent(id)}/target-count`,
+    { signal }
+  );
+
+  return data;
+};
 
 export const getIntegrationStatus = async (signal?: AbortSignal) => {
   const { data } = await APIClient.get<IntegrationEngineStatus>(
@@ -614,7 +713,7 @@ export const getIntegrationFailure = (error: unknown): IntegrationFailure => {
     const code =
       error.response?.data?.errorCode ??
       error.response?.data?.code ??
-      (status === 409 ? 'VERSION_CONFLICT' : 'REQUEST_FAILED');
+      'REQUEST_FAILED';
     const rejectedBeforeSubmission = new Set([
       'INTEGRATION_DISABLED',
       'ENGINE_UNAVAILABLE',
@@ -641,11 +740,24 @@ export const getIntegrationFailure = (error: unknown): IntegrationFailure => {
       'INITIALIZATION_IN_PROGRESS',
       'INITIALIZATION_CONFIGURATION_LOCKED',
       'INITIALIZATION_UNAVAILABLE',
+      'CDC_PREFLIGHT_FAILED',
+      'CDC_CONFIGURATION_CHANGED',
+      'CDC_LEGACY_RESUME_UNSAFE',
+      'TARGET_WRITER_ACTIVE',
+      'TARGET_COUNT_UNAVAILABLE',
+      'CDC_TRUSTED_INSPECTION_REQUIRED',
+      'ORACLE_CDC_OPTIONS_INVALID',
+      'ORACLE_CDC_CONTAINER_RUNTIME_UNVERIFIED',
+      'ORACLE_CDC_IDENTIFIER_UNSUPPORTED',
+      'ORACLE_CDC_TYPE_UNSUPPORTED',
+      'ORACLE_CDC_LOB_UNVERIFIED',
+      'ORACLE_CDC_STRING_BYTES_UNVERIFIED',
+      'ORACLE_CDC_EXTENDED_STRING_UNVERIFIED',
     ]);
 
     return {
       code,
-      conflict: status === 409,
+      conflict: status === 409 && code === 'VERSION_CONFLICT',
       uncertain:
         code === 'SUBMISSION_UNKNOWN' ||
         !error.response ||

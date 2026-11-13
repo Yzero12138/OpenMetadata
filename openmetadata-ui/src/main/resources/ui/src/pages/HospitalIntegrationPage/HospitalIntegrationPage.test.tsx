@@ -61,6 +61,9 @@ jest.mock('../../rest/hospitalIntegrationAPI', () => ({
   testIntegrationConnection: jest.fn(),
   previewIntegrationTargetTable: jest.fn(),
   createIntegrationTargetTable: jest.fn(),
+  preflightIntegrationTask: jest.fn(),
+  preflightIntegrationConnection: jest.fn(),
+  getIntegrationTargetCount: jest.fn(),
 }));
 
 const mockApi = api as jest.Mocked<typeof api>;
@@ -185,14 +188,17 @@ const renderWorkspace = async (
   isAdmin = true,
   path = ROUTES.HOSPITAL_INTEGRATION_TASKS
 ) => {
+  let result!: ReturnType<typeof render>;
   await act(async () => {
-    render(
+    result = render(
       <MemoryRouter initialEntries={[path]}>
         <HospitalIntegrationWorkspace isAdmin={isAdmin} />
         <LocationProbe />
       </MemoryRouter>
     );
   });
+
+  return result;
 };
 const renderSources = async (isAdmin = true, search = '') => {
   await act(async () => {
@@ -207,13 +213,11 @@ const renderSources = async (isAdmin = true, search = '') => {
 };
 const click = async (element: HTMLElement) => {
   await act(async () => {
-    await userEvent.click(element);
+    fireEvent.click(element);
   });
 };
 const openTask = async () => {
-  await act(async () => {
-    await click(await screen.findByRole('button', { name: task.displayName }));
-  });
+  await click(await screen.findByRole('button', { name: task.displayName }));
   await waitFor(() =>
     expect(screen.getByRole('button', { name: 'label.refresh' })).toBeEnabled()
   );
@@ -258,6 +262,427 @@ describe('Hospital integration workbench behavior', () => {
     mockApi.runIntegrationTask.mockResolvedValue(
       withRun({ ...finished, status: 'RUNNING', finishedAt: undefined })
     );
+    mockApi.preflightIntegrationTask.mockResolvedValue({
+      connectionId: sourceConnection.id,
+      databaseType: 'Postgres',
+      implemented: true,
+      ready: true,
+      checks: [],
+    });
+    mockApi.preflightIntegrationConnection.mockResolvedValue({
+      connectionId: sourceConnection.id,
+      databaseType: 'Postgres',
+      implemented: true,
+      ready: true,
+      checks: [],
+    });
+    mockApi.getIntegrationTargetCount.mockResolvedValue({
+      count: 0,
+      checkedAt: 1791500020000,
+    });
+  });
+
+  it('requires explicit task evidence and rechecks actual saved renamed mappings immediately before run', async () => {
+    const renamed = {
+      ...task,
+      fieldMappings: [{ source: 'id', target: 'encounter_id' }],
+    };
+    mockApi.getIntegrationTask.mockResolvedValue(renamed);
+    await renderWorkspace();
+    await openTask();
+
+    expect(mockApi.preflightIntegrationTask).not.toHaveBeenCalled();
+    expect(mockApi.getIntegrationTargetCount).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'label.run' })).toBeDisabled();
+
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+
+    expect(mockApi.preflightIntegrationTask).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        primaryKey: 'id',
+        fieldMappings: renamed.fieldMappings,
+      }),
+      expect.any(AbortSignal)
+    );
+
+    await click(screen.getByRole('button', { name: 'label.close' }));
+    await click(screen.getByRole('button', { name: 'label.run' }));
+
+    expect(mockApi.preflightIntegrationTask).toHaveBeenCalledTimes(2);
+    expect(mockApi.runIntegrationTask).toHaveBeenCalledWith(task.id, false);
+  });
+
+  it('never latches submission uncertainty when the fresh preflight times out before run', async () => {
+    await renderWorkspace();
+    await openTask();
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+    await click(screen.getByRole('button', { name: 'label.close' }));
+    mockApi.preflightIntegrationTask.mockRejectedValueOnce({
+      isAxiosError: true,
+    });
+    await click(screen.getByRole('button', { name: 'label.run' }));
+
+    expect(mockApi.runIntegrationTask).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('hospitalIntegration.errors.SUBMISSION_UNKNOWN')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId('integration-task-preflight-drawer')
+    ).toBeInTheDocument();
+
+    await click(screen.getByRole('button', { name: 'label.close' }));
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+    await click(screen.getByRole('button', { name: 'label.close' }));
+
+    expect(screen.getByRole('button', { name: 'label.run' })).toBeEnabled();
+  });
+
+  it('invalidates previous readiness on a CDC rejection without displaying version reload', async () => {
+    mockApi.runIntegrationTask.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { code: 'CDC_PREFLIGHT_FAILED' } },
+    });
+    await renderWorkspace();
+    await openTask();
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+    await click(screen.getByRole('button', { name: 'label.close' }));
+    await click(screen.getByRole('button', { name: 'label.run' }));
+
+    expect(screen.getByRole('button', { name: 'label.run' })).toBeDisabled();
+    expect(
+      screen.queryByTestId('integration-task-reload')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('hospitalIntegration.errors.SUBMISSION_UNKNOWN')
+    ).not.toBeInTheDocument();
+  });
+
+  it('saves a structurally valid CDC draft when execution preflight is not ready', async () => {
+    mockApi.preflightIntegrationTask.mockResolvedValue({
+      connectionId: sourceConnection.id,
+      databaseType: 'Oracle',
+      implemented: true,
+      ready: false,
+      checks: [
+        {
+          id: 'lob',
+          status: 'FAIL',
+          code: 'ORACLE_CDC_LOB_UNVERIFIED',
+          required: true,
+        },
+      ],
+    });
+    mockApi.updateIntegrationTask.mockResolvedValue(task);
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'label.save' })).toBeEnabled()
+    );
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+
+    expect(await screen.findByText('hospitalCdc.lob')).toBeInTheDocument();
+
+    await click(screen.getByRole('button', { name: 'label.save' }));
+
+    expect(mockApi.updateIntegrationTask).toHaveBeenCalled();
+  });
+
+  it('queries target rows only on explicit action and preserves a measured zero and timestamp', async () => {
+    await renderWorkspace();
+    await openTask();
+
+    expect(mockApi.getIntegrationTargetCount).not.toHaveBeenCalled();
+
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.countTarget' })
+    );
+
+    expect(mockApi.getIntegrationTargetCount).toHaveBeenCalledWith(
+      task.id,
+      expect.any(AbortSignal)
+    );
+    expect(screen.getByTestId('integration-target-count')).toHaveTextContent(
+      '0'
+    );
+
+    await click(screen.getByRole('button', { name: 'label.refresh' }));
+
+    expect(mockApi.getIntegrationTargetCount).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechecks a legacy PostgreSQL resume without inventing runtime options or requiring a fingerprint', async () => {
+    mockApi.getIntegrationTask.mockResolvedValue(
+      withRun({ ...finished, status: 'SAVEPOINT_DONE', canResume: true })
+    );
+    await renderWorkspace();
+    await openTask();
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+    await click(screen.getByRole('button', { name: 'label.close' }));
+    await click(screen.getByRole('button', { name: 'label.resume' }));
+
+    expect(mockApi.preflightIntegrationTask).toHaveBeenCalledTimes(2);
+    expect(
+      mockApi.preflightIntegrationTask.mock.calls[1][0]
+    ).not.toHaveProperty('runtime');
+    expect(
+      mockApi.preflightIntegrationTask.mock.calls[1][0]
+    ).not.toHaveProperty('cdc');
+    expect(mockApi.runIntegrationTask).toHaveBeenCalledWith(task.id, true);
+  });
+
+  it('checks basic form validity before task preflight without inventing placeholder names', async () => {
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'hospitalCdc.check' })
+      ).toBeEnabled()
+    );
+    fireEvent.change(document.getElementById('integration-task-name')!, {
+      target: { value: '' },
+    });
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+
+    expect(mockApi.preflightIntegrationTask).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'hospitalIntegration.invalidName'
+    );
+  });
+
+  it.each(['close', 'history'])(
+    'guards a clean saved task with only an invalid raw runtime draft on %s',
+    async (action) => {
+      await renderWorkspace();
+      await openTask();
+      await click(screen.getByRole('button', { name: 'label.edit' }));
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'label.save' })).toBeEnabled()
+      );
+      fireEvent.click(screen.getByText('hospitalCdc.runtimeSettings'));
+      fireEvent.change(
+        document.getElementById('integration-runtime-fetchSize')!,
+        { target: { value: '1e3' } }
+      );
+      const requestLeave = () =>
+        click(
+          action === 'close'
+            ? screen.getByRole('button', { name: 'label.close' })
+            : screen.getByTestId('integration-history-back')
+        );
+      await requestLeave();
+
+      expect(screen.getByText('message.unsaved-form-data')).toBeInTheDocument();
+      expect(screen.getByTestId('integration-location')).toHaveTextContent(
+        '/tasks/' + task.id
+      );
+
+      await click(
+        screen.getByRole('button', { name: 'label.continue-editing' })
+      );
+
+      expect(
+        document.getElementById('integration-runtime-fetchSize')
+      ).toHaveValue('1e3');
+      expect(mockApi.updateIntegrationTask).not.toHaveBeenCalled();
+
+      await requestLeave();
+      await click(screen.getByRole('button', { name: 'label.discard' }));
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId('integration-task-drawer')
+        ).not.toBeInTheDocument()
+      );
+      if (action === 'history') {
+        await openTask();
+      }
+      await click(screen.getByRole('button', { name: 'label.edit' }));
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'label.save' })).toBeEnabled()
+      );
+
+      expect(
+        document.getElementById('integration-runtime-fetchSize')
+      ).toHaveValue('');
+
+      await click(screen.getByRole('button', { name: 'label.close' }));
+
+      expect(
+        screen.queryByText('message.unsaved-form-data')
+      ).not.toBeInTheDocument();
+    }
+  );
+
+  it('clears invalid runtime dirty state after returning the value to its unchanged inherited blank', async () => {
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'label.save' })).toBeEnabled()
+    );
+    fireEvent.click(screen.getByText('hospitalCdc.runtimeSettings'));
+    const fetch = document.getElementById('integration-runtime-fetchSize')!;
+    fireEvent.change(fetch, { target: { value: '1e3' } });
+    fireEvent.change(fetch, { target: { value: '' } });
+    await click(screen.getByRole('button', { name: 'label.close' }));
+
+    expect(
+      screen.queryByText('message.unsaved-form-data')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('integration-task-drawer')
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders inherited null runtime fields blank and preserves them through edit, task preflight and save', async () => {
+    const nullable = {
+      ...task,
+      runtime: {
+        fetchSize: null,
+        splitSize: null,
+        sinkBatchSize: null,
+        checkpointIntervalSeconds: null,
+        checkpointTimeoutSeconds: null,
+      },
+    };
+    mockApi.getIntegrationTask.mockResolvedValue(nullable);
+    mockApi.updateIntegrationTask.mockImplementation(async (_id, input) => ({
+      ...nullable,
+      ...input,
+    }));
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'hospitalCdc.check' })
+      ).toBeEnabled()
+    );
+
+    expect(
+      document.getElementById('integration-runtime-fetchSize')
+    ).toHaveValue('');
+    expect(
+      document.getElementById('integration-runtime-fetchSize')
+    ).toHaveAttribute('placeholder', '1000');
+
+    fireEvent.change(document.getElementById('integration-task-displayName')!, {
+      target: { value: task.displayName + ' reviewed' },
+    });
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+
+    expect(mockApi.preflightIntegrationTask).toHaveBeenLastCalledWith(
+      expect.objectContaining({ runtime: nullable.runtime }),
+      expect.any(AbortSignal)
+    );
+
+    await click(screen.getByRole('button', { name: 'label.save' }));
+
+    expect(mockApi.updateIntegrationTask).toHaveBeenCalledWith(
+      task.id,
+      expect.objectContaining({ runtime: nullable.runtime }),
+      task.version
+    );
+
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+
+    expect(
+      document.getElementById('integration-runtime-fetchSize')
+    ).toHaveValue('');
+    expect(
+      document.getElementById('integration-runtime-checkpointIntervalSeconds')
+    ).toHaveValue('');
+  });
+
+  it('saves and reopens explicit Oracle options while displaying discovered DB_NAME without backfilling it', async () => {
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      {
+        ...sourceConnection,
+        databaseType: 'Oracle',
+        database: 'SERVICE_ONLY',
+        databaseVersion: '11.2.0.1.0',
+      },
+      targetConnection,
+    ]);
+    mockApi.preflightIntegrationTask.mockResolvedValue({
+      connectionId: sourceConnection.id,
+      databaseType: 'Oracle',
+      databaseName: 'ORCL',
+      databaseVersion: '11.2.0.1.0',
+      implemented: true,
+      ready: false,
+      checks: [
+        {
+          id: 'column-types',
+          code: 'ORACLE_CDC_LOB_UNVERIFIED',
+          status: 'FAIL',
+          required: true,
+        },
+      ],
+    });
+    mockApi.updateIntegrationTask.mockImplementation(async (_id, input) => ({
+      ...task,
+      ...input,
+    }));
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'hospitalCdc.check' })
+      ).toBeEnabled()
+    );
+
+    expect(
+      document.getElementById('integration-cdc-database-name')
+    ).toHaveValue('');
+
+    fireEvent.change(
+      document.getElementById('integration-cdc-server-time-zone')!,
+      { target: { value: 'Asia/Shanghai' } }
+    );
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+
+    expect(screen.getByText('ORCL')).toBeInTheDocument();
+    expect(
+      document.getElementById('integration-cdc-database-name')
+    ).toHaveValue('');
+
+    fireEvent.click(screen.getByText('hospitalCdc.runtimeSettings'));
+    fireEvent.change(
+      document.getElementById('integration-runtime-fetchSize')!,
+      { target: { value: '2000' } }
+    );
+    await click(screen.getByRole('button', { name: 'label.save' }));
+
+    expect(mockApi.updateIntegrationTask).toHaveBeenCalledWith(
+      task.id,
+      expect.objectContaining({
+        cdc: { serverTimeZone: 'Asia/Shanghai' },
+        runtime: { fetchSize: 2000 },
+      }),
+      task.version
+    );
+
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+
+    expect(
+      document.getElementById('integration-cdc-server-time-zone')
+    ).toHaveValue('Asia/Shanghai');
+    expect(
+      document.getElementById('integration-runtime-fetchSize')
+    ).toHaveValue('2000');
   });
 
   it('gives integration tasks their own page heading', async () => {
@@ -269,6 +694,118 @@ describe('Hospital integration workbench behavior', () => {
         name: 'hospitalIntegration.tasks',
       })
     ).toBeInTheDocument();
+  });
+
+  it('aborts fresh execution preflight on administrator role loss before any run request', async () => {
+    const view = await renderWorkspace();
+    await openTask();
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+    await click(screen.getByRole('button', { name: 'label.close' }));
+    let resolve!: (value: api.IntegrationCdcPreflightResult) => void;
+    mockApi.preflightIntegrationTask.mockImplementationOnce(
+      () =>
+        new Promise((success) => {
+          resolve = success;
+        })
+    );
+    await click(screen.getByRole('button', { name: 'label.run' }));
+    const signal = mockApi.preflightIntegrationTask.mock.calls[1][1];
+    view.rerender(
+      <MemoryRouter>
+        <HospitalIntegrationWorkspace isAdmin={false} />
+      </MemoryRouter>
+    );
+
+    expect(signal?.aborted).toBe(true);
+
+    await act(async () =>
+      resolve({
+        connectionId: sourceConnection.id,
+        databaseType: 'Postgres',
+        implemented: true,
+        ready: true,
+        checks: [],
+      })
+    );
+
+    expect(mockApi.runIntegrationTask).not.toHaveBeenCalled();
+  });
+
+  it('keeps checkpoint zero distinct from unknown and preserves the last successful sample through task refresh', async () => {
+    const sampled = withRun({
+      ...finished,
+      checkpoints: { triggered: 0, completed: 0, failed: 0, restored: 0 },
+      checkpointsCheckedAt: 1791500000000,
+    });
+    mockApi.getIntegrationTask.mockResolvedValue(sampled);
+    await renderWorkspace();
+    await openTask();
+
+    expect(
+      screen.getByTestId('integration-checkpoint-completed')
+    ).toHaveTextContent('0');
+    expect(
+      screen.getByTestId('integration-checkpoint-sample')
+    ).toHaveTextContent('hospitalCdc.sampleAge');
+
+    await click(screen.getByRole('button', { name: 'label.refresh' }));
+
+    expect(
+      screen.getByTestId('integration-checkpoint-sample')
+    ).toHaveTextContent('hospitalCdc.sampleAge');
+
+    mockApi.getIntegrationTask.mockResolvedValue(withRun(finished));
+    await click(screen.getByRole('button', { name: 'label.refresh' }));
+
+    expect(
+      screen.getByTestId('integration-checkpoint-completed')
+    ).toHaveTextContent('hospitalIntegration.unavailable');
+    expect(
+      screen.getByTestId('integration-checkpoint-sample')
+    ).toHaveTextContent('hospitalCdc.sampleUnknown');
+  });
+
+  it('offers server-advertised source preflight separately and cancels its request when closed', async () => {
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      sourceConnection,
+      targetConnection,
+      {
+        ...businessConnection,
+        id: 'mssql',
+        databaseType: 'Mssql',
+        supportedModes: ['FULL'],
+      },
+    ]);
+    await renderSources();
+
+    expect(
+      screen.getAllByRole('button', { name: 'hospitalCdc.sourcePreflight' })
+    ).toHaveLength(1);
+    expect(mockApi.preflightIntegrationConnection).not.toHaveBeenCalled();
+
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.sourcePreflight' })
+    );
+    const select = screen.getByRole('button', {
+      name: /hospitalIntegration.sourceTable/,
+    });
+    await click(select);
+    await click(await screen.findByRole('option', { name: table.name }));
+    mockApi.preflightIntegrationConnection.mockImplementationOnce(
+      () => new Promise(() => undefined)
+    );
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+    const signal = mockApi.preflightIntegrationConnection.mock.calls[0][2];
+
+    expect(screen.getByText('hospitalCdc.sourceOnly')).toBeInTheDocument();
+
+    await click(screen.getByRole('button', { name: 'label.close' }));
+
+    expect(signal?.aborted).toBe(true);
+    expect(mockApi.preflightIntegrationTask).not.toHaveBeenCalled();
+    expect(mockApi.getIntegrationTargetCount).not.toHaveBeenCalled();
   });
 
   it('opens a new task with the actual Doris table chosen from table management', async () => {
@@ -524,6 +1061,10 @@ describe('Hospital integration workbench behavior', () => {
         name: 'hospitalIntegration.stopWithSavepoint',
       })
     );
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+    await click(screen.getByRole('button', { name: 'label.close' }));
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'label.resume' })).toBeEnabled()
     );
@@ -545,6 +1086,10 @@ describe('Hospital integration workbench behavior', () => {
     });
     await renderWorkspace();
     await openTask();
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+    await click(screen.getByRole('button', { name: 'label.close' }));
     await click(screen.getByRole('button', { name: 'label.run' }));
 
     await waitFor(() =>
@@ -651,6 +1196,10 @@ describe('Hospital integration workbench behavior', () => {
     );
     await renderWorkspace();
     await openTask();
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+    await click(screen.getByRole('button', { name: 'label.close' }));
 
     expect(screen.getByRole('button', { name: 'label.resume' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'label.run' })).toBeEnabled();

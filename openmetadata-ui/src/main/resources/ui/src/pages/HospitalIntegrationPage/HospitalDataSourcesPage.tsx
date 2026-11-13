@@ -178,6 +178,7 @@ export const HospitalDataSourcesWorkspace = ({
             <IntegrationConnections
               connections={connections}
               createRequest={createRequest}
+              isAdmin={isAdmin}
               loading={loading}
               showHeading={false}
               visibleConnections={filtered.slice(

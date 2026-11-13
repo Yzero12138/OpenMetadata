@@ -40,6 +40,12 @@ export const IntegrationTaskDetail = ({
   onStop,
   onCatalog,
   onInitialization,
+  cdcReady = false,
+  onPreflight,
+  targetCount,
+  targetCountLoading,
+  targetCountErrorCode,
+  onTargetCount,
 }: IntegrationTaskDetailProps) => {
   const { t, i18n } = useTranslation();
   const run = task.latestRun;
@@ -68,12 +74,12 @@ export const IntegrationTaskDetail = ({
     run?.trigger !== 'INITIALIZATION' &&
     Boolean(run?.businessDate) &&
     ['FAILED', 'STOPPED', 'CANCELED', 'CANCELLED'].includes(run?.status ?? '');
-  const timestamp = (value?: number) =>
-    value === undefined
+  const timestamp = (value?: number | null) =>
+    typeof value !== 'number' || !Number.isFinite(value)
       ? t('hospitalIntegration.unavailable')
       : new Date(value).toLocaleString(i18n.language);
-  const count = (value?: number) =>
-    value === undefined || !Number.isFinite(value)
+  const count = (value?: number | null) =>
+    typeof value !== 'number' || !Number.isFinite(value)
       ? t('hospitalIntegration.unavailable')
       : value.toLocaleString(i18n.language);
   const statusLabel = (item?: IntegrationRun) =>
@@ -361,13 +367,13 @@ export const IntegrationTaskDetail = ({
               </>
             )}
             <div>
-              <dt>{t('hospitalIntegration.sourceCount')}</dt>
+              <dt>{t('hospitalCdc.sourceAttempts')}</dt>
               <dd data-testid="integration-source-count">
                 {count(run.sourceReceivedCount)}
               </dd>
             </div>
             <div>
-              <dt>{t('hospitalIntegration.sinkCount')}</dt>
+              <dt>{t('hospitalCdc.sinkAttempts')}</dt>
               <dd data-testid="integration-sink-count">
                 {count(run.sinkWriteCount)}
               </dd>
@@ -383,6 +389,54 @@ export const IntegrationTaskDetail = ({
             {t('hospitalIntegration.counterHint')}
           </p>
         )}
+        {task.mode === 'CDC' && (
+          <>
+            <h3>{t('hospitalCdc.checkpoints')}</h3>
+            <dl className="hospital-integration__facts">
+              {(['triggered', 'completed', 'failed', 'restored'] as const).map(
+                (key) => (
+                  <div key={key}>
+                    <dt>{t('hospitalCdc.' + key)}</dt>
+                    <dd data-testid={'integration-checkpoint-' + key}>
+                      {count(run?.checkpoints?.[key])}
+                    </dd>
+                  </div>
+                )
+              )}
+              <div>
+                <dt>{t('hospitalCdc.latestCompletedAt')}</dt>
+                <dd>{timestamp(run?.checkpoints?.latestCompletedAt)}</dd>
+              </div>
+              <div>
+                <dt>{t('hospitalCdc.latestSavepointAt')}</dt>
+                <dd>{timestamp(run?.checkpoints?.latestSavepointAt)}</dd>
+              </div>
+            </dl>
+            <p
+              className="hospital-integration__hint"
+              data-testid="integration-checkpoint-sample">
+              {typeof run?.checkpointsCheckedAt === 'number'
+                ? t('hospitalCdc.sampleAge', {
+                    time: timestamp(run.checkpointsCheckedAt),
+                    seconds: Math.max(
+                      0,
+                      Math.floor((Date.now() - run.checkpointsCheckedAt) / 1000)
+                    ).toLocaleString(i18n.language),
+                  })
+                : t('hospitalCdc.sampleUnknown')}
+            </p>
+            <div className="hospital-integration__actions hospital-integration__table-tools">
+              <Button color="secondary" isDisabled={busy} onClick={onPreflight}>
+                {t('hospitalCdc.taskPreflight')}
+              </Button>
+              <p className="hospital-integration__hint">
+                {t(
+                  cdcReady ? 'hospitalCdc.ready' : 'hospitalCdc.checkRequired'
+                )}
+              </p>
+            </div>
+          </>
+        )}
         {run?.errorCode && (
           <div className="hospital-integration__alert" role="alert">
             <p>{t(integrationErrorKey(run.errorCode))}</p>
@@ -392,7 +446,13 @@ export const IntegrationTaskDetail = ({
         <div className="hospital-integration__actions">
           {!initializing && (
             <Button
-              isDisabled={busy || active || resumable || !engineAvailable}
+              isDisabled={
+                busy ||
+                active ||
+                resumable ||
+                !engineAvailable ||
+                (task.mode === 'CDC' && !cdcReady)
+              }
               isLoading={loading.run}
               onClick={() => onRun(false)}>
               {t(sqlMode ? 'hospitalIntegration.backfill' : 'label.run')}
@@ -430,6 +490,7 @@ export const IntegrationTaskDetail = ({
                 busy ||
                 active ||
                 !engineAvailable ||
+                (task.mode === 'CDC' && !cdcReady) ||
                 !canResumeIntegrationTask(task.mode, run)
               }
               isLoading={loading.resume}
@@ -446,6 +507,39 @@ export const IntegrationTaskDetail = ({
         {resumable && (
           <p className="hospital-integration__hint" role="status">
             {t('hospitalIntegration.pausedHint')}
+          </p>
+        )}
+      </section>
+      <section aria-labelledby="integration-target-count-title">
+        <div className="hospital-integration__section-heading">
+          <h2 id="integration-target-count-title">
+            {t('hospitalCdc.targetRows')}
+          </h2>
+          <Button
+            color="secondary"
+            isDisabled={busy || targetCountLoading}
+            isLoading={targetCountLoading}
+            onClick={onTargetCount}>
+            {t('hospitalCdc.countTarget')}
+          </Button>
+        </div>
+        <p data-testid="integration-target-count" role="status">
+          {count(targetCount?.count)}
+        </p>
+        <p className="hospital-integration__hint">
+          {targetCount
+            ? t('hospitalCdc.sampleAge', {
+                time: timestamp(targetCount.checkedAt),
+                seconds: Math.max(
+                  0,
+                  Math.floor((Date.now() - targetCount.checkedAt) / 1000)
+                ).toLocaleString(i18n.language),
+              })
+            : t('hospitalCdc.manualCountHint')}
+        </p>
+        {targetCountErrorCode && (
+          <p className="hospital-integration__inline-error" role="alert">
+            {t(integrationErrorKey(targetCountErrorCode))}
           </p>
         )}
       </section>

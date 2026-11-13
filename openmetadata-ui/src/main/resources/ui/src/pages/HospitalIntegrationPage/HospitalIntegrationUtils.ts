@@ -22,6 +22,7 @@ import {
   IntegrationTask,
   IntegrationTaskInput,
 } from '../../rest/hospitalIntegrationAPI';
+import { cdcErrorKey, validateIntegrationRuntime } from './IntegrationCdcUtils';
 
 export const SQL_QUERY_MAX_BYTES = 16384;
 export const DEFAULT_INTEGRATION_SCHEDULE = {
@@ -177,6 +178,8 @@ export const toIntegrationTaskInput = (
   ...(task.initialization
     ? { initialization: { ...task.initialization } }
     : {}),
+  ...(task.cdc ? { cdc: { ...task.cdc } } : {}),
+  ...(task.runtime ? { runtime: { ...task.runtime } } : {}),
 });
 
 export const canResumeIntegrationTask = (
@@ -198,7 +201,7 @@ export const validateIntegrationInput = (
   sourceTables: IntegrationTable[],
   targetTables: IntegrationTable[]
 ): string[] => {
-  const errors: string[] = [];
+  const errors: string[] = validateIntegrationRuntime(input);
   if (!/^[a-z][a-z0-9_-]{0,62}$/.test(input.name)) {
     errors.push('invalidName');
   }
@@ -281,6 +284,10 @@ export const validateIntegrationInput = (
 };
 
 export const integrationErrorKey = (code?: string) => {
+  const cdcKey = cdcErrorKey(code);
+  if (cdcKey) {
+    return cdcKey;
+  }
   const knownCodes = new Set([
     'INTEGRATION_DISABLED',
     'ENGINE_UNAVAILABLE',

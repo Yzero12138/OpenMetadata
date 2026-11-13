@@ -34,7 +34,11 @@ import {
   isIntegrationInitializationLocked,
   SQL_QUERY_MAX_BYTES,
 } from './HospitalIntegrationUtils';
+import { IntegrationCdcPreflight } from './IntegrationCdcPreflight';
+import { changeIntegrationMode } from './IntegrationCdcUtils';
 import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
+import { IntegrationExecutionSettings } from './IntegrationExecutionSettings';
+import { IntegrationOracleCdcOptions } from './IntegrationOracleCdcOptions';
 import { IntegrationTargetTableForm } from './IntegrationTargetTableForm';
 
 export const IntegrationTaskForm = ({
@@ -64,6 +68,12 @@ export const IntegrationTaskForm = ({
   onValidate,
   onSave,
   onCancel,
+  preflight,
+  preflightLoading,
+  preflightErrorCode,
+  onPreflight,
+  onRuntimeValidityChange,
+  onRuntimeDraftChange,
 }: IntegrationTaskFormProps) => {
   const { t } = useTranslation();
   const [designerOpen, setDesignerOpen] = useState(false);
@@ -162,7 +172,12 @@ export const IntegrationTaskForm = ({
       connection.enabled &&
       connection.role === 'TARGET'
   );
-  const supportedModes = sourceConnection?.supportedModes ?? [];
+  const supportedModes = (sourceConnection?.supportedModes ?? []).filter(
+    (mode) =>
+      mode !== 'CDC' ||
+      sourceConnection?.databaseType === 'Oracle' ||
+      sourceConnection?.databaseType === 'Postgres'
+  );
   const modes =
     supportedModes.includes('FULL') && !supportedModes.includes('SQL_T1')
       ? [...supportedModes, 'SQL_T1' as const]
@@ -183,7 +198,15 @@ export const IntegrationTaskForm = ({
           <p>{t('hospitalIntegration.checkForm')}</p>
           <ul>
             {errors.map((error) => (
-              <li key={error}>{t(`hospitalIntegration.${error}`)}</li>
+              <li key={error}>
+                {t(
+                  `${
+                    error.startsWith('runtime')
+                      ? 'hospitalCdc'
+                      : 'hospitalIntegration'
+                  }.${error}`
+                )}
+              </li>
             ))}
           </ul>
         </IntegrationDrawerAlert>
@@ -265,14 +288,18 @@ export const IntegrationTaskForm = ({
                   return;
                 }
                 const mode =
-                  connection.supportedModes.includes(value.mode) ||
+                  (connection.supportedModes.includes(value.mode) &&
+                    (value.mode !== 'CDC' ||
+                      connection.databaseType === 'Oracle' ||
+                      connection.databaseType === 'Postgres')) ||
                   (value.mode === 'SQL_T1' &&
                     connection.supportedModes.includes('FULL'))
                     ? value.mode
                     : 'FULL';
                 const nextSql = mode === 'SQL_T1';
                 onChange({
-                  ...value,
+                  ...changeIntegrationMode(value, mode),
+                  cdc: undefined,
                   sourceConnectionId: connection.id,
                   sourceSchema: nextSql ? connection.schemas[0] ?? '' : '',
                   sourceTable: nextSql ? 'sql_result' : '',
@@ -406,14 +433,14 @@ export const IntegrationTaskForm = ({
               ) {
                 const nextSql = key === 'SQL_T1';
                 if (nextSql === sqlMode) {
-                  onChange({ ...value, mode: key });
+                  onChange(changeIntegrationMode(value, key));
 
                   return;
                 }
                 const targetAllowed =
                   !nextSql || targetConnection?.databaseType === 'Doris';
                 onChange({
-                  ...value,
+                  ...changeIntegrationMode(value, key),
                   mode: key,
                   sourceSchema: nextSql
                     ? sourceConnection?.schemas[0] ?? ''
@@ -460,6 +487,30 @@ export const IntegrationTaskForm = ({
           </Select>
         </div>
       </section>
+      {value.mode === 'CDC' && sourceConnection?.databaseType === 'Oracle' && (
+        <section aria-labelledby="integration-oracle-options-title">
+          <h2 id="integration-oracle-options-title">
+            {t('hospitalCdc.oracleSettings')}
+          </h2>
+          <IntegrationOracleCdcOptions
+            disabled={disabled}
+            value={value.cdc}
+            onChange={(cdc) => onChange({ ...value, cdc })}
+          />
+        </section>
+      )}
+      <IntegrationExecutionSettings
+        disabled={disabled}
+        key={JSON.stringify([
+          value.mode,
+          value.sourceConnectionId,
+          value.targetConnectionId,
+        ])}
+        value={value}
+        onChange={onChange}
+        onDraftChange={onRuntimeDraftChange}
+        onValidityChange={onRuntimeValidityChange}
+      />
       {sqlMode && (
         <>
           <section aria-labelledby="integration-query-title">
@@ -786,6 +837,30 @@ export const IntegrationTaskForm = ({
           </div>
         )}
       </section>
+      {value.mode === 'CDC' && (
+        <section aria-labelledby="integration-task-preflight-title">
+          <div className="hospital-integration__section-heading">
+            <h2 id="integration-task-preflight-title">
+              {t('hospitalCdc.taskPreflight')}
+            </h2>
+            <Button
+              color="secondary"
+              isDisabled={disabled || tablesLoading || preflightLoading}
+              isLoading={preflightLoading}
+              onClick={onPreflight}>
+              {t('hospitalCdc.check')}
+            </Button>
+          </div>
+          <IntegrationCdcPreflight
+            errorCode={preflightErrorCode}
+            loading={preflightLoading}
+            result={preflight}
+          />
+          <p className="hospital-integration__hint">
+            {t('hospitalCdc.draftHint')}
+          </p>
+        </section>
+      )}
       <FormDrawerActions>
         <div className="hospital-integration__actions">
           <Button

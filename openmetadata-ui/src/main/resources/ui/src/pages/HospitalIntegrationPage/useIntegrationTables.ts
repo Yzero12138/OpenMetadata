@@ -10,130 +10,91 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import {
-  getIntegrationFailure,
   getIntegrationTable,
   getIntegrationTableOptions,
   IntegrationTable,
 } from '../../rest/hospitalIntegrationAPI';
+import { useIntegrationScopedRead } from './useIntegrationScopedRead';
 
 export const useIntegrationTables = (
   connectionId: string,
   schema: string,
   name: string,
   active: boolean,
-  reload: number
+  reload: number,
+  scope?: string
 ) => {
-  const [options, setOptions] = useState<IntegrationTable[]>([]);
-  const [detail, setDetail] = useState<IntegrationTable>();
-  const [loading, setLoading] = useState({ options: false, detail: false });
-  const [errors, setErrors] = useState<{ options?: string; detail?: string }>(
-    {}
-  );
+  const optionsKey =
+    active && connectionId
+      ? JSON.stringify([scope, connectionId, reload])
+      : undefined;
+  const detailKey =
+    optionsKey && schema && name
+      ? JSON.stringify([optionsKey, schema, name])
+      : undefined;
+  const optionsRead = useIntegrationScopedRead<IntegrationTable[]>(optionsKey);
+  const detailRead = useIntegrationScopedRead<IntegrationTable>(detailKey);
+  const { execute: readOptions } = optionsRead;
+  const { execute: readDetail } = detailRead;
   useEffect(() => {
-    setOptions([]);
-    setErrors((current) => ({ ...current, options: undefined }));
-    if (!active || !connectionId) {
-      setLoading((current) => ({ ...current, options: false }));
-
-      return;
+    if (optionsKey) {
+      void readOptions((signal) =>
+        getIntegrationTableOptions(connectionId, signal)
+      );
     }
-    const controller = new AbortController();
-    setLoading((current) => ({ ...current, options: true }));
-    const load = async () => {
-      try {
-        const result = await getIntegrationTableOptions(
-          connectionId,
-          controller.signal
-        );
-        if (!controller.signal.aborted) {
-          setOptions(result);
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setErrors((current) => ({
-            ...current,
-            options: getIntegrationFailure(error).code,
-          }));
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading((current) => ({ ...current, options: false }));
-        }
-      }
-    };
-    void load();
-
-    return () => controller.abort();
-  }, [active, connectionId, reload]);
+  }, [connectionId, optionsKey, readOptions]);
   useEffect(() => {
-    setDetail(undefined);
-    setErrors((current) => ({ ...current, detail: undefined }));
-    if (!active || !connectionId || !schema || !name) {
-      setLoading((current) => ({ ...current, detail: false }));
-
-      return;
-    }
-    const controller = new AbortController();
-    setLoading((current) => ({ ...current, detail: true }));
-    const load = async () => {
-      try {
-        const result = await getIntegrationTable(
+    if (detailKey) {
+      void readDetail(async (signal) => {
+        const table = await getIntegrationTable(
           connectionId,
           schema,
           name,
-          controller.signal
+          signal
         );
-        if (
-          !controller.signal.aborted &&
-          result.schema === schema &&
-          result.name === name
-        ) {
-          setDetail(result);
+        if (table.schema !== schema || table.name !== name) {
+          throw new Error('REQUEST_FAILED');
         }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setErrors((current) => ({
-            ...current,
-            detail: getIntegrationFailure(error).code,
-          }));
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading((current) => ({ ...current, detail: false }));
-        }
-      }
-    };
-    void load();
 
-    return () => controller.abort();
-  }, [active, connectionId, name, reload, schema]);
+        return table;
+      });
+    }
+  }, [connectionId, schema, name, detailKey, readDetail]);
+  const options = optionsRead.data;
+  const detail = detailRead.data;
   const tables = useMemo(
     () =>
-      options.map((table) =>
+      (options ?? []).map((table) =>
         detail?.schema === table.schema && detail.name === table.name
           ? detail
           : table
       ),
-    [detail, options]
+    [options, detail]
   );
-
-  const acceptTable = useCallback((table: IntegrationTable) => {
-    setOptions((current) => [
-      ...current.filter(
-        (item) => item.schema !== table.schema || item.name !== table.name
-      ),
-      table,
-    ]);
-    setDetail(table);
-  }, []);
+  const acceptTable = useCallback(
+    (table: IntegrationTable) => {
+      optionsRead.accept([
+        ...(options ?? []).filter(
+          (item) => item.schema !== table.schema || item.name !== table.name
+        ),
+        table,
+      ]);
+      detailRead.accept(table);
+    },
+    [options, optionsRead.accept, detailRead.accept]
+  );
 
   return {
     acceptTable,
     tables,
     detail,
-    loading: loading.options || loading.detail,
-    errorCode: errors.options ?? errors.detail,
+    loading:
+      Boolean(optionsKey && !optionsRead.data && !optionsRead.errorCode) ||
+      Boolean(detailKey && !detailRead.data && !detailRead.errorCode) ||
+      optionsRead.loading ||
+      detailRead.loading,
+    errorCode: optionsRead.errorCode ?? detailRead.errorCode,
   };
 };

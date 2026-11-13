@@ -16,10 +16,15 @@ import {
   createIntegrationTargetTable,
   deleteIntegrationConnection,
   getIntegrationConnection,
+  getIntegrationFailure,
   getIntegrationQuerySchema,
   getIntegrationTable,
   getIntegrationTableOptions,
+  getIntegrationTargetCount,
   IntegrationConnectionInput,
+  IntegrationTaskInput,
+  preflightIntegrationConnection,
+  preflightIntegrationTask,
   previewIntegrationTargetTable,
   runIntegrationTask,
   updateIntegrationConnection,
@@ -48,6 +53,74 @@ const input: IntegrationConnectionInput = {
   tlsMode: 'VERIFY',
   enabled: true,
 };
+
+describe('CDC inspection HTTP boundary', () => {
+  it('sends actual task mappings, key and options to task preflight with cancellation', async () => {
+    client.post.mockResolvedValue({ data: { ready: false } });
+    const signal = new AbortController().signal;
+    const task: IntegrationTaskInput = {
+      name: 'renamed',
+      displayName: 'Synthetic renamed CDC',
+      sourceConnectionId: 'source',
+      targetConnectionId: 'doris',
+      sourceSchema: 'HIS',
+      sourceTable: 'VISIT',
+      targetSchema: 'ods',
+      targetTable: 'visits',
+      mode: 'CDC',
+      primaryKey: 'ID',
+      fieldMappings: [{ source: 'ID', target: 'visit_id' }],
+      cdc: { serverTimeZone: 'Asia/Shanghai' },
+      runtime: { sinkBatchSize: 1000 },
+    };
+    await preflightIntegrationTask(task, signal);
+
+    expect(client.post).toHaveBeenLastCalledWith(
+      '/hospital/integration/tasks/cdc-preflight',
+      task,
+      { signal }
+    );
+
+    await preflightIntegrationConnection(
+      'source/id',
+      { schema: 'HIS', table: 'VISIT', columns: ['ID'] },
+      signal
+    );
+
+    expect(client.post).toHaveBeenLastCalledWith(
+      '/hospital/integration/connections/source%2Fid/cdc-preflight',
+      { schema: 'HIS', table: 'VISIT', columns: ['ID'] },
+      { signal }
+    );
+  });
+
+  it('counts only the explicit encoded task target and forwards cancellation', async () => {
+    client.get.mockResolvedValue({ data: { count: 0, checkedAt: 1234 } });
+    const signal = new AbortController().signal;
+
+    await expect(getIntegrationTargetCount('task/id', signal)).resolves.toEqual(
+      { count: 0, checkedAt: 1234 }
+    );
+    expect(client.get).toHaveBeenLastCalledWith(
+      '/hospital/integration/tasks/task%2Fid/target-count',
+      { signal }
+    );
+  });
+
+  it.each([
+    'CDC_PREFLIGHT_FAILED',
+    'CDC_CONFIGURATION_CHANGED',
+    'CDC_LEGACY_RESUME_UNSAFE',
+    'TARGET_WRITER_ACTIVE',
+  ])('classifies %s as a safe rejection without version conflict', (code) => {
+    expect(
+      getIntegrationFailure({
+        isAxiosError: true,
+        response: { status: 409, data: { code } },
+      })
+    ).toEqual({ code, conflict: false, uncertain: false });
+  });
+});
 
 describe('Hospital managed connection HTTP boundary', () => {
   beforeEach(() => {

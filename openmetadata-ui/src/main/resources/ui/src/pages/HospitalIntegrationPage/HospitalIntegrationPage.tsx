@@ -25,14 +25,18 @@ import {
   getIntegrationConnections,
   getIntegrationFailure,
   getIntegrationStatus,
+  getIntegrationTargetCount,
   getIntegrationTask,
   getIntegrationTasks,
+  IntegrationCdcPreflightResult,
   IntegrationConnection,
   IntegrationEngineStatus,
   IntegrationInitializationAction,
   IntegrationRunOptions,
+  IntegrationTargetCount,
   IntegrationTask,
   IntegrationTaskInput,
+  preflightIntegrationTask,
   runIntegrationTask,
   stopIntegrationTask,
   syncIntegrationCatalog,
@@ -60,6 +64,11 @@ import {
   toIntegrationTaskInput,
   validateIntegrationInput,
 } from './HospitalIntegrationUtils';
+import { IntegrationCdcPreflight } from './IntegrationCdcPreflight';
+import {
+  cdcPreflightReady,
+  integrationTaskPreflightKey,
+} from './IntegrationCdcUtils';
 import {
   IntegrationCollectionPagination,
   IntegrationCollectionTools,
@@ -72,6 +81,7 @@ import { IntegrationTaskDetail } from './IntegrationTaskDetail';
 import { IntegrationTaskForm } from './IntegrationTaskForm';
 import { useIntegrationNavigationGuard } from './useIntegrationNavigationGuard';
 import { useIntegrationQuerySchema } from './useIntegrationQuerySchema';
+import { useIntegrationScopedRead } from './useIntegrationScopedRead';
 import { useIntegrationTables } from './useIntegrationTables';
 
 type IntegrationView = 'list' | 'create' | 'detail' | 'edit';
@@ -112,6 +122,15 @@ export const HospitalIntegrationWorkspace = ({
   const consumedTargetIntent = useRef<string>();
   const [discardRequested, setDiscardRequested] = useState(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [runtimeInvalid, setRuntimeInvalid] = useState(false);
+  const [runtimeDirty, setRuntimeDirty] = useState(false);
+  const runtimeDraft = useRef(false);
+  const runtimeDraftChange = useCallback((dirty: boolean) => {
+    runtimeDraft.current = dirty;
+    setRuntimeDirty(dirty);
+  }, []);
+  const [editorSession, setEditorSession] = useState(0);
+  const [preflightOpen, setPreflightOpen] = useState(false);
   const [errorCode, setErrorCode] = useState<string>();
   const [connectionErrorCode, setConnectionErrorCode] = useState<string>();
   const [tasksErrorCode, setTasksErrorCode] = useState<string>();
@@ -137,15 +156,35 @@ export const HospitalIntegrationWorkspace = ({
     form.sourceConnectionId,
     form.sourceSchema,
     form.sourceTable,
-    taskEditorOpen && form.mode !== 'SQL_T1',
-    tablesReload
+    isAdmin && taskEditorOpen && form.mode !== 'SQL_T1',
+    tablesReload,
+    JSON.stringify([
+      isAdmin,
+      location.key,
+      location.pathname,
+      view,
+      editorSession,
+      connections.find(
+        (connection) => connection.id === form.sourceConnectionId
+      )?.version,
+    ])
   );
   const targetData = useIntegrationTables(
     form.targetConnectionId,
     form.targetSchema,
     form.targetTable,
-    taskEditorOpen,
-    tablesReload + targetTablesReload
+    isAdmin && taskEditorOpen,
+    tablesReload + targetTablesReload,
+    JSON.stringify([
+      isAdmin,
+      location.key,
+      location.pathname,
+      view,
+      editorSession,
+      connections.find(
+        (connection) => connection.id === form.targetConnectionId
+      )?.version,
+    ])
   );
   const queryData = useIntegrationQuerySchema(
     {
@@ -153,7 +192,7 @@ export const HospitalIntegrationWorkspace = ({
       schema: form.sourceSchema,
       query: form.sourceQuery ?? '',
     },
-    taskEditorOpen && form.mode === 'SQL_T1'
+    isAdmin && taskEditorOpen && form.mode === 'SQL_T1'
   );
   const sourceDetail =
     form.mode === 'SQL_T1' ? queryData.table : sourceData.detail;
@@ -166,13 +205,68 @@ export const HospitalIntegrationWorkspace = ({
   const targetTables = targetData.tables;
   const tablesLoading = sourceData.loading || targetData.loading;
   const autoMappedRoute = useRef<string>();
+  const inspectionInput = taskEditorOpen
+    ? form
+    : selected
+    ? toIntegrationTaskInput(selected)
+    : undefined;
+  const inspectionKey =
+    isAdmin &&
+    inspectionInput?.mode === 'CDC' &&
+    (taskEditorOpen || view === 'detail')
+      ? integrationTaskPreflightKey(
+          inspectionInput,
+          connections,
+          JSON.stringify([
+            location.key,
+            location.pathname,
+            view,
+            editorSession,
+            runtimeInvalid,
+          ]),
+          tablesReload + targetTablesReload + reload
+        )
+      : undefined;
+  const currentInspectionKey = useRef(inspectionKey);
+  currentInspectionKey.current = inspectionKey;
+  const authorized = useRef(isAdmin);
+  authorized.current = isAdmin;
+  const taskPreflight =
+    useIntegrationScopedRead<IntegrationCdcPreflightResult>(inspectionKey);
+  const countKey =
+    isAdmin && selected && view === 'detail'
+      ? JSON.stringify([
+          location.key,
+          location.pathname,
+          selected.id,
+          selected.targetConnectionId,
+          selected.targetSchema,
+          selected.targetTable,
+          selected.latestRun?.jobId,
+          connections.find((item) => item.id === selected.targetConnectionId)
+            ?.version,
+        ])
+      : undefined;
+  const targetCount =
+    useIntegrationScopedRead<IntegrationTargetCount>(countKey);
   const busy = targetTableBusy || Object.values(loading).some(Boolean);
   const engineAvailable = engine?.enabled === true && engine.reachable;
+  const executionState = useRef({
+    engineAvailable,
+    selected,
+    uncertain: Boolean(selected && uncertainTasks[selected.id]),
+  });
+  executionState.current = {
+    engineAvailable,
+    selected,
+    uncertain: Boolean(selected && uncertainTasks[selected.id]),
+  };
   const navigationGuard = useIntegrationNavigationGuard({
     enabled:
       (taskEditorOpen &&
         (busy ||
           targetTableDirty ||
+          runtimeDirty ||
           JSON.stringify(form) !== initialForm.current)) ||
       (backfillOpen && (busy || businessDate !== initialBusinessDate.current)),
     locked: busy,
@@ -355,12 +449,18 @@ export const HospitalIntegrationWorkspace = ({
     setFormErrors([]);
     setDiscardRequested(false);
     setView(next);
+    setPreflightOpen(false);
+    setRuntimeInvalid(false);
+    runtimeDraftChange(false);
     setLoading((current) => ({ ...current, detail: false }));
   };
 
   const setEditorForm = (input: IntegrationTaskInput) => {
     initialForm.current = JSON.stringify(input);
     setForm(input);
+    setRuntimeInvalid(false);
+    runtimeDraftChange(false);
+    setEditorSession((current) => current + 1);
   };
   const closeEditor = () => {
     setForm({ ...EMPTY_INTEGRATION_TASK, fieldMappings: [] });
@@ -372,6 +472,7 @@ export const HospitalIntegrationWorkspace = ({
     }
     if (
       targetTableDraft.current ||
+      runtimeDraft.current ||
       JSON.stringify(form) !== initialForm.current
     ) {
       setDiscardRequested(true);
@@ -544,6 +645,9 @@ export const HospitalIntegrationWorkspace = ({
       return;
     }
     const errors = validateIntegrationInput(form, sourceTables, targetTables);
+    if (runtimeInvalid) {
+      errors.push('runtimeRangeInvalid');
+    }
     if (
       !connections.some(
         (connection) =>
@@ -610,6 +714,49 @@ export const HospitalIntegrationWorkspace = ({
     });
   };
 
+  const checkTaskPreflight = async () => {
+    if (
+      !isAdmin ||
+      !inspectionInput ||
+      mutation.current ||
+      taskPreflight.loading ||
+      targetTablePending.current
+    ) {
+      return;
+    }
+    if (taskEditorOpen) {
+      const errors = validateIntegrationInput(form, sourceTables, targetTables);
+      if (runtimeInvalid) {
+        errors.push('runtimeRangeInvalid');
+      }
+      if (
+        !connections.some(
+          (connection) =>
+            connection.id === form.sourceConnectionId &&
+            connection.enabled &&
+            connection.role === 'SOURCE'
+        ) ||
+        !connections.some(
+          (connection) =>
+            connection.id === form.targetConnectionId &&
+            connection.enabled &&
+            connection.role === 'TARGET'
+        )
+      ) {
+        errors.push('connectionsRequired');
+      }
+      setFormErrors(errors);
+      if (tablesLoading || errors.length) {
+        return;
+      }
+    } else {
+      setPreflightOpen(true);
+    }
+    await taskPreflight.execute((signal) =>
+      preflightIntegrationTask(inspectionInput, signal)
+    );
+  };
+
   const taskAction = async (
     key:
       | 'run'
@@ -651,8 +798,59 @@ export const HospitalIntegrationWorkspace = ({
       return;
     }
     const requestEpoch = epoch.current;
+    const capturedInspectionKey = inspectionKey;
     await perform(key, async () => {
+      let submissionStarted = false;
       try {
+        if (submits && task.mode === 'CDC') {
+          if (
+            !capturedInspectionKey ||
+            !cdcPreflightReady(taskPreflight.data)
+          ) {
+            return;
+          }
+          const fresh = await taskPreflight.execute((signal) =>
+            preflightIntegrationTask(toIntegrationTaskInput(task), signal)
+          );
+          if (
+            !authorized.current ||
+            requestEpoch !== epoch.current ||
+            capturedInspectionKey !== currentInspectionKey.current
+          ) {
+            return;
+          }
+          if (!cdcPreflightReady(fresh)) {
+            setPreflightOpen(true);
+
+            return;
+          }
+        }
+        if (!authorized.current || requestEpoch !== epoch.current) {
+          return;
+        }
+        if (submits) {
+          const latest = executionState.current;
+          if (
+            !latest.engineAvailable ||
+            latest.selected?.id !== task.id ||
+            latest.uncertain ||
+            isIntegrationRunBusy(latest.selected.latestRun) ||
+            isIntegrationInitializing(latest.selected) ||
+            (key === 'resume' &&
+              !canResumeIntegrationTask(
+                latest.selected.mode,
+                latest.selected.latestRun
+              )) ||
+            (key === 'run' &&
+              canResumeIntegrationTask(
+                latest.selected.mode,
+                latest.selected.latestRun
+              ))
+          ) {
+            return;
+          }
+        }
+        submissionStarted = submits;
         const result =
           key === 'refresh'
             ? await getIntegrationTask(task.id)
@@ -672,11 +870,29 @@ export const HospitalIntegrationWorkspace = ({
         }
       } catch (error) {
         const failure = getIntegrationFailure(error);
-        if (mounted.current && submits && failure.uncertain) {
+        if (mounted.current && submissionStarted && failure.uncertain) {
           setUncertainTasks((current) => ({ ...current, [task.id]: true }));
         }
         if (requestEpoch === epoch.current) {
           setErrorCode(failure.code);
+          if (
+            [
+              'CDC_PREFLIGHT_FAILED',
+              'CDC_CONFIGURATION_CHANGED',
+              'CDC_LEGACY_RESUME_UNSAFE',
+              'CDC_TRUSTED_INSPECTION_REQUIRED',
+              'TARGET_WRITER_ACTIVE',
+              'ORACLE_CDC_OPTIONS_INVALID',
+              'ORACLE_CDC_TYPE_UNSUPPORTED',
+              'ORACLE_CDC_CONTAINER_RUNTIME_UNVERIFIED',
+              'ORACLE_CDC_LOB_UNVERIFIED',
+              'ORACLE_CDC_STRING_BYTES_UNVERIFIED',
+              'ORACLE_CDC_EXTENDED_STRING_UNVERIFIED',
+              'ORACLE_CDC_IDENTIFIER_UNSUPPORTED',
+            ].includes(failure.code)
+          ) {
+            taskPreflight.invalidate();
+          }
         }
       }
     });
@@ -1151,7 +1367,11 @@ export const HospitalIntegrationWorkspace = ({
                 !selected?.initialization?.enabled &&
                 Boolean(selected?.scheduleState?.pendingBusinessDate)
               }
+              key={editorSession}
               navigationBlocked={navigationGuard.blocked}
+              preflight={taskPreflight.data}
+              preflightErrorCode={taskPreflight.errorCode}
+              preflightLoading={taskPreflight.loading}
               queryErrorCode={queryData.errorCode}
               queryLoading={queryData.loading}
               saving={loading.save}
@@ -1170,8 +1390,11 @@ export const HospitalIntegrationWorkspace = ({
               }}
               onDiscardNavigation={() => navigationGuard.proceed(closeEditor)}
               onKeepNavigation={navigationGuard.stay}
+              onPreflight={() => void checkTaskPreflight()}
               onReadQuerySchema={() => void queryData.read()}
               onReloadTables={() => setTablesReload((current) => current + 1)}
+              onRuntimeDraftChange={runtimeDraftChange}
+              onRuntimeValidityChange={setRuntimeInvalid}
               onSave={() => void validateOrSave(true)}
               onTargetTableBusyChange={targetTableBusyChange}
               onTargetTableCreated={(table, fieldMappings) => {
@@ -1192,6 +1415,34 @@ export const HospitalIntegrationWorkspace = ({
               }}
               onTargetTableDraftChange={targetTableDraftChange}
               onValidate={() => void validateOrSave(false)}
+            />
+          </FormDrawer>
+          <FormDrawer
+            destroyOnClose
+            className="hospital-integration hospital-integration--drawer"
+            data-testid="integration-task-preflight-drawer"
+            footer={
+              <>
+                <Button
+                  color="secondary"
+                  isDisabled={taskPreflight.loading || busy}
+                  isLoading={taskPreflight.loading}
+                  onClick={() => void checkTaskPreflight()}>
+                  {t('hospitalCdc.check')}
+                </Button>
+              </>
+            }
+            isOpen={preflightOpen && view === 'detail'}
+            title={t('hospitalCdc.taskPreflight')}
+            width={720}
+            onClose={() => {
+              taskPreflight.cancel();
+              setPreflightOpen(false);
+            }}>
+            <IntegrationCdcPreflight
+              errorCode={taskPreflight.errorCode}
+              loading={taskPreflight.loading}
+              result={taskPreflight.data}
             />
           </FormDrawer>
           <FormDrawer
@@ -1292,6 +1543,7 @@ export const HospitalIntegrationWorkspace = ({
               hidden={view !== 'detail' && view !== 'edit'}>
               <IntegrationTaskDetail
                 busy={busy}
+                cdcReady={cdcPreflightReady(taskPreflight.data)}
                 engineAvailable={engineAvailable}
                 loading={loading}
                 showTitle={false}
@@ -1307,6 +1559,9 @@ export const HospitalIntegrationWorkspace = ({
                       connection.id === selected.targetConnectionId
                   )?.displayName
                 }
+                targetCount={targetCount.data}
+                targetCountErrorCode={targetCount.errorCode}
+                targetCountLoading={targetCount.loading}
                 task={selected}
                 uncertain={
                   Boolean(uncertainTasks[selected.id]) ||
@@ -1319,6 +1574,7 @@ export const HospitalIntegrationWorkspace = ({
                   changeView('edit');
                 }}
                 onInitialization={(action) => void initializationAction(action)}
+                onPreflight={() => void checkTaskPreflight()}
                 onRefresh={() => void taskAction('refresh')}
                 onRetry={() => {
                   if (selected.latestRun?.businessDate) {
@@ -1334,6 +1590,13 @@ export const HospitalIntegrationWorkspace = ({
                     : void taskAction(resume ? 'resume' : 'run')
                 }
                 onStop={() => void taskAction('stop')}
+                onTargetCount={() => {
+                  if (isAdmin && selected && view === 'detail') {
+                    void targetCount.execute((signal) =>
+                      getIntegrationTargetCount(selected.id, signal)
+                    );
+                  }
+                }}
               />
             </div>
           )}

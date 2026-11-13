@@ -322,7 +322,7 @@ describe('Hospital integration validation and run safety', () => {
         isAxiosError: true,
         response: { status: 409, data: {} },
       }).conflict
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('rejects unavailable columns and duplicate target mappings', () => {

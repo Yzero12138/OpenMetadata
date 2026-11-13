@@ -12,12 +12,15 @@
  */
 import { ReactNode } from 'react';
 import {
+  IntegrationCdcOptions,
+  IntegrationCdcPreflightResult,
   IntegrationConnection,
   IntegrationConnectionInput,
   IntegrationInitializationAction,
   IntegrationInitializationState,
   IntegrationMode,
   IntegrationTable,
+  IntegrationTargetCount,
   IntegrationTargetTableInput,
   IntegrationTask,
   IntegrationTaskInput,
@@ -57,6 +60,12 @@ export interface IntegrationTaskFormProps {
   onValidate: () => void;
   onSave: () => void;
   onCancel: () => void;
+  preflight?: IntegrationCdcPreflightResult;
+  preflightLoading?: boolean;
+  preflightErrorCode?: string;
+  onPreflight?: () => void;
+  onRuntimeValidityChange?: (invalid: boolean) => void;
+  onRuntimeDraftChange?: (dirty: boolean) => void;
 }
 
 export interface IntegrationTargetTableFormProps {
@@ -91,9 +100,16 @@ export interface IntegrationTaskDetailProps {
   onStop: () => void;
   onCatalog: () => void;
   onInitialization?: (action: IntegrationInitializationAction) => void;
+  cdcReady?: boolean;
+  onPreflight?: () => void;
+  targetCount?: IntegrationTargetCount;
+  targetCountLoading?: boolean;
+  targetCountErrorCode?: string;
+  onTargetCount?: () => void;
 }
 
 export interface IntegrationConnectionsProps {
+  isAdmin?: boolean;
   visibleConnections?: IntegrationConnection[];
   showHeading?: boolean;
   connections: IntegrationConnection[];
@@ -101,6 +117,33 @@ export interface IntegrationConnectionsProps {
   createRequest: number;
   onChange: (connections: IntegrationConnection[]) => void;
   onBusyChange: (busy: boolean) => void;
+}
+
+export interface IntegrationCdcPreflightProps {
+  result?: IntegrationCdcPreflightResult;
+  loading?: boolean;
+  errorCode?: string;
+  sourceOnly?: boolean;
+}
+
+export interface IntegrationExecutionSettingsProps {
+  value: IntegrationTaskInput;
+  disabled: boolean;
+  onChange: (value: IntegrationTaskInput) => void;
+  onValidityChange?: (invalid: boolean) => void;
+  onDraftChange?: (dirty: boolean) => void;
+}
+
+export interface IntegrationOracleCdcOptionsProps {
+  value?: IntegrationCdcOptions;
+  disabled: boolean;
+  onChange: (value: IntegrationCdcOptions) => void;
+}
+
+export interface IntegrationSourcePreflightProps {
+  connection: IntegrationConnection;
+  scope: string;
+  onClose: () => void;
 }
 
 export interface IntegrationConnectionFormProps {
