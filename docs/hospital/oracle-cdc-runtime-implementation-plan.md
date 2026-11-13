@@ -35,7 +35,9 @@ GET /tasks/{id}/target-count returns a bounded read-only COUNT of the registered
 
 RunSummary adds nullable checkpoints and configurationFingerprint. Unavailable checkpoint data remains absent; do not synthesize zero or infer snapshot/incremental phase/committed SCN from RUNNING or counters.
 
-## Task 1: Native engine inspection and Oracle connector packaging
+## Task 1: Native engine inspection and Oracle connector packaging — completed
+
+Evidence: focused28/28 and full pure-unit293/293 passed after targeted checkpoint identity/savepoint-type regressions. Separate spec PASS and final quality APPROVE. Fixed-base local image and isolated Java17 factory/value/NLS smoke passed; no push, deployment or source DB actions. Real Oracle CDC remains blocked and is not claimed as accepted.
 
 **Files:** SeaTunnelClient.java/Test.java; docker/hospital/seatunnel artifact manifest, prepare/build scripts and a minimal inheriting Dockerfile; new opt-in connector smoke helper under docker/hospital/seatunnel.
 
@@ -85,6 +87,7 @@ source.put("schema", Map.of("table", database + "." + owner + "." + table,
 ```
 
 Use original source field names. NUMBER18 remains exact DECIMAL(18,0); Oracle DATE is TIMESTAMP; only verified supported mappings are emitted. Driver settings forwarded under debezium database.oracle.* prefixes. Never downgrade TCPS to a plain TCP URL to avoid the catalog parser.
+- [ ] Lock the released connector's read-only source configuration: source skip_analyze=true, use_select_count=true, schema-changes.enabled=false; debezium log.mining.read.only=true and log.mining.strategy=online_catalog. Do not expose an arbitrary Debezium option map. Forbid heartbeat.action.query rather than assuming interval0 prevents source actions (the release replaces0 with5000ms). These choices avoid helper-table creation/update, ANALYZE and redo dictionary builds; actual CDC log-mining sessions still require the reviewed DBA setup.
 - [ ] Probe actual Oracle version, database name, ARCHIVELOG, database minimal supplemental logging, selected-table all-column logging or demonstrably covering unconditional groups, current LogMiner package/view access, source PK and mapped types. Queries are read-only, parameterized and bounded. Lack of access is UNKNOWN/fail-closed, never assumed enabled.
 - [ ] Non-CDB 11g/19c is the initial tested path. CDB/PDB options must be validated as a pair against source container and root service with the same credentials; do not claim such tasks ready when no proven root path exists. Unknown patch/driver combinations show an explicit compatibility warning; 11.2.0.1.0 is uncertified even though JDBC currently connects.
 - [ ] Block mapped CLOB/NCLOB Oracle CDC with ORACLE_CDC_LOB_UNVERIFIED. Debezium1.9.8 unchanged-LOB placeholders are not safe for whole-row Doris updates even with lob.enabled=true. Full LOB support remains enabled; unmapped LOBs are not silently added back into the emitted schema. No sentinel-to-NULL substitution.
