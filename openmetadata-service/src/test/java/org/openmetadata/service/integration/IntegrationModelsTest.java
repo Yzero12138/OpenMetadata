@@ -3,6 +3,7 @@ package org.openmetadata.service.integration;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +15,64 @@ import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
 
 class IntegrationModelsTest {
   private static final ObjectMapper JSON = new ObjectMapper();
+
+  @Test
+  void acceptsNullableRuntimeOptionsAndPreservesThemThroughCopiesAndStorage() throws Exception {
+    ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+    var runtime =
+        JSON.readTree(
+            """
+            {"fetchSize":2000,"splitSize":16384,"sinkBatchSize":20000,
+             "checkpointIntervalSeconds":120,"checkpointTimeoutSeconds":1200}
+            """);
+    input.set("runtime", runtime);
+    var task = IntegrationModels.IntegrationTask.from(IntegrationModels.readInput(input, false));
+    var restored = IntegrationModels.deserialize(IntegrationModels.serialize(task));
+    assertEquals(runtime, JSON.readTree(IntegrationModels.serialize(restored)).path("runtime"));
+    var replacement = IntegrationModels.IntegrationTask.from(IntegrationValidatorTest.validInput());
+    replacement.replaceInput(restored);
+    assertEquals(runtime, JSON.readTree(IntegrationModels.serialize(replacement)).path("runtime"));
+
+    input.set("runtime", JSON.readTree("{\"fetchSize\":null}"));
+    assertDoesNotThrow(() -> IntegrationModels.readInput(input, false));
+    input.putNull("runtime");
+    assertDoesNotThrow(() -> IntegrationModels.readInput(input, false));
+  }
+
+  @Test
+  void oldTaskDocumentsRemainReadableWithoutMaterializingRuntimeDefaults() throws Exception {
+    String oldDocument =
+        IntegrationModels.serialize(
+            IntegrationModels.IntegrationTask.from(IntegrationValidatorTest.validInput()));
+    var restored = IntegrationModels.deserialize(oldDocument);
+    assertNull(JSON.readTree(IntegrationModels.serialize(restored)).get("runtime"));
+  }
+
+  @Test
+  void runtimeRejectsFloatStringBooleanOverflowAndUnknownOptions() throws Exception {
+    for (String field :
+        new String[] {
+          "fetchSize",
+          "splitSize",
+          "sinkBatchSize",
+          "checkpointIntervalSeconds",
+          "checkpointTimeoutSeconds"
+        }) {
+      for (String value : new String[] {"1.5", "1000.0", "\"1000\"", "true", "2147483648", "[]"}) {
+        ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+        input.putObject("runtime").set(field, JSON.readTree(value));
+        assertEquals(
+            "INVALID_CONFIGURATION",
+            assertThrows(
+                    IntegrationException.class, () -> IntegrationModels.readInput(input, false))
+                .code(),
+            field + "=" + value);
+      }
+    }
+    ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+    input.putObject("runtime").put("checkpoint.interval", 60000);
+    assertThrows(IntegrationException.class, () -> IntegrationModels.readInput(input, false));
+  }
 
   @Test
   void acceptsInitializationConfigurationButNotCallerOwnedProgress() throws Exception {

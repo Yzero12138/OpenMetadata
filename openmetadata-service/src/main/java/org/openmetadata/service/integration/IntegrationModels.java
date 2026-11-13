@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import org.openmetadata.service.integration.IntegrationCdcModels.RuntimeOptions;
 
 public final class IntegrationModels {
   private static final ObjectMapper JSON =
@@ -49,6 +50,7 @@ public final class IntegrationModels {
     public String mode;
     public String primaryKey;
     public String sourceQuery;
+    public RuntimeOptions runtime;
     public ScheduleConfig schedule;
     public InitializationConfig initialization;
     public List<FieldMapping> fieldMappings;
@@ -65,6 +67,7 @@ public final class IntegrationModels {
       mode = input.mode;
       primaryKey = input.primaryKey;
       sourceQuery = input.sourceQuery;
+      runtime = input.runtime;
       schedule = input.schedule == null ? null : input.schedule.copy();
       initialization = input.initialization == null ? null : input.initialization.copy();
       fieldMappings = input.fieldMappings == null ? null : List.copyOf(input.fieldMappings);

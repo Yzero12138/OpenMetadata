@@ -95,6 +95,7 @@ public final class IntegrationValidator {
     if (!Set.of("FULL", "CDC", "SQL_T1").contains(input.mode == null ? "" : input.mode)) {
       error(errors, "mode", "INVALID_MODE", "Select FULL, CDC or SQL_T1.");
     }
+    errors.addAll(IntegrationRuntimeOptions.validate(input));
     if ("SQL_T1".equals(input.mode)) {
       if (!"sql_result".equals(input.sourceTable)) {
         error(errors, "sourceTable", "INVALID_CONFIGURATION", "SQL results must use sql_result.");

@@ -47,7 +47,9 @@ Evidence: focused28/28 and full pure-unit293/293 passed after targeted checkpoin
 - [ ] Exercise factory discovery/classloading against exact released artifacts with no DB required. This is a loader test, not CDC data acceptance. No resident server or existing test workload is changed.
 - [ ] Format, review spec then quality, commit scoped files.
 
-## Task 2: Checkpointable Oracle full extraction and bounded runtime
+## Task 2: Checkpointable Oracle full extraction and bounded runtime — foundation completed
+
+Foundation evidence: immutable profiles/options, strict bounds, native Oracle dynamic splitting and explicit legacy PG graph builder implemented. Fresh309/309pureunits passed; separate spec PASS and quality APPROVE with52/52focused independent rerun. SQL_T1 keeps fetch1000/no split/sink100 and uses60s/900s checkpoints. Actual engine/source validation is next. Service selection of legacy restore, fingerprints and writer exclusion belong to Task3 integration and are not yet implemented.
 
 **Files:** SeaTunnelJobConfig.java/Test.java; IntegrationModels.java/Test.java; new IntegrationRuntimeOptions.java/Test.java; validation and service run/restore guards.
 
@@ -93,6 +95,7 @@ Use original source field names. NUMBER18 remains exact DECIMAL(18,0); Oracle DA
 - [ ] Block mapped CLOB/NCLOB Oracle CDC with ORACLE_CDC_LOB_UNVERIFIED. Debezium1.9.8 unchanged-LOB placeholders are not safe for whole-row Doris updates even with lob.enabled=true. Full LOB support remains enabled; unmapped LOBs are not silently added back into the emitted schema. No sentinel-to-NULL substitution.
 - [ ] Mandatory engine check uses actual option-rule discovery. App JDBC success is reported separately from engine-source access. There is no REST dry-run connection endpoint: engine-source network remains a nonblocking UNKNOWN warning until actual controlled runtime proof, not a false PASS.
 - [ ] For task checks, require actual single non-null PK, supported selected fields, compatible Doris Unique Key target and mappings. Required FAIL/UNKNOWN blocks ready and run; nonblocking compatibility/network warnings remain visible. Saved drafts can exist while DB prerequisites are missing, but run/resume performs fresh mandatory checks before submitting.
+- [ ] Initial Oracle CDC uses whole-row Doris writes, so every target business column must be mapped. Reject an unmapped target column even when nullable/defaulted: a 101-column CDC projection must not silently NULL out a previously populated BLYY column in a 102-column target. A deliberately reduced source projection needs its own matching target. Do not enable unverified partial-update headers or assume a preceding full load preserves unmapped values.
 - [ ] Expose admin endpoints using the contract above, with negative tests for unauthorized-before-parse, schema escapes, unknown columns, malformed JSON, missing connector/logs/privileges and exception redaction. Existing PG behavior remains covered.
 - [ ] Refresh checkpoint evidence with bounded remaining time; source/target counts stay correctly labeled as cumulative attempts versus an explicit actual target count sample. Native APIs cannot establish snapshot/incremental phase or committed SCN, so return unknown for those signals.
 - [ ] Review spec and quality independently and commit.

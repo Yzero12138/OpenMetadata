@@ -6,16 +6,209 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
+import org.openmetadata.service.integration.IntegrationCdcModels.RuntimeOptions;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionDefinition;
 import org.openmetadata.service.integration.IntegrationModels.FieldMapping;
 import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
 import org.openmetadata.service.integration.IntegrationModels.RunSummary;
 
 class SeaTunnelJobConfigTest {
+  @Test
+  void legacyPostgresCdcKeepsTheCompletePriorJdbcAndDorisGraphs() throws Exception {
+    var task = task();
+    task.mode = "CDC";
+    var run = new RunSummary();
+    run.jobId = "123456789";
+    for (boolean doris : List.of(false, true)) {
+      if (doris) {
+        task.targetConnectionId = "doris-ods-validation";
+        task.targetSchema = "ods_validation";
+        task.targetTable = "visits";
+      }
+      var builder = doris ? sqlBuilder(task) : new SeaTunnelJobConfig(configuration());
+      var expected = legacyCdcConfig(doris);
+      assertEquals(expected, builder.buildLegacyCdc(task, run));
+      task.runtime = new RuntimeOptions(2500, 16000, 12000, 120, 1500);
+      assertEquals(expected, builder.buildLegacyCdc(task, run));
+      var current = builder.build(task, run);
+      var currentSink = (Map<?, ?>) ((List<?>) current.get("sink")).getFirst();
+      assertEquals(12000, currentSink.get(doris ? "doris.batch.size" : "batch_size"));
+      assertEquals(120000, ((Map<?, ?>) current.get("env")).get("checkpoint.interval"));
+      assertEquals(1500000, ((Map<?, ?>) current.get("env")).get("checkpoint.timeout"));
+      var legacySource = (Map<?, ?>) ((List<?>) expected.get("source")).getFirst();
+      for (String option :
+          List.of("fetch_size", "snapshot.fetch.size", "snapshot.split.size", "split.size")) {
+        assertFalse(legacySource.containsKey(option), option);
+      }
+      task.runtime = null;
+    }
+  }
+
+  @Test
+  void oracleFullUsesNativeDynamicSplitsWithTheExactMappedKeyAliasAndProtectedDescriptor() {
+    var definition = new ConnectionDefinition();
+    definition.copyInput(IntegrationConnectionsTest.input("Oracle"));
+    definition.id = "01234567-1234-1234-1234-123456789012";
+    definition.oracleConnectionType = "SID";
+    var endpoint = new IntegrationConfiguration.JdbcEndpoint(definition, "synthetic-oracle-secret");
+    var task = task();
+    task.sourceConnectionId = definition.id;
+    task.sourceSchema = definition.schemas.getFirst();
+    task.sourceTable = "医嘱记录";
+    task.primaryKey = "YZLSH";
+    task.fieldMappings =
+        List.of(
+            new FieldMapping("YZLSH", "yzlsh"),
+            new FieldMapping("XML_CLOB", "xml_payload"),
+            new FieldMapping("患者姓名", "PatientName"));
+    var builder =
+        new SeaTunnelJobConfig(
+            id -> id.equals(definition.id) ? endpoint : configuration().endpoint(id));
+    String expectedQuery =
+        "SELECT \"YZLSH\" AS \"yzlsh\", \"XML_CLOB\" AS \"xml_payload\", "
+            + "\"患者姓名\" AS \"PatientName\" FROM \""
+            + task.sourceSchema
+            + "\".\"医嘱记录\"";
+    var config = builder.build(task);
+    var source = (Map<?, ?>) ((List<?>) config.get("source")).getFirst();
+    assertEquals(
+        List.of(Map.of("query", expectedQuery, "partition_column", "yzlsh")),
+        source.get("table_list"));
+    assertEquals(endpoint.jdbcUrl(), source.get("url"));
+    assertTrue(endpoint.jdbcUrl().contains("(DESCRIPTION="));
+    assertEquals(definition.username, source.get("username"));
+    assertEquals("synthetic-oracle-secret", source.get("password"));
+    assertFalse(endpoint.jdbcUrl().contains("synthetic-oracle-secret"));
+    assertEquals("HospitalOracle", source.get("dialect"));
+    assertEquals(1000, source.get("fetch_size"));
+    assertEquals(8192, source.get("split.size"));
+    assertEquals(false, source.get("split.allow-sampling"));
+    assertEquals(true, source.get("skip_analyze"));
+    assertEquals(true, source.get("use_select_count"));
+    assertEquals(true, source.get("enable_concurrent_read"));
+    for (String option :
+        List.of(
+            "query",
+            "partition_column",
+            "table_path",
+            "partition_num",
+            "partition_lower_bound",
+            "partition_upper_bound")) {
+      assertFalse(source.containsKey(option), option);
+    }
+    // The native splitter owns JDBC BigDecimal/setObject boundaries; no PK values enter this graph.
+    assertEquals(
+        Set.of(
+            "plugin_name",
+            "plugin_output",
+            "url",
+            "username",
+            "password",
+            "driver",
+            "fetch_size",
+            "query_timeout_sec",
+            "table_list",
+            "split.size",
+            "split.allow-sampling",
+            "skip_analyze",
+            "use_select_count",
+            "enable_concurrent_read",
+            "dialect",
+            "properties"),
+        source.keySet());
+    assertEquals(List.of(), config.get("transform"));
+    task.runtime = new RuntimeOptions(3000, 20000, 20000, 90, 1200);
+    var configured = (Map<?, ?>) ((List<?>) builder.build(task).get("source")).getFirst();
+    assertEquals(3000, configured.get("fetch_size"));
+    assertEquals(20000, configured.get("split.size"));
+    assertEquals(source.get("table_list"), configured.get("table_list"));
+  }
+
+  @Test
+  void newFullAndCdcJobsUseModeSpecificRuntimeDefaultsWithoutMutatingSavedTasks() {
+    var task = task();
+    var builder = new SeaTunnelJobConfig(configuration());
+    for (String mode : List.of("FULL", "CDC")) {
+      task.mode = mode;
+      String before = IntegrationModels.serialize(task);
+      var config = builder.build(task);
+      var environment = (Map<?, ?>) config.get("env");
+      var sink = (Map<?, ?>) ((List<?>) config.get("sink")).getFirst();
+      assertEquals(mode.equals("FULL") ? 10000 : 1000, sink.get("batch_size"), mode);
+      assertEquals(
+          mode.equals("FULL") ? 60000 : 30000, environment.get("checkpoint.interval"), mode);
+      assertEquals(
+          mode.equals("FULL") ? 900000 : 300000, environment.get("checkpoint.timeout"), mode);
+      assertEquals(1, environment.get("parallelism"));
+      assertEquals(before, IntegrationModels.serialize(task));
+    }
+  }
+
+  @Test
+  void configuredFetchBatchAndCheckpointsUseNativeJdbcAndDorisKeys() {
+    var task = task();
+    task.runtime = new RuntimeOptions(2500, 16000, 12000, 120, 1500);
+    var config = new SeaTunnelJobConfig(configuration()).build(task);
+    var source = (Map<?, ?>) ((List<?>) config.get("source")).getFirst();
+    var sink = (Map<?, ?>) ((List<?>) config.get("sink")).getFirst();
+    assertEquals(2500, source.get("fetch_size"));
+    assertEquals(12000, sink.get("batch_size"));
+    assertFalse(sink.containsKey("doris.batch.size"));
+    assertEquals(120000, ((Map<?, ?>) config.get("env")).get("checkpoint.interval"));
+    assertEquals(1500000, ((Map<?, ?>) config.get("env")).get("checkpoint.timeout"));
+
+    task = initializationTask("DAY");
+    task.latestRun.windowEnd = "2024-02-15 00:00:00";
+    task.initializationState.pendingEndDate = "2024-02-15";
+    task.runtime = new RuntimeOptions(2500, null, 12000, 120, 1500);
+    var dorisConfig = sqlBuilder(task).build(task);
+    var doris = (Map<?, ?>) ((List<?>) dorisConfig.get("sink")).getFirst();
+    assertEquals(12000, doris.get("doris.batch.size"));
+    assertFalse(doris.containsKey("batch_size"));
+    assertEquals(
+        Map.of(
+            "format",
+            "json",
+            "read_json_by_line",
+            "true",
+            "strict_mode",
+            "true",
+            "max_filter_ratio",
+            "0",
+            "num_as_string",
+            "true"),
+        doris.get("doris.config"));
+  }
+
+  @Test
+  void sqlT1KeepsItsSmallBatchProfileAndDoesNotSplitCustomAggregateQueries() {
+    var task = initializationTask("DAY");
+    task.sourceQuery = "SELECT id, COUNT(*) AS name FROM visits WHERE day = :biz_date GROUP BY id";
+    task.latestRun.windowEnd = "2024-02-15 00:00:00";
+    task.initializationState.pendingEndDate = "2024-02-15";
+    var config = sqlBuilder(task).build(task);
+    var source = (Map<?, ?>) ((List<?>) config.get("source")).getFirst();
+    var sink = (Map<?, ?>) ((List<?>) config.get("sink")).getFirst();
+    assertEquals(
+        "SELECT id, COUNT(*) AS name FROM \"public\".visits WHERE day = '2024-02-14' GROUP BY id",
+        source.get("query"));
+    assertEquals(1000, source.get("fetch_size"));
+    assertEquals(100, sink.get("doris.batch.size"));
+    assertEquals(60000, ((Map<?, ?>) config.get("env")).get("checkpoint.interval"));
+    assertEquals(900000, ((Map<?, ?>) config.get("env")).get("checkpoint.timeout"));
+    for (String option : List.of("table_list", "partition_column", "table_path", "split.size")) {
+      assertFalse(source.containsKey(option), option);
+    }
+    task.runtime = new RuntimeOptions(null, 8192, null, null, null);
+    assertThrows(IntegrationException.class, () -> sqlBuilder(task).build(task));
+  }
+
   @Test
   void initializationUsesThePersistedPartialMonthAndRetriesExactlyTheSameWindow() {
     var task = initializationTask("MONTH");
@@ -295,7 +488,9 @@ class SeaTunnelJobConfigTest {
               + endpoint.dialect().quote(task.sourceSchema)
               + "."
               + endpoint.dialect().quote("patient"),
-          source.get("query"));
+          type.equals("Oracle")
+              ? ((Map<?, ?>) ((List<?>) source.get("table_list")).getFirst()).get("query")
+              : source.get("query"));
       if (!type.equals("Postgres")) {
         task.mode = "CDC";
         assertEquals(
@@ -394,6 +589,99 @@ class SeaTunnelJobConfigTest {
     IntegrationTask task = IntegrationTask.from(IntegrationValidatorTest.validInput());
     task.id = "12345678-1234-1234-1234-1234567890ab";
     return task;
+  }
+
+  private Map<String, Object> legacyCdcConfig(boolean doris) {
+    var source =
+        Map.ofEntries(
+            Map.entry("plugin_name", "Postgres-CDC"),
+            Map.entry("plugin_output", "source"),
+            Map.entry("url", "jdbc:postgresql://source:5432/source_db"),
+            Map.entry("username", "source_user"),
+            Map.entry("password", "synthetic-source-secret"),
+            Map.entry("database-names", List.of("source_db")),
+            Map.entry("schema-names", List.of("public")),
+            Map.entry("table-names", List.of("source_db.public.patient")),
+            Map.entry("decoding.plugin.name", "pgoutput"),
+            Map.entry("startup.mode", "initial"),
+            Map.entry("slot.name", "hospital_123456781234123412341234567890ab"),
+            Map.entry(
+                "debezium",
+                Map.of(
+                    "publication.name", "hospital_123456781234123412341234567890ab",
+                    "publication.autocreate.mode", "filtered",
+                    "slot.drop.on.stop", "false",
+                    "database.sslmode", "disable",
+                    "schema.include.list", "\\Qpublic\\E",
+                    "table.include.list", "\\Qpublic\\E\\.\\Qpatient\\E")));
+    Map<String, Object> sink = new LinkedHashMap<>();
+    sink.put("plugin_input", "mapped");
+    sink.put("username", doris ? "synthetic-writer" : "target_user");
+    sink.put("password", doris ? "synthetic-password" : "synthetic-target-secret");
+    if (doris) {
+      sink.put("plugin_name", "Doris");
+      sink.put("fenodes", "doris.example.internal:8030");
+      sink.put("query-port", 9030);
+      sink.put("database", "ods_validation");
+      sink.put("table", "visits");
+      sink.put("sink.enable-2pc", false);
+      sink.put("sink.enable-delete", true);
+      sink.put("sink.label-prefix", "h9292152de3cc85b7");
+      sink.put("doris.batch.size", 100);
+      sink.put(
+          "doris.config",
+          Map.of(
+              "format",
+              "json",
+              "read_json_by_line",
+              "true",
+              "strict_mode",
+              "true",
+              "max_filter_ratio",
+              "0"));
+    } else {
+      sink.put("plugin_name", "Jdbc");
+      sink.put("url", "jdbc:postgresql://target:5432/target_db");
+      sink.put("driver", "org.postgresql.Driver");
+      sink.put("generate_sink_sql", true);
+      sink.put("database", "target_db");
+      sink.put("table", "public.patient_ods");
+      sink.put("primary_keys", List.of("id"));
+      sink.put("enable_upsert", true);
+      sink.put("is_exactly_once", false);
+      sink.put("batch_size", 100);
+      sink.put("batch_interval_ms", 1000);
+    }
+    sink.put("schema_save_mode", "IGNORE");
+    sink.put("data_save_mode", "APPEND_DATA");
+    return Map.of(
+        "env",
+        Map.of(
+            "job.mode",
+            "STREAMING",
+            "parallelism",
+            1,
+            "checkpoint.interval",
+            5000,
+            "checkpoint.timeout",
+            60000,
+            "checkpoint.retain-after-job-cancelled",
+            true),
+        "source",
+        List.of(source),
+        "transform",
+        List.of(
+            Map.of(
+                "plugin_name",
+                "Sql",
+                "plugin_input",
+                "source",
+                "plugin_output",
+                "mapped",
+                "query",
+                "SELECT `id` AS `id`, `name` AS `name` FROM source")),
+        "sink",
+        List.of(sink));
   }
 
   private IntegrationTask initializationTask(String batchUnit) {

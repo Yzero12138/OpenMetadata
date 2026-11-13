@@ -31,9 +31,22 @@ public final class SeaTunnelJobConfig {
   }
 
   public Map<String, Object> build(IntegrationTask task, RunSummary run) {
+    return build(task, run, false);
+  }
+
+  public Map<String, Object> buildLegacyCdc(IntegrationTask task, RunSummary run) {
+    if (task == null || !"CDC".equals(task.mode)) {
+      throw new IntegrationException("MODE_UNSUPPORTED", 400);
+    }
+    return build(task, run, true);
+  }
+
+  private Map<String, Object> build(IntegrationTask task, RunSummary run, boolean legacyCdc) {
     if (!IntegrationValidator.validateStructure(task).valid()) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
+    var runtime =
+        legacyCdc ? IntegrationRuntimeOptions.legacyCdc() : IntegrationRuntimeOptions.resolve(task);
     JdbcEndpoint sourceConnection = endpoints.apply(task.sourceConnectionId);
     JdbcEndpoint targetConnection = endpoints.apply(task.targetConnectionId);
     boolean cdc = "CDC".equals(task.mode);
@@ -50,6 +63,12 @@ public final class SeaTunnelJobConfig {
         || !targetConnection.schemas().contains(task.targetSchema)) {
       throw new IntegrationException("SCHEMA_NOT_ALLOWED", 400);
     }
+    String targetKey =
+        task.fieldMappings.stream()
+            .filter(mapping -> mapping.source().equals(task.primaryKey))
+            .map(FieldMapping::target)
+            .findFirst()
+            .orElseThrow(() -> new IntegrationException("INVALID_CONFIGURATION", 400));
     Map<String, Object> source = new LinkedHashMap<>();
     source.put("plugin_name", cdc ? "Postgres-CDC" : "Jdbc");
     source.put("plugin_output", "source");
@@ -83,10 +102,9 @@ public final class SeaTunnelJobConfig {
               Pattern.quote(task.sourceSchema) + "\\." + Pattern.quote(task.sourceTable)));
     } else {
       source.put("driver", sourceConnection.driver());
-      source.put("fetch_size", 1000);
+      source.put("fetch_size", runtime.fetchSize());
       source.put("query_timeout_sec", 60);
-      source.put(
-          "query",
+      String query =
           sql
               ? sqlQuery(task, run, sourceConnection)
               : "SELECT "
@@ -100,7 +118,17 @@ public final class SeaTunnelJobConfig {
                   + " FROM "
                   + sourceConnection.dialect().quote(task.sourceSchema)
                   + "."
-                  + sourceConnection.dialect().quote(task.sourceTable));
+                  + sourceConnection.dialect().quote(task.sourceTable);
+      if (!sql && sourceConnection.dialect() == JdbcDialect.Oracle) {
+        source.put("table_list", List.of(Map.of("query", query, "partition_column", targetKey)));
+        source.put("split.size", runtime.splitSize());
+        source.put("split.allow-sampling", false);
+        source.put("skip_analyze", true);
+        source.put("use_select_count", true);
+        source.put("enable_concurrent_read", true);
+      } else {
+        source.put("query", query);
+      }
       if (sourceConnection.dialect() == JdbcDialect.Oracle) {
         source.put("dialect", "HospitalOracle");
         source.put(
@@ -132,12 +160,6 @@ public final class SeaTunnelJobConfig {
                   "query",
                   "SELECT " + projection + " FROM source"));
     }
-    String targetKey =
-        task.fieldMappings.stream()
-            .filter(mapping -> mapping.source().equals(task.primaryKey))
-            .map(FieldMapping::target)
-            .findFirst()
-            .orElseThrow(() -> new IntegrationException("INVALID_CONFIGURATION", 400));
     Map<String, Object> sink = new LinkedHashMap<>();
     sink.put("plugin_input", cdc || sql ? "mapped" : "source");
     if (targetConnection.dialect() == JdbcDialect.Doris) {
@@ -154,18 +176,22 @@ public final class SeaTunnelJobConfig {
       sink.put("sink.enable-2pc", false);
       sink.put("sink.enable-delete", cdc);
       sink.put("sink.label-prefix", labelPrefix(task, run));
-      sink.put("doris.batch.size", 100);
-      sink.put(
-          "doris.config",
-          Map.of(
-              "format",
-              "json",
-              "read_json_by_line",
-              "true",
-              "strict_mode",
-              "true",
-              "max_filter_ratio",
-              "0"));
+      sink.put("doris.batch.size", runtime.sinkBatchSize());
+      Map<String, String> streamLoadOptions =
+          new LinkedHashMap<>(
+              Map.of(
+                  "format",
+                  "json",
+                  "read_json_by_line",
+                  "true",
+                  "strict_mode",
+                  "true",
+                  "max_filter_ratio",
+                  "0"));
+      if (!legacyCdc) {
+        streamLoadOptions.put("num_as_string", "true");
+      }
+      sink.put("doris.config", streamLoadOptions);
     } else {
       sink.put("plugin_name", "Jdbc");
       sink.put("url", targetConnection.jdbcUrl());
@@ -194,7 +220,7 @@ public final class SeaTunnelJobConfig {
       sink.put("primary_keys", List.of(targetKey));
       sink.put("enable_upsert", true);
       sink.put("is_exactly_once", false);
-      sink.put("batch_size", 100);
+      sink.put("batch_size", runtime.sinkBatchSize());
       sink.put("batch_interval_ms", 1000);
     }
     sink.put("schema_save_mode", "IGNORE");
@@ -206,9 +232,9 @@ public final class SeaTunnelJobConfig {
             "parallelism",
             1,
             "checkpoint.interval",
-            5000,
+            runtime.checkpointIntervalSeconds() * 1000,
             "checkpoint.timeout",
-            60000,
+            runtime.checkpointTimeoutSeconds() * 1000,
             "checkpoint.retain-after-job-cancelled",
             true);
     return Map.of(
