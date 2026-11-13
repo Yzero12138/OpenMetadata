@@ -11,7 +11,8 @@ import org.openmetadata.service.integration.IntegrationModels.ScheduleConfig;
 import org.openmetadata.service.integration.IntegrationModels.ScheduleState;
 
 public final class IntegrationSchedule {
-  private static final DateTimeFormatter WINDOW = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+  private static final DateTimeFormatter WINDOW =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
   private IntegrationSchedule() {}
 

@@ -40,7 +40,7 @@ fi
 if ! "${admin[@]}" >/dev/null 2>"$error_file" <<SQL
 CREATE DATABASE IF NOT EXISTS ods_validation PROPERTIES ("replication_allocation" = "tag.location.default:1");
 CREATE USER IF NOT EXISTS '$writer'@'%' IDENTIFIED BY PASSWORD '$writer_hash';
-GRANT SELECT_PRIV, LOAD_PRIV, CREATE_PRIV ON internal.ods_validation.* TO '$writer'@'%';
+GRANT SELECT_PRIV, LOAD_PRIV, CREATE_PRIV, ALTER_PRIV ON internal.ods_validation.* TO '$writer'@'%';
 SQL
 then
   echo 'Doris database or scoped writer initialization failed; no credentials were printed.' >&2
@@ -57,7 +57,7 @@ for attempt in {1..60}; do
   alive="$(backend_state)"
   if [[ "$alive" == true ]]; then
     "${admin[@]}" --execute="SELECT @@version_comment; SELECT Host, Alive FROM backends() WHERE Host = '$be_host';"
-    echo 'ods_validation is ready; hospital_ods_writer is scoped to SELECT, LOAD and CREATE in that database.'
+    echo 'ods_validation is ready; hospital_ods_writer is scoped to SELECT, LOAD, CREATE and ALTER in that database.'
     exit 0
   fi
   sleep 5

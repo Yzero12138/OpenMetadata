@@ -29,6 +29,7 @@ final class DorisTableMetadata {
     Set<String> keys;
     try (var statement = connection.createStatement()) {
       statement.setQueryTimeout(5);
+      statement.setMaxRows(1);
       try (ResultSet result = statement.executeQuery("SHOW CREATE TABLE " + qualified)) {
         if (!result.next()) {
           throw new IntegrationException("TABLE_NOT_FOUND", 404);
@@ -38,30 +39,35 @@ final class DorisTableMetadata {
     }
     List<ColumnDefinition> columns = new ArrayList<>();
     Set<String> names = new HashSet<>();
-    try (var statement = connection.createStatement()) {
+    try (var statement =
+        connection.prepareStatement(
+            "SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? ORDER BY ORDINAL_POSITION")) {
+      statement.setString(1, schema);
+      statement.setString(2, table);
       statement.setQueryTimeout(5);
-      try (ResultSet result = statement.executeQuery("DESCRIBE " + qualified)) {
+      statement.setMaxRows(129);
+      try (ResultSet result = statement.executeQuery()) {
         while (result.next()) {
-          String name = result.getString("Field");
+          String name = result.getString("COLUMN_NAME");
           if (!IntegrationValidator.safeIdentifier(name)
-              || !names.add(name)
+              || !names.add(name.toLowerCase(Locale.ROOT))
               || columns.size() >= 128) {
             throw new IntegrationException("INVALID_CONFIGURATION", 400);
           }
-          boolean key = keys.contains(name) && "true".equalsIgnoreCase(result.getString("Key"));
-          String defaultValue = result.getString("Default");
+          boolean key = keys.contains(name);
+          String defaultValue = result.getString("COLUMN_DEFAULT");
           columns.add(
               column(
                   name,
-                  result.getString("Type"),
-                  !"NO".equalsIgnoreCase(result.getString("Null")),
+                  result.getString("COLUMN_TYPE"),
+                  !"NO".equalsIgnoreCase(result.getString("IS_NULLABLE")),
                   key,
-                  defaultValue != null && !"NULL".equalsIgnoreCase(defaultValue)));
+                  defaultValue != null));
         }
       }
     }
     if (columns.isEmpty()
-        || !names.containsAll(keys)
+        || !names.containsAll(keys.stream().map(key -> key.toLowerCase(Locale.ROOT)).toList())
         || columns.stream().filter(ColumnDefinition::primaryKey).count() != keys.size()) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
@@ -116,8 +122,8 @@ final class DorisTableMetadata {
           size = 1;
         }
         case "tinyint" -> {
-          jdbc = Types.TINYINT;
-          size = 3;
+          jdbc = first == 1 ? Types.BOOLEAN : Types.TINYINT;
+          size = first == 1 ? 1 : 3;
         }
         case "smallint" -> {
           jdbc = Types.SMALLINT;
@@ -149,6 +155,12 @@ final class DorisTableMetadata {
           size = first;
           unicode = true;
           capacity = first / 4;
+        }
+        case "string", "text" -> {
+          jdbc = Types.LONGVARCHAR;
+          size = 1_048_576;
+          unicode = true;
+          capacity = size / 4;
         }
         case "date", "datev2" -> {
           jdbc = Types.DATE;

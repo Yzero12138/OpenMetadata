@@ -41,6 +41,7 @@ import {
   validateIntegrationTask,
 } from '../../rest/hospitalIntegrationAPI';
 import { showSuccessToast } from '../../utils/ToastUtils';
+import { readDorisTaskTarget } from '../HospitalTargetTablesPage/DorisTableDesignUtils';
 import './hospital-integration.less';
 import { HospitalIntegrationWorkspaceProps } from './HospitalIntegrationPage.interface';
 import {
@@ -108,6 +109,7 @@ export const HospitalIntegrationWorkspace = ({
     ...EMPTY_INTEGRATION_TASK,
   });
   const initialForm = useRef('');
+  const consumedTargetIntent = useRef<string>();
   const [discardRequested, setDiscardRequested] = useState(false);
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [errorCode, setErrorCode] = useState<string>();
@@ -466,6 +468,52 @@ export const HospitalIntegrationWorkspace = ({
       search: getIntegrationCollectionSearch(location.search),
     });
   };
+
+  useEffect(() => {
+    if (
+      !isAdmin ||
+      routeTaskId ||
+      loading.initial ||
+      consumedTargetIntent.current === location.key
+    ) {
+      return;
+    }
+    const target = readDorisTaskTarget(location.state);
+    if (!target) {
+      return;
+    }
+    const connection = connections.find(
+      (item) =>
+        item.id === target.connectionId &&
+        item.enabled &&
+        item.role === 'TARGET' &&
+        item.databaseType === 'Doris' &&
+        item.database === target.schema
+    );
+    if (!connection) {
+      return;
+    }
+    consumedTargetIntent.current = location.key;
+    const next: IntegrationTaskInput = {
+      ...EMPTY_INTEGRATION_TASK,
+      fieldMappings: [],
+      targetConnectionId: connection.id,
+      targetSchema: target.schema,
+      targetTable: target.table,
+    };
+    initialForm.current = JSON.stringify(next);
+    setForm(next);
+    setFormErrors([]);
+    setSelected(undefined);
+    setView('create');
+  }, [
+    connections,
+    isAdmin,
+    loading.initial,
+    location.key,
+    location.state,
+    routeTaskId,
+  ]);
 
   const perform = async (key: string, action: () => Promise<void>) => {
     if (mutation.current || !isAdmin) {
@@ -1103,6 +1151,7 @@ export const HospitalIntegrationWorkspace = ({
                 !selected?.initialization?.enabled &&
                 Boolean(selected?.scheduleState?.pendingBusinessDate)
               }
+              navigationBlocked={navigationGuard.blocked}
               queryErrorCode={queryData.errorCode}
               queryLoading={queryData.loading}
               saving={loading.save}
@@ -1119,6 +1168,8 @@ export const HospitalIntegrationWorkspace = ({
                 setForm(value);
                 setFormErrors([]);
               }}
+              onDiscardNavigation={() => navigationGuard.proceed(closeEditor)}
+              onKeepNavigation={navigationGuard.stay}
               onReadQuerySchema={() => void queryData.read()}
               onReloadTables={() => setTablesReload((current) => current + 1)}
               onSave={() => void validateOrSave(true)}

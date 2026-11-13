@@ -128,6 +128,84 @@ export interface IntegrationTargetTablePreview {
   fieldMappings: IntegrationTargetTableInput['fieldMappings'];
 }
 
+export type DorisColumnType =
+  | 'BOOLEAN'
+  | 'TINYINT'
+  | 'SMALLINT'
+  | 'INT'
+  | 'BIGINT'
+  | 'FLOAT'
+  | 'DOUBLE'
+  | 'DECIMAL'
+  | 'CHAR'
+  | 'VARCHAR'
+  | 'STRING'
+  | 'DATE'
+  | 'DATETIME';
+
+export type DorisDefaultKind =
+  | 'NONE'
+  | 'NULL'
+  | 'LITERAL'
+  | 'CURRENT_DATE'
+  | 'CURRENT_TIMESTAMP';
+
+export interface DorisColumnInput {
+  name: string;
+  type: string;
+  length?: number;
+  precision?: number;
+  scale?: number;
+  nullable: boolean;
+  primaryKey: boolean;
+  defaultKind: DorisDefaultKind;
+  defaultValue?: string;
+  comment: string;
+}
+
+export interface DorisTableDesignInput {
+  targetSchema: string;
+  targetTable: string;
+  comment: string;
+  buckets: number;
+  columns: DorisColumnInput[];
+}
+
+export interface DorisAddColumnsInput {
+  columns: DorisColumnInput[];
+}
+
+export interface DorisTableStructure {
+  targetConnectionId: string;
+  targetSchema: string;
+  targetTable: string;
+  comment: string;
+  model: string;
+  buckets?: number;
+  replicationNum?: number;
+  structureHash: string;
+  columns: DorisColumnInput[];
+  table: IntegrationTable;
+  ddl: string;
+  change?: { jobId: string; state: string };
+}
+
+export interface DorisTableDesignPreview {
+  targetConnectionId: string;
+  action: 'CREATE' | 'ADD_COLUMNS';
+  targetSchema: string;
+  targetTable: string;
+  previewHash: string;
+  ddl: string;
+  columns: DorisColumnInput[];
+  table: IntegrationTable;
+}
+
+export interface DorisTableMutationResult {
+  status: 'APPLIED' | 'SUBMITTED';
+  structure: DorisTableStructure;
+}
+
 export interface IntegrationTaskInput {
   name: string;
   displayName: string;
@@ -336,6 +414,81 @@ export const createIntegrationTargetTable = async (
 ): Promise<IntegrationTable> => {
   const { data } = await APIClient.post<IntegrationTable>(
     PREFIX + '/connections/' + encodeURIComponent(id) + '/tables',
+    input
+  );
+
+  return data;
+};
+
+const dorisStructurePath = (id: string, schema: string, table: string) =>
+  `${PREFIX}/connections/${encodeURIComponent(id)}/tables/${encodeURIComponent(
+    schema
+  )}/${encodeURIComponent(table)}`;
+
+export const getDorisTableStructure = async (
+  id: string,
+  schema: string,
+  table: string,
+  signal?: AbortSignal
+): Promise<DorisTableStructure> => {
+  const { data } = await APIClient.get<DorisTableStructure>(
+    dorisStructurePath(id, schema, table) + '/structure',
+    { signal }
+  );
+
+  return data;
+};
+
+export const previewDesignedDorisTable = async (
+  id: string,
+  input: DorisTableDesignInput,
+  signal?: AbortSignal
+): Promise<DorisTableDesignPreview> => {
+  const { data } = await APIClient.post<DorisTableDesignPreview>(
+    `${PREFIX}/connections/${encodeURIComponent(id)}/table-design/preview`,
+    input,
+    { signal }
+  );
+
+  return data;
+};
+
+export const createDesignedDorisTable = async (
+  id: string,
+  input: DorisTableDesignInput & { previewHash: string }
+): Promise<DorisTableMutationResult> => {
+  const { data } = await APIClient.post<DorisTableMutationResult>(
+    `${PREFIX}/connections/${encodeURIComponent(id)}/table-design`,
+    input
+  );
+
+  return data;
+};
+
+export const previewDorisTableColumns = async (
+  id: string,
+  schema: string,
+  table: string,
+  input: DorisAddColumnsInput,
+  signal?: AbortSignal
+): Promise<DorisTableDesignPreview> => {
+  const { data } = await APIClient.post<DorisTableDesignPreview>(
+    dorisStructurePath(id, schema, table) + '/columns/preview',
+    input,
+    { signal }
+  );
+
+  return data;
+};
+
+export const addDorisTableColumns = async (
+  id: string,
+  schema: string,
+  table: string,
+  input: DorisAddColumnsInput & { previewHash: string }
+): Promise<DorisTableMutationResult> => {
+  const { data } = await APIClient.post<DorisTableMutationResult>(
+    dorisStructurePath(id, schema, table) + '/columns',
     input
   );
 

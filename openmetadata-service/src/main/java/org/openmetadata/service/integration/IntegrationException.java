@@ -74,11 +74,37 @@ public final class IntegrationException extends RuntimeException {
           Map.entry("TABLE_NOT_FOUND", "The selected table does not exist or is not accessible."),
           Map.entry("TABLE_ALREADY_EXISTS", "The target table already exists. Choose a new name."),
           Map.entry(
+              "INVALID_TABLE_DESIGN",
+              "The table or column design is invalid. Check names, types, lengths, defaults and keys."),
+          Map.entry(
+              "COLUMN_ALREADY_EXISTS",
+              "A column with this name already exists in the target table."),
+          Map.entry(
+              "TABLE_COLUMN_LIMIT_EXCEEDED", "A target table can contain at most 128 columns."),
+          Map.entry(
+              "TARGET_TABLE_MODEL_UNSUPPORTED",
+              "Only native Doris UNIQUE KEY tables support adding columns."),
+          Map.entry(
+              "TARGET_TABLE_ACTIVE",
+              "This target table has an active or uncertain integration job. Finish or reconcile it before adding columns."),
+          Map.entry(
+              "TARGET_SCHEMA_CHANGE_ACTIVE",
+              "A schema change is still active. Wait for it to finish before adding columns."),
+          Map.entry(
+              "TARGET_TABLE_PERMISSION_DENIED",
+              "The target account lacks permission. Check SELECT, CREATE or ALTER privileges for this database."),
+          Map.entry(
+              "TARGET_TABLE_STRUCTURE_UNAVAILABLE",
+              "The target table structure could not be inspected safely. Check target connectivity and permissions."),
+          Map.entry(
+              "TARGET_TABLE_ALTER_FAILED",
+              "The column change could not be confirmed. Refresh the actual structure and schema change state before retrying."),
+          Map.entry(
               "DORIS_LABEL_INVALID",
               "Doris database and table names must use ASCII letters, digits or underscores and total at most 67 characters."),
           Map.entry(
               "TABLE_PREVIEW_STALE",
-              "The table preview changed. Preview it again before creating."),
+              "The table preview changed. Preview it again before applying the change."),
           Map.entry(
               "UNSUPPORTED_TARGET_TYPE",
               "The selected source type cannot be represented safely in this target."),

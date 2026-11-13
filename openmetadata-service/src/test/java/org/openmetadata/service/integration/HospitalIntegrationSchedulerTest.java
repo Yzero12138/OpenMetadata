@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -35,7 +35,8 @@ class HospitalIntegrationSchedulerTest {
   @BeforeEach
   void createScheduler() throws Exception {
     Properties properties = new Properties();
-    properties.setProperty("org.quartz.scheduler.instanceName", "hospital-test-" + UUID.randomUUID());
+    properties.setProperty(
+        "org.quartz.scheduler.instanceName", "hospital-test-" + UUID.randomUUID());
     properties.setProperty("org.quartz.scheduler.skipUpdateCheck", "true");
     properties.setProperty("org.quartz.threadPool.threadCount", "1");
     properties.setProperty("org.quartz.threadPool.makeThreadsDaemons", "true");
@@ -100,10 +101,7 @@ class HospitalIntegrationSchedulerTest {
     Trigger original = scheduler.getTrigger(HospitalIntegrationScheduler.TRIGGER_KEY);
     scheduler.rescheduleJob(
         original.getKey(),
-        original
-            .getTriggerBuilder()
-            .startAt(Date.from(Instant.now().plusSeconds(86_400)))
-            .build());
+        original.getTriggerBuilder().startAt(Date.from(Instant.now().plusSeconds(86_400))).build());
     Trigger before = scheduler.getTrigger(HospitalIntegrationScheduler.TRIGGER_KEY);
     HospitalIntegrationScheduler.register(scheduler, configuration());
     Trigger after = scheduler.getTrigger(HospitalIntegrationScheduler.TRIGGER_KEY);

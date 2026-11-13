@@ -14,6 +14,11 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.openmetadata.service.integration.DorisTableDesignModels.DorisAddColumnsInput;
+import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableDesignInput;
+import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableDesignPreview;
+import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableMutationResult;
+import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableStructure;
 import org.openmetadata.service.integration.IntegrationConfiguration.JdbcEndpoint;
 import org.openmetadata.service.integration.IntegrationModels.CatalogSummary;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionDefinition;
@@ -54,6 +59,7 @@ public final class IntegrationService {
   private final IntegrationConnections connections;
   private final SeaTunnelJobConfig jobs;
   private final CatalogProjector catalog;
+  private final DorisTableDesignService tableDesign;
   private final Clock clock;
   private SeaTunnelClient engine;
   private int listRefreshCursor;
@@ -85,6 +91,7 @@ public final class IntegrationService {
     inspector = new JdbcInspector(connections::endpoint);
     jobs = new SeaTunnelJobConfig(connections::endpoint);
     catalog = new CatalogProjector(connections);
+    tableDesign = new DorisTableDesignService(configuration, connections, store);
   }
 
   public EngineStatus status() {
@@ -225,6 +232,50 @@ public final class IntegrationService {
     connections.requireRole(id, "TARGET", "FULL");
     if (!"Doris".equals(connections.connection(id).databaseType)) {
       throw new IntegrationException("UNSUPPORTED_TARGET_TYPE", 400);
+    }
+  }
+
+  public DorisTableStructure targetTableStructure(String id, String schema, String table) {
+    configuration.requireReady();
+    synchronized (TASK_LOCK) {
+      requireDorisTarget(id);
+      return tableDesign.structure(id, schema, table);
+    }
+  }
+
+  public DorisTableDesignPreview previewDesignedTargetTable(
+      String id, DorisTableDesignInput input) {
+    configuration.requireReady();
+    synchronized (TASK_LOCK) {
+      requireDorisTarget(id);
+      return tableDesign.previewCreate(id, input);
+    }
+  }
+
+  public DorisTableMutationResult createDesignedTargetTable(
+      String id, DorisTableDesignInput input, String actor) {
+    configuration.requireReady();
+    synchronized (TASK_LOCK) {
+      requireDorisTarget(id);
+      return tableDesign.create(id, input, actor);
+    }
+  }
+
+  public DorisTableDesignPreview previewTargetTableColumns(
+      String id, String schema, String table, DorisAddColumnsInput input) {
+    configuration.requireReady();
+    synchronized (TASK_LOCK) {
+      requireDorisTarget(id);
+      return tableDesign.previewColumns(id, schema, table, input);
+    }
+  }
+
+  public DorisTableMutationResult addTargetTableColumns(
+      String id, String schema, String table, DorisAddColumnsInput input, String actor) {
+    configuration.requireReady();
+    synchronized (TASK_LOCK) {
+      requireDorisTarget(id);
+      return tableDesign.addColumns(id, schema, table, input, actor);
     }
   }
 

@@ -395,6 +395,10 @@ public final class IntegrationModels {
     if (input == null || !input.isObject() || input.toString().length() > MAX_INPUT_BYTES) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
+    if (type == DorisTableDesignModels.DorisTableDesignInput.class
+        || type == DorisTableDesignModels.DorisAddColumnsInput.class) {
+      DorisTableDesignModels.requireJsonTypes(input);
+    }
     try {
       return JSON.treeToValue(input, type);
     } catch (JsonProcessingException | IllegalArgumentException e) {

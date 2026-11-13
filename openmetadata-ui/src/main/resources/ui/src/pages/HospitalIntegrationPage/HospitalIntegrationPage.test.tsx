@@ -271,6 +271,88 @@ describe('Hospital integration workbench behavior', () => {
     ).toBeInTheDocument();
   });
 
+  it('opens a new task with the actual Doris table chosen from table management', async () => {
+    const target: api.IntegrationConnection = {
+      ...targetConnection,
+      id: 'designer-doris',
+      displayName: 'Designer Doris',
+      databaseType: 'Doris',
+      database: 'ods_validation',
+      schemas: ['ods_validation'],
+      supportedModes: ['FULL', 'SQL_T1'],
+      dorisHttpPort: 8030,
+    };
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      sourceConnection,
+      target,
+    ]);
+    mockApi.getIntegrationTableOptions.mockResolvedValue([
+      {
+        ...table,
+        schema: 'ods_validation',
+        name: 'designed_visits',
+        columns: [],
+      },
+    ]);
+    await act(async () => {
+      render(
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: ROUTES.HOSPITAL_INTEGRATION_TASKS,
+              state: {
+                dorisTarget: {
+                  connectionId: target.id,
+                  schema: 'ods_validation',
+                  table: 'designed_visits',
+                },
+              },
+            },
+          ]}>
+          <HospitalIntegrationWorkspace isAdmin />
+        </MemoryRouter>
+      );
+    });
+
+    const drawer = screen.getByRole('dialog');
+
+    expect(
+      within(drawer).getByRole('button', {
+        name: /hospitalIntegration.targetConnection/,
+      })
+    ).toHaveTextContent('Designer Doris');
+    expect(
+      within(drawer).getByRole('button', {
+        name: /hospitalIntegration.targetTable/,
+      })
+    ).toHaveTextContent('designed_visits');
+    expect(mockApi.createIntegrationTask).not.toHaveBeenCalled();
+  });
+
+  it('ignores a target-table intent outside its registered database scope', async () => {
+    await act(async () => {
+      render(
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: ROUTES.HOSPITAL_INTEGRATION_TASKS,
+              state: {
+                dorisTarget: {
+                  connectionId: targetConnection.id,
+                  schema: 'other_database',
+                  table: 'visits',
+                },
+              },
+            },
+          ]}>
+          <HospitalIntegrationWorkspace isAdmin />
+        </MemoryRouter>
+      );
+    });
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('does not use tabs to switch between tasks and data sources', async () => {
     await renderWorkspace();
 
@@ -1081,7 +1163,7 @@ describe('Hospital integration workbench behavior', () => {
     expect(mockApi.getIntegrationTables).not.toHaveBeenCalled();
   });
 
-  it('clears dependent selections and removes unsupported CDC on source change', async () => {
+  it('clears source selections, preserves the target and removes unsupported CDC on source change', async () => {
     mockApi.getIntegrationConnections.mockResolvedValue([
       sourceConnection,
       targetConnection,
@@ -1104,7 +1186,7 @@ describe('Hospital integration workbench behavior', () => {
     ).not.toHaveTextContent(table.name);
     expect(
       document.getElementById('integration-target-table')
-    ).not.toHaveTextContent(table.name);
+    ).toHaveTextContent(table.name);
     expect(document.getElementById('integration-mode')).toHaveTextContent(
       'hospitalIntegration.full'
     );

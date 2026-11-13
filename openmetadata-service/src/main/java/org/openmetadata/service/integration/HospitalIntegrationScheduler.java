@@ -30,7 +30,8 @@ public final class HospitalIntegrationScheduler {
                 .build(),
             false);
       } catch (ObjectAlreadyExistsException ignored) {
-        // Another cluster member completed registration before this member acquired the Quartz lock.
+        // Another cluster member completed registration before this member acquired the Quartz
+        // lock.
       }
     }
     if (!scheduler.checkExists(TRIGGER_KEY)) {

@@ -53,6 +53,7 @@ const navigationIcon = (icon: UntitledIconType) =>
 export const SIDEBAR_NESTED_KEYS: Record<string, string> = {
   [ROUTES.HOSPITAL_INTEGRATION_SOURCES]: ROUTES.HOSPITAL_INTEGRATION,
   [ROUTES.HOSPITAL_INTEGRATION_TASKS]: ROUTES.HOSPITAL_INTEGRATION,
+  [ROUTES.HOSPITAL_INTEGRATION_TARGET_TABLES]: ROUTES.HOSPITAL_INTEGRATION,
   [ROUTES.DATA_MARKETPLACE]: ROUTES.DATA_MARKETPLACE_SECTION,
   [ROUTES.EXPLORE]: ROUTES.DATA_MARKETPLACE_SECTION,
   [ROUTES.DOMAIN]: ROUTES.DATA_MARKETPLACE_SECTION,
@@ -138,6 +139,13 @@ export const SIDEBAR_LIST: LeftSidebarItem[] = [
         redirect_url: ROUTES.HOSPITAL_INTEGRATION_SOURCES,
         icon: navigationIcon(Database01),
         dataTestId: 'app-bar-item-hospital-integration-sources',
+      },
+      {
+        key: ROUTES.HOSPITAL_INTEGRATION_TARGET_TABLES,
+        title: 'hospitalTableDesign.title',
+        redirect_url: ROUTES.HOSPITAL_INTEGRATION_TARGET_TABLES,
+        icon: navigationIcon(Columns03),
+        dataTestId: 'app-bar-item-hospital-integration-target-tables',
       },
       {
         key: ROUTES.HOSPITAL_INTEGRATION_TASKS,

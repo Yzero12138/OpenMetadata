@@ -1,0 +1,196 @@
+.hospital-table-design {
+  &__field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 24px;
+  }
+
+  &__fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  &__section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 28px;
+  }
+  &__section-heading h3 {
+    margin: 0;
+  }
+  &__table-scroll {
+    overflow-x: auto;
+  }
+  &__editor-table,
+  &__structure-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--color-text-primary, var(--tw-color-text-primary));
+    font-size: 13px;
+  }
+  &__editor-table th,
+  &__structure-table th {
+    text-align: start;
+    color: var(--color-text-secondary, var(--tw-color-text-secondary));
+    font-weight: 500;
+  }
+  &__editor-table th,
+  &__editor-table td,
+  &__structure-table th,
+  &__structure-table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid
+      var(--color-border-secondary, var(--tw-color-border-secondary));
+  }
+  &__editor-table th:first-child,
+  &__editor-table td:first-child {
+    padding-inline-start: 0;
+  }
+  &__editor-table th:last-child,
+  &__editor-table td:last-child {
+    padding-inline-end: 0;
+  }
+  &__editor-table {
+    table-layout: fixed;
+  }
+  &__editor-table th:first-child {
+    width: 24%;
+  }
+  &__editor-table th:nth-child(2) {
+    width: 22%;
+  }
+  &__editor-table th:last-child {
+    width: 28%;
+  }
+  &__editor-table tr[data-selected='true'] > td {
+    background: var(--color-bg-secondary, var(--tw-color-bg-secondary));
+  }
+  &__editor-table tr[data-invalid='true'] > td {
+    border-bottom-color: var(
+      --color-border-error,
+      var(--tw-color-border-error)
+    );
+  }
+  &__flag {
+    vertical-align: middle;
+  }
+  &__flag input[type='radio'] {
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+    cursor: pointer;
+    accent-color: var(--color-bg-brand-solid, var(--tw-color-bg-brand-solid));
+  }
+  &__flag input[type='radio']:focus-visible {
+    outline: 2px solid var(--color-border-brand, var(--tw-color-border-brand));
+    outline-offset: 3px;
+  }
+  &__row-actions {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  &__row-actions button {
+    padding-inline: 6px;
+  }
+  &__settings {
+    padding: 16px;
+    background: var(--color-bg-secondary, var(--tw-color-bg-secondary));
+  }
+  &__settings h4 {
+    margin: 0 0 16px;
+    color: var(--color-text-secondary, var(--tw-color-text-secondary));
+    font-size: 13px;
+    font-weight: 600;
+  }
+  &__field-error {
+    margin: 10px 0 0;
+    color: var(--color-text-error-primary, var(--tw-color-text-error-primary));
+  }
+  &__import {
+    margin-top: 20px;
+  }
+  &__notice {
+    margin-bottom: 20px;
+    padding: 16px;
+    border-radius: 8px;
+    background: var(--color-bg-secondary, var(--tw-color-bg-secondary));
+    color: var(--color-text-secondary, var(--tw-color-text-secondary));
+  }
+  &__notice h3,
+  &__notice p {
+    margin: 0 0 8px;
+  }
+  &__existing {
+    margin-bottom: 24px;
+  }
+  &__existing summary,
+  &__ddl summary {
+    cursor: pointer;
+    color: var(
+      --color-text-brand-secondary,
+      var(--tw-color-text-brand-secondary)
+    );
+    padding-block: 8px;
+  }
+  &__preview {
+    margin-top: 28px;
+  }
+  &__preview pre,
+  &__ddl pre {
+    overflow: auto;
+    margin: 12px 0;
+    padding: 16px;
+    border-radius: 8px;
+    background: var(--color-bg-secondary, var(--tw-color-bg-secondary));
+    color: var(--color-text-secondary, var(--tw-color-text-secondary));
+    font-size: 12px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  &__structure-table caption {
+    text-align: start;
+    padding-block: 12px;
+    font-weight: 600;
+  }
+  &__structure-table td,
+  &__structure-table th {
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+  &__summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 24px;
+    margin: 16px 0 24px;
+  }
+  &__summary > div {
+    min-width: 0;
+  }
+  &__summary dt {
+    color: var(--color-text-secondary, var(--tw-color-text-secondary));
+    font-size: 13px;
+  }
+  &__summary dd {
+    margin: 4px 0 0;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  &__toolbar {
+    display: grid;
+    grid-template-columns: minmax(240px, 360px) minmax(240px, 1fr) auto;
+    align-items: end;
+    gap: 16px;
+    margin-block: 24px;
+  }
+  &__list-table {
+    width: 100%;
+  }
+  &__table-name {
+    font-weight: 600;
+  }
+}

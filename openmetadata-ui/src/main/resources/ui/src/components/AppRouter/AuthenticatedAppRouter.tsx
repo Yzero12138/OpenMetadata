@@ -103,6 +103,13 @@ const HospitalDataSourcesPage = withPageSuspenseFallback(
   )
 );
 
+const HospitalTargetTablesPage = withPageSuspenseFallback(
+  React.lazy(
+    () =>
+      import('../../pages/HospitalTargetTablesPage/HospitalTargetTablesPage')
+  )
+);
+
 const TestSuiteIngestionPage = withPageSuspenseFallback(
   React.lazy(
     () => import('../../pages/TestSuiteIngestionPage/TestSuiteIngestionPage')
@@ -385,6 +392,10 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
       <Route
         element={<HospitalDataSourcesPage />}
         path={ROUTES.HOSPITAL_INTEGRATION_SOURCES}
+      />
+      <Route
+        element={<HospitalTargetTablesPage />}
+        path={ROUTES.HOSPITAL_INTEGRATION_TARGET_TABLES}
       />
       <Route
         element={<HospitalIntegrationPage />}

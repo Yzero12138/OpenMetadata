@@ -70,7 +70,8 @@ class IntegrationScheduleTest {
     state.pendingBusinessDate = null;
     state.lastError = "ENGINE_JOB_FAILED";
     assertTrue(IntegrationSchedule.due(schedule, state, now).isEmpty());
-    assertEquals("2026-12-31", IntegrationSchedule.occurrence(schedule, state.nextRunAt).businessDate());
+    assertEquals(
+        "2026-12-31", IntegrationSchedule.occurrence(schedule, state.nextRunAt).businessDate());
     assertEquals(millis("2026-12-31T18:00:00Z"), state.nextRunAt);
   }
 
@@ -123,16 +124,19 @@ class IntegrationScheduleTest {
   @Test
   void daylightSavingGapPreservesDailyLocalTimeAfterTransition() {
     ScheduleConfig schedule = schedule("02:30", "America/New_York");
-    long transitionDay = IntegrationSchedule.initialize(schedule, Instant.parse("2027-03-13T12:00:00Z"));
+    long transitionDay =
+        IntegrationSchedule.initialize(schedule, Instant.parse("2027-03-13T12:00:00Z"));
     assertEquals(millis("2027-03-14T07:30:00Z"), transitionDay);
     assertEquals(millis("2027-03-15T06:30:00Z"), IntegrationSchedule.next(schedule, transitionDay));
-    assertEquals("2027-03-13", IntegrationSchedule.occurrence(schedule, transitionDay).businessDate());
+    assertEquals(
+        "2027-03-13", IntegrationSchedule.occurrence(schedule, transitionDay).businessDate());
   }
 
   @Test
   void daylightSavingOverlapExecutesOncePerLocalDate() {
     ScheduleConfig schedule = schedule("01:30", "America/New_York");
-    long overlapDay = IntegrationSchedule.initialize(schedule, Instant.parse("2027-11-06T12:00:00Z"));
+    long overlapDay =
+        IntegrationSchedule.initialize(schedule, Instant.parse("2027-11-06T12:00:00Z"));
     assertEquals(millis("2027-11-07T05:30:00Z"), overlapDay);
     assertEquals(millis("2027-11-08T06:30:00Z"), IntegrationSchedule.next(schedule, overlapDay));
     assertEquals(
@@ -160,8 +164,7 @@ class IntegrationScheduleTest {
         IntegrationException.class,
         () -> IntegrationSchedule.validate(schedule("02:00", "Asia/Unknown")));
     assertThrows(
-        IntegrationException.class,
-        () -> IntegrationSchedule.validate(schedule("02:00", null)));
+        IntegrationException.class, () -> IntegrationSchedule.validate(schedule("02:00", null)));
   }
 
   private static ScheduleConfig schedule(String dailyTime, String timeZone) {

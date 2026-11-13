@@ -39,6 +39,9 @@ export interface IntegrationTaskFormProps {
   initializationUnavailable?: boolean;
   onTargetTableBusyChange: (busy: boolean) => void;
   onTargetTableDraftChange: (dirty: boolean) => void;
+  navigationBlocked?: boolean;
+  onKeepNavigation?: () => void;
+  onDiscardNavigation?: () => void;
   onTargetTableCreated: (
     table: IntegrationTable,
     fieldMappings: IntegrationTargetTableInput['fieldMappings']

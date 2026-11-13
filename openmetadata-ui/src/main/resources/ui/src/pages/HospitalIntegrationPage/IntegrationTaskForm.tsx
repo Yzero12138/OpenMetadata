@@ -17,9 +17,11 @@ import {
   Select,
   TextArea,
 } from '@openmetadata/ui-core-components';
+import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormDrawerActions } from '../../components/common/atoms/drawer/FormDrawerActions';
 import { IntegrationTable } from '../../rest/hospitalIntegrationAPI';
+import { DorisTableDesigner } from '../HospitalTargetTablesPage/DorisTableDesigner';
 import { IntegrationTaskFormProps } from './HospitalIntegrationPage.interface';
 import {
   DEFAULT_INTEGRATION_SCHEDULE,
@@ -49,6 +51,9 @@ export const IntegrationTaskForm = ({
   onTargetTableBusyChange,
   onTargetTableDraftChange,
   onTargetTableCreated,
+  navigationBlocked,
+  onKeepNavigation,
+  onDiscardNavigation,
   targetTables,
   errors,
   disabled,
@@ -61,6 +66,41 @@ export const IntegrationTaskForm = ({
   onCancel,
 }: IntegrationTaskFormProps) => {
   const { t } = useTranslation();
+  const [designerOpen, setDesignerOpen] = useState(false);
+  const designerState = useRef({
+    automaticBusy: false,
+    manualBusy: false,
+    automaticDirty: false,
+    manualDirty: false,
+  });
+  const automaticBusy = useCallback(
+    (busy: boolean) => {
+      designerState.current.automaticBusy = busy;
+      onTargetTableBusyChange?.(busy || designerState.current.manualBusy);
+    },
+    [onTargetTableBusyChange]
+  );
+  const manualBusy = useCallback(
+    (busy: boolean) => {
+      designerState.current.manualBusy = busy;
+      onTargetTableBusyChange?.(busy || designerState.current.automaticBusy);
+    },
+    [onTargetTableBusyChange]
+  );
+  const automaticDirty = useCallback(
+    (dirty: boolean) => {
+      designerState.current.automaticDirty = dirty;
+      onTargetTableDraftChange?.(dirty || designerState.current.manualDirty);
+    },
+    [onTargetTableDraftChange]
+  );
+  const manualDirty = useCallback(
+    (dirty: boolean) => {
+      designerState.current.manualDirty = dirty;
+      onTargetTableDraftChange?.(dirty || designerState.current.automaticDirty);
+    },
+    [onTargetTableDraftChange]
+  );
   const sqlMode = value.mode === 'SQL_T1';
   const schedule = value.schedule ?? DEFAULT_INTEGRATION_SCHEDULE;
   const initialization = value.initialization ?? {
@@ -236,8 +276,6 @@ export const IntegrationTaskForm = ({
                   sourceConnectionId: connection.id,
                   sourceSchema: nextSql ? connection.schemas[0] ?? '' : '',
                   sourceTable: nextSql ? 'sql_result' : '',
-                  targetSchema: '',
-                  targetTable: '',
                   primaryKey: '',
                   fieldMappings: [],
                   mode,
@@ -332,6 +370,16 @@ export const IntegrationTaskForm = ({
               {(item) => <Select.Item {...item} />}
             </Select>
           </div>
+          {targetConnection?.databaseType === 'Doris' && !routeLocked && (
+            <div className="hospital-integration__actions">
+              <Button
+                color="secondary"
+                isDisabled={disabled}
+                onClick={() => setDesignerOpen(true)}>
+                {t('hospitalTableDesign.create')}
+              </Button>
+            </div>
+          )}
           <Select
             hint={t(
               `hospitalIntegration.${
@@ -664,9 +712,9 @@ export const IntegrationTaskForm = ({
             sourceConnectionId={value.sourceConnectionId}
             sourceQuery={value.sourceQuery}
             targetConnection={targetConnection}
-            onBusyChange={onTargetTableBusyChange}
+            onBusyChange={automaticBusy}
             onCreated={onTargetTableCreated}
-            onDraftChange={onTargetTableDraftChange}
+            onDraftChange={automaticDirty}
           />
         </section>
       ) : null}
@@ -769,6 +817,40 @@ export const IntegrationTaskForm = ({
           </Button>
         </div>
       </FormDrawerActions>
+      {designerOpen && targetConnection?.databaseType === 'Doris' && (
+        <DorisTableDesigner
+          connection={targetConnection}
+          navigationBlocked={navigationBlocked}
+          source={
+            source?.columns.length && (!sqlMode || value.primaryKey)
+              ? {
+                  connectionId: value.sourceConnectionId,
+                  table: {
+                    ...source,
+                    columns: source.columns.map((column) => ({
+                      ...column,
+                      primaryKey: sqlMode
+                        ? column.name === value.primaryKey
+                        : column.primaryKey,
+                    })),
+                  },
+                  mode: value.mode,
+                  sourceQuery: value.sourceQuery,
+                  primaryKey: value.primaryKey,
+                }
+              : undefined
+          }
+          onApplied={(structure, mappings) => {
+            onTargetTableCreated(structure.table, mappings);
+            setDesignerOpen(false);
+          }}
+          onBusyChange={manualBusy}
+          onClose={() => setDesignerOpen(false)}
+          onDiscardNavigation={onDiscardNavigation}
+          onDraftChange={manualDirty}
+          onKeepNavigation={onKeepNavigation}
+        />
+      )}
     </form>
   );
 };

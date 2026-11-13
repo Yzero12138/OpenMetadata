@@ -145,6 +145,7 @@ export const ROUTES = {
   HOSPITAL_INTEGRATION: '/hospital/integration',
   HOSPITAL_INTEGRATION_SOURCES: '/hospital/integration/sources',
   HOSPITAL_INTEGRATION_TASKS: '/hospital/integration/tasks',
+  HOSPITAL_INTEGRATION_TARGET_TABLES: '/hospital/integration/target-tables',
   HOSPITAL_INTEGRATION_TASK_DETAIL: '/hospital/integration/tasks/:taskId',
   TOUR: '/tour',
   REPORTS: '/reports',
