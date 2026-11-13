@@ -73,7 +73,7 @@ spec:
               memory: 3Gi
       containers:
         - name: openmetadata
-          image: harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:53a696d608db57de47d8f0e09e6a45376dfe34da4249b168a18d7adca36b4e93
+          image: harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:a7fbf27e96283e9f7dc3cd81d0a58f0a18e45240b4e81ac0450747e091e6da16
           ports:
             - name: http
               containerPort: 8585
