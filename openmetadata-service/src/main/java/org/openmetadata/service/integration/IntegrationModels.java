@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import org.openmetadata.service.integration.IntegrationCdcModels.CdcOptions;
 import org.openmetadata.service.integration.IntegrationCdcModels.RuntimeOptions;
 
 public final class IntegrationModels {
@@ -51,6 +52,7 @@ public final class IntegrationModels {
     public String primaryKey;
     public String sourceQuery;
     public RuntimeOptions runtime;
+    public CdcOptions cdc;
     public ScheduleConfig schedule;
     public InitializationConfig initialization;
     public List<FieldMapping> fieldMappings;
@@ -68,6 +70,7 @@ public final class IntegrationModels {
       primaryKey = input.primaryKey;
       sourceQuery = input.sourceQuery;
       runtime = input.runtime;
+      cdc = input.cdc;
       schedule = input.schedule == null ? null : input.schedule.copy();
       initialization = input.initialization == null ? null : input.initialization.copy();
       fieldMappings = input.fieldMappings == null ? null : List.copyOf(input.fieldMappings);
@@ -203,7 +206,35 @@ public final class IntegrationModels {
       @JsonIgnore boolean hasDefault,
       @JsonIgnore boolean unicodeSafeTarget,
       @JsonIgnore int unicodeCapacity,
-      @JsonIgnore JdbcDialect inspectedDialect) {
+      @JsonIgnore JdbcDialect inspectedDialect,
+      @JsonIgnore Integer oracleDataLengthBytes) {
+    public ColumnDefinition(
+        String name,
+        String dataType,
+        boolean nullable,
+        boolean primaryKey,
+        int jdbcType,
+        int size,
+        int scale,
+        boolean hasDefault,
+        boolean unicodeSafeTarget,
+        int unicodeCapacity,
+        JdbcDialect inspectedDialect) {
+      this(
+          name,
+          dataType,
+          nullable,
+          primaryKey,
+          jdbcType,
+          size,
+          scale,
+          hasDefault,
+          unicodeSafeTarget,
+          unicodeCapacity,
+          inspectedDialect,
+          null);
+    }
+
     public ColumnDefinition(
         String name,
         String dataType,

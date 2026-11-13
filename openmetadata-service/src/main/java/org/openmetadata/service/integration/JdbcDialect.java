@@ -22,7 +22,7 @@ public enum JdbcDialect {
   }
 
   public List<String> supportedModes() {
-    return this == Postgres ? List.of("FULL", "CDC") : List.of("FULL");
+    return CdcAdapters.supportedModes(this);
   }
 
   public String quote(String identifier) {

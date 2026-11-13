@@ -48,7 +48,7 @@ public final class IntegrationConnections {
       }
       connections.addAll(
           store.list().stream()
-              .map(value -> value.definition)
+              .map(value -> withCurrentCapabilities(value.definition))
               .sorted(Comparator.comparing(value -> value.name))
               .toList());
       return List.copyOf(connections);
@@ -57,7 +57,7 @@ public final class IntegrationConnections {
 
   public ConnectionDefinition connection(String id) {
     configuration.requireReady();
-    return isSeed(id) ? seed(id) : store.get(uuid(id)).definition;
+    return isSeed(id) ? seed(id) : withCurrentCapabilities(store.get(uuid(id)).definition);
   }
 
   public JdbcEndpoint endpoint(String id) {
@@ -265,13 +265,22 @@ public final class IntegrationConnections {
   }
 
   private List<String> supportedModes(ConnectionInput input) {
-    if ("Postgres".equals(input.databaseType)
-        && !input.database.contains(".")
-        && input.databaseVersion.matches("[0-9]{1,2}(?:[.][0-9]+)*")
-        && Integer.parseInt(input.databaseVersion.split("[.]", 2)[0]) >= 10) {
-      return List.of("FULL", "CDC");
-    }
-    return List.of("FULL");
+    return CdcAdapters.supportedModes(input);
+  }
+
+  private ConnectionDefinition withCurrentCapabilities(ConnectionDefinition stored) {
+    ConnectionDefinition result = new ConnectionDefinition();
+    result.copyInput(stored);
+    result.id = stored.id;
+    result.version = stored.version;
+    result.managed = stored.managed;
+    result.synthetic = stored.synthetic;
+    result.passwordSet = stored.passwordSet;
+    result.createdAt = stored.createdAt;
+    result.updatedAt = stored.updatedAt;
+    result.updatedBy = stored.updatedBy;
+    result.supportedModes = supportedModes(stored);
+    return result;
   }
 
   private String encrypt(String password) {
