@@ -6,7 +6,7 @@ SQL 定时采集见 [SQL T+1 配置与补跑](sql-t1-sync.md)，本轮验证边�
 
 首次入仓支持 [历史起始日期、日/月批次和断点续跑](sql-initialization.md)，完成后自动接续每日 T+1；测试环境版本与真实故障恢复结果见 [发布记录](sql-initialization-release.md)。
 
-Doris 目标表可以在 [目标表管理](doris-table-designer.md) 中设计字段、预览并创建，也支持给已有表追加字段，然后直接用于集成任务。
+Doris 目标表可以在 [目标表管理](doris-table-designer.md) 中设计字段、预览并创建，也支持给已有表追加字段，然后直接用于集成任务。[本次发布记录](doris-table-designer-release.md) 包含实际建表、追加字段、同步与门户 SSO 恢复结果。
 
 ## 工号统一登录
 

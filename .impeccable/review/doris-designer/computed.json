@@ -1,0 +1,334 @@
+[
+  {
+    "width": 1440,
+    "longNameLength": 64,
+    "measures": {
+      "viewport": {
+        "width": 1440,
+        "height": 1080
+      },
+      "rootOverflow": false,
+      "form": [
+        {
+          "id": "doris-target-database",
+          "value": "ods_validation",
+          "clientWidth": 490,
+          "scrollWidth": 490
+        },
+        {
+          "id": "doris-target-table",
+          "value": "encounter_payment_daily",
+          "clientWidth": 490,
+          "scrollWidth": 490
+        },
+        {
+          "id": "doris-table-comment",
+          "value": "按业务日期同步就诊费用明细",
+          "clientWidth": 490,
+          "scrollWidth": 490
+        },
+        {
+          "id": "doris-table-buckets",
+          "value": "1",
+          "clientWidth": 490,
+          "scrollWidth": 490
+        },
+        {
+          "id": "doris-name-initial-field",
+          "value": "id",
+          "clientWidth": 220,
+          "scrollWidth": 220
+        },
+        {
+          "id": "doris-name-new-field-1",
+          "value": "long_source_system_code_for_hospital_ods_validation_his_daily_01",
+          "clientWidth": 220,
+          "scrollWidth": 445
+        },
+        {
+          "id": "doris-precision-new-field-1",
+          "value": "18",
+          "clientWidth": 474,
+          "scrollWidth": 474
+        },
+        {
+          "id": "doris-scale-new-field-1",
+          "value": "2",
+          "clientWidth": 474,
+          "scrollWidth": 474
+        },
+        {
+          "id": "doris-default-new-field-1",
+          "value": "0.00",
+          "clientWidth": 474,
+          "scrollWidth": 474
+        },
+        {
+          "id": "doris-comment-new-field-1",
+          "value": "费用金额（元）",
+          "clientWidth": 474,
+          "scrollWidth": 474
+        }
+      ],
+      "styles": [
+        {
+          "selector": ".hospital-table-design__editor-table th",
+          "text": "名称",
+          "color": "rgb(83, 103, 95)",
+          "background": "rgb(255, 255, 255)",
+          "fontSize": "13px",
+          "lineHeight": "19.5px",
+          "fontWeight": "500",
+          "bounds": {
+            "x": 364,
+            "y": 515,
+            "width": 252.46875,
+            "height": 44
+          },
+          "clientWidth": 252,
+          "scrollWidth": 252,
+          "contrast": 6.046395213967223
+        },
+        {
+          "selector": ".hospital-table-design__settings h4",
+          "text": "字段配置：long_source_system_code_for_hospital_ods_validation_his_daily_01",
+          "color": "rgb(83, 103, 95)",
+          "background": "rgb(250, 250, 250)",
+          "fontSize": "13px",
+          "lineHeight": "19.5px",
+          "fontWeight": "600",
+          "bounds": {
+            "x": 380,
+            "y": 709.5,
+            "width": 1020,
+            "height": 19.5
+          },
+          "clientWidth": 1020,
+          "scrollWidth": 1020,
+          "contrast": 5.792869017585756
+        },
+        {
+          "selector": "[role=\"alert\"] p",
+          "text": "Doris 账号缺少建表或变更权限，请由管理员配置该库的 CREATE/ALTER 权限。",
+          "color": "rgb(180, 35, 24)",
+          "background": "rgb(254, 243, 242)",
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "fontWeight": "400",
+          "bounds": {
+            "x": 380,
+            "y": 155,
+            "width": 1020,
+            "height": 24
+          },
+          "clientWidth": 1020,
+          "scrollWidth": 1020,
+          "contrast": 6.04726982551666
+        },
+        {
+          "selector": ".hospital-integration__hint",
+          "text": "选择一个非空主键。同主键数据合并更新；主键将自动排列在首列。",
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(255, 255, 255)",
+          "fontSize": "12px",
+          "lineHeight": "18px",
+          "fontWeight": "400",
+          "bounds": {
+            "x": 364,
+            "y": 481,
+            "width": 506.671875,
+            "height": 18
+          },
+          "clientWidth": 507,
+          "scrollWidth": 507,
+          "contrast": 21
+        },
+        {
+          "selector": ".form-drawer__header h2",
+          "text": "新建目标表",
+          "color": "rgb(24, 47, 41)",
+          "background": "rgb(255, 255, 255)",
+          "fontSize": "18px",
+          "lineHeight": "28px",
+          "fontWeight": "600",
+          "bounds": {
+            "x": 364,
+            "y": 20,
+            "width": 996,
+            "height": 28
+          },
+          "clientWidth": 996,
+          "scrollWidth": 996,
+          "contrast": 14.213552213450619
+        }
+      ]
+    },
+    "errors": []
+  },
+  {
+    "width": 1920,
+    "longNameLength": 64,
+    "measures": {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "rootOverflow": false,
+      "form": [
+        {
+          "id": "doris-target-database",
+          "value": "ods_validation",
+          "clientWidth": 490,
+          "scrollWidth": 490
+        },
+        {
+          "id": "doris-target-table",
+          "value": "encounter_payment_daily",
+          "clientWidth": 490,
+          "scrollWidth": 490
+        },
+        {
+          "id": "doris-table-comment",
+          "value": "按业务日期同步就诊费用明细",
+          "clientWidth": 490,
+          "scrollWidth": 490
+        },
+        {
+          "id": "doris-table-buckets",
+          "value": "1",
+          "clientWidth": 490,
+          "scrollWidth": 490
+        },
+        {
+          "id": "doris-name-initial-field",
+          "value": "id",
+          "clientWidth": 220,
+          "scrollWidth": 220
+        },
+        {
+          "id": "doris-name-new-field-1",
+          "value": "long_source_system_code_for_hospital_ods_validation_his_daily_01",
+          "clientWidth": 220,
+          "scrollWidth": 445
+        },
+        {
+          "id": "doris-precision-new-field-1",
+          "value": "18",
+          "clientWidth": 474,
+          "scrollWidth": 474
+        },
+        {
+          "id": "doris-scale-new-field-1",
+          "value": "2",
+          "clientWidth": 474,
+          "scrollWidth": 474
+        },
+        {
+          "id": "doris-default-new-field-1",
+          "value": "0.00",
+          "clientWidth": 474,
+          "scrollWidth": 474
+        },
+        {
+          "id": "doris-comment-new-field-1",
+          "value": "费用金额（元）",
+          "clientWidth": 474,
+          "scrollWidth": 474
+        }
+      ],
+      "styles": [
+        {
+          "selector": ".hospital-table-design__editor-table th",
+          "text": "名称",
+          "color": "rgb(83, 103, 95)",
+          "background": "rgb(255, 255, 255)",
+          "fontSize": "13px",
+          "lineHeight": "19.5px",
+          "fontWeight": "500",
+          "bounds": {
+            "x": 844,
+            "y": 515,
+            "width": 252.46875,
+            "height": 44
+          },
+          "clientWidth": 252,
+          "scrollWidth": 252,
+          "contrast": 6.046395213967223
+        },
+        {
+          "selector": ".hospital-table-design__settings h4",
+          "text": "字段配置：long_source_system_code_for_hospital_ods_validation_his_daily_01",
+          "color": "rgb(83, 103, 95)",
+          "background": "rgb(250, 250, 250)",
+          "fontSize": "13px",
+          "lineHeight": "19.5px",
+          "fontWeight": "600",
+          "bounds": {
+            "x": 860,
+            "y": 709.5,
+            "width": 1020,
+            "height": 19.5
+          },
+          "clientWidth": 1020,
+          "scrollWidth": 1020,
+          "contrast": 5.792869017585756
+        },
+        {
+          "selector": "[role=\"alert\"] p",
+          "text": "Doris 账号缺少建表或变更权限，请由管理员配置该库的 CREATE/ALTER 权限。",
+          "color": "rgb(180, 35, 24)",
+          "background": "rgb(254, 243, 242)",
+          "fontSize": "16px",
+          "lineHeight": "24px",
+          "fontWeight": "400",
+          "bounds": {
+            "x": 860,
+            "y": 155,
+            "width": 1020,
+            "height": 24
+          },
+          "clientWidth": 1020,
+          "scrollWidth": 1020,
+          "contrast": 6.04726982551666
+        },
+        {
+          "selector": ".hospital-integration__hint",
+          "text": "选择一个非空主键。同主键数据合并更新；主键将自动排列在首列。",
+          "color": "rgb(0, 0, 0)",
+          "background": "rgb(255, 255, 255)",
+          "fontSize": "12px",
+          "lineHeight": "18px",
+          "fontWeight": "400",
+          "bounds": {
+            "x": 844,
+            "y": 481,
+            "width": 506.671875,
+            "height": 18
+          },
+          "clientWidth": 507,
+          "scrollWidth": 507,
+          "contrast": 21
+        },
+        {
+          "selector": ".form-drawer__header h2",
+          "text": "新建目标表",
+          "color": "rgb(24, 47, 41)",
+          "background": "rgb(255, 255, 255)",
+          "fontSize": "18px",
+          "lineHeight": "28px",
+          "fontWeight": "600",
+          "bounds": {
+            "x": 844,
+            "y": 20,
+            "width": 996,
+            "height": 28
+          },
+          "clientWidth": 996,
+          "scrollWidth": 996,
+          "contrast": 14.213552213450619
+        }
+      ]
+    },
+    "errors": []
+  }
+]

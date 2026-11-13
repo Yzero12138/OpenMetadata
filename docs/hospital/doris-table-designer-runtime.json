@@ -1,0 +1,133 @@
+{
+  "checkedAt": "2026-11-13T05:28:53.820Z",
+  "sourceRevision": "f67b36bd9b047a53de0238fea8e80724cb7ce7ff",
+  "image": "harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:f9fac7c3c8230093c501e9730be4486234fd17e1e498b928fc9e36b9f559b518",
+  "artifacts": [
+    {
+      "module": "service",
+      "path": "openmetadata-service/target/openmetadata-service-2.0.4.jar",
+      "bytes": 10584509,
+      "sha256": "6622f4fd41172ff584a9937baa1b3c8c9c3657a36a515f71c9f7c4a65401a153"
+    },
+    {
+      "module": "ui",
+      "path": "openmetadata-ui/target/openmetadata-ui-2.0.4.jar",
+      "bytes": 51019507,
+      "sha256": "98b4afd50ec5d76d34b073d9b41b4699c8832edf4253f04b9347db877f5bf6e0"
+    }
+  ],
+  "publishedOnlyAcceptance": true,
+  "productionClassesVerified": 11,
+  "classSourcePhasesVerified": 5,
+  "runs": [
+    {
+      "jobId": "1498600023632253925",
+      "status": "FINISHED",
+      "trigger": "MANUAL",
+      "businessDate": "2026-11-12",
+      "sourceReceivedCount": 2,
+      "sinkWriteCount": 2,
+      "errorCode": null
+    },
+    {
+      "jobId": "5363330409359536199",
+      "status": "FINISHED",
+      "trigger": "MANUAL",
+      "businessDate": "2026-11-12",
+      "sourceReceivedCount": 3,
+      "sinkWriteCount": 3,
+      "errorCode": null
+    }
+  ],
+  "retainedTarget": "ods_validation.sql_design_api_e0d3fa79a800",
+  "preservation": {
+    "checkedAt": "2026-11-13T05:27:38.891Z",
+    "workloads": 8,
+    "onlyApplicationImageChanged": true,
+    "configurationSecretPvcRefsUnchanged": 40
+  },
+  "dorisPermissions": {
+    "scope": "internal.ods_validation.*",
+    "before": {
+      "select": true,
+      "load": true,
+      "create": true,
+      "alter": false,
+      "drop": false,
+      "admin": false,
+      "databaseScopePresent": true,
+      "privilegeFieldCount": 11
+    },
+    "after": {
+      "select": true,
+      "load": true,
+      "create": true,
+      "alter": true,
+      "drop": false,
+      "admin": false,
+      "databaseScopePresent": true,
+      "privilegeFieldCount": 11
+    },
+    "onlyAlterGranted": true,
+    "secretsUnchanged": true
+  },
+  "oracleNlsSha256": "b709d6cee59d23658b4dbd66cd1088b65380b43c68678bc107f2a1a5cd112c56",
+  "http": {
+    "checkedAt": "2026-11-13T05:57:22.334Z",
+    "checks": 21,
+    "verifiedAssets": 141,
+    "passed": true
+  },
+  "portalRestoration": {
+    "checkedAt": "2026-11-13T06:16:39.569Z",
+    "namespace": "coop-dev",
+    "workloads": 18,
+    "onlyPlatformAndWebImagesChanged": true,
+    "unchangedConfigSecretPvcRefs": 55,
+    "pods": [
+      {
+        "name": "platform-5d4975d598-8dqsf",
+        "uid": "7f14e9e4-52ec-486d-8645-8f8252a9a4d0",
+        "ready": true
+      },
+      {
+        "name": "web-966cd9b66-867rm",
+        "uid": "b1840843-538e-4316-b952-8a82b74e0bb7",
+        "ready": true
+      }
+    ],
+    "platformImage": "harbor.qcrmyy.local/coop/platform@sha256:cec5694159972e9209f687939f0c24f6d420f90aa6fc0ed6fcd4bfd44ff93997",
+    "webImage": "harbor.qcrmyy.local/coop/web@sha256:fdcaae0e3d19033370bb120b6a5719cf16df3aaf2825536d73d1a598c8e82824",
+    "platformJarSha256": "152707e719e4fcced705d650c7a3a7bc90d9aff0c37ac83ad819349daaa5fdab",
+    "platformTests": {
+      "packaged": 60,
+      "independentQuality": 5
+    },
+    "clientTests": {
+      "formal": 35,
+      "independent": 2
+    },
+    "servedClientFiles": [
+      {
+        "path": "/assets/PortalPage-CQtZ1A15.js",
+        "status": 200,
+        "sha256": "b7327d4272447ca960f4a84a70f0b97306e653b7de8c578149a4e2725680a0de",
+        "bytes": 4550,
+        "etag": "\"6af6aa91-11c6\"",
+        "cacheControl": null
+      },
+      {
+        "path": "/assets/datahub-sso-4683a33bec833d01.js",
+        "status": 200,
+        "sha256": "4683a33bec833d018ca012ecc512223be94d4517e58f6974ab6277b0c54c42f6",
+        "bytes": 3188,
+        "etag": "\"6af6aa91-c74\"",
+        "cacheControl": null
+      }
+    ],
+    "indexUnchanged": true,
+    "oldEtagReturns200": true,
+    "authenticatedBrowserFlowClaimed": false,
+    "privateSourcePushedToPublicFork": false
+  }
+}

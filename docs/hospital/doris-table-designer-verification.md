@@ -31,4 +31,4 @@
 
 12:28（北京时间）只向现有 `hospital_ods_writer` 追加 `ALTER_PRIV ON internal.ods_validation.*`，SELECT/LOAD/CREATE 保留，未授予 DROP 或管理员权限。仓库 bootstrap 同步该限定权限。运行中的哈希 ConfigMap 不重建，避免不必要的 Doris FE 重启；权限已持久保存在 FE。
 
-最终镜像、部署后验收和资源保留结果记录于后续发布记录。页面合成截图不证明员工 SSO、实际医院数据、跨数据库 CDC、手机或深色主题已验收。
+最终镜像、部署后验收和资源保留结果见 [测试发布记录](doris-table-designer-release.md)：PUBLISHED 原生建表/追加/两次主键合并通过，21项HTTP和141项生产资源核对通过，门户运行包遗漏的 SSO 已恢复。页面合成截图不证明员工 SSO、实际医院数据、跨数据库 CDC、手机或深色主题已验收。

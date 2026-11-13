@@ -1,0 +1,156 @@
+[
+  {
+    "name": "existing-structure",
+    "width": 1440,
+    "bounds": {
+      "x": 440,
+      "y": 0,
+      "width": 1000,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": [],
+    "summary": {
+      "display": "grid",
+      "columns": "464px 464px",
+      "gap": "16px 24px",
+      "height": 105,
+      "items": [
+        {
+          "tag": "DT",
+          "text": "目标表",
+          "fontSize": "13px",
+          "color": "rgb(83, 103, 95)",
+          "margin": "0px"
+        },
+        {
+          "tag": "DD",
+          "text": "ods_validation.encounter_daily",
+          "fontSize": "14px",
+          "color": "rgb(0, 0, 0)",
+          "margin": "4px 0px 0px"
+        },
+        {
+          "tag": "DT",
+          "text": "描述",
+          "fontSize": "13px",
+          "color": "rgb(83, 103, 95)",
+          "margin": "0px"
+        },
+        {
+          "tag": "DD",
+          "text": "每日就诊 ODS 明细",
+          "fontSize": "14px",
+          "color": "rgb(0, 0, 0)",
+          "margin": "4px 0px 0px"
+        },
+        {
+          "tag": "DT",
+          "text": "表模型",
+          "fontSize": "13px",
+          "color": "rgb(83, 103, 95)",
+          "margin": "0px"
+        },
+        {
+          "tag": "DD",
+          "text": "UNIQUE",
+          "fontSize": "14px",
+          "color": "rgb(0, 0, 0)",
+          "margin": "4px 0px 0px"
+        },
+        {
+          "tag": "DT",
+          "text": "分桶数量",
+          "fontSize": "13px",
+          "color": "rgb(83, 103, 95)",
+          "margin": "0px"
+        },
+        {
+          "tag": "DD",
+          "text": "1",
+          "fontSize": "14px",
+          "color": "rgb(0, 0, 0)",
+          "margin": "4px 0px 0px"
+        }
+      ]
+    }
+  },
+  {
+    "name": "existing-structure",
+    "width": 1920,
+    "bounds": {
+      "x": 920,
+      "y": 0,
+      "width": 1000,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": [],
+    "summary": {
+      "display": "grid",
+      "columns": "464px 464px",
+      "gap": "16px 24px",
+      "height": 105,
+      "items": [
+        {
+          "tag": "DT",
+          "text": "目标表",
+          "fontSize": "13px",
+          "color": "rgb(83, 103, 95)",
+          "margin": "0px"
+        },
+        {
+          "tag": "DD",
+          "text": "ods_validation.encounter_daily",
+          "fontSize": "14px",
+          "color": "rgb(0, 0, 0)",
+          "margin": "4px 0px 0px"
+        },
+        {
+          "tag": "DT",
+          "text": "描述",
+          "fontSize": "13px",
+          "color": "rgb(83, 103, 95)",
+          "margin": "0px"
+        },
+        {
+          "tag": "DD",
+          "text": "每日就诊 ODS 明细",
+          "fontSize": "14px",
+          "color": "rgb(0, 0, 0)",
+          "margin": "4px 0px 0px"
+        },
+        {
+          "tag": "DT",
+          "text": "表模型",
+          "fontSize": "13px",
+          "color": "rgb(83, 103, 95)",
+          "margin": "0px"
+        },
+        {
+          "tag": "DD",
+          "text": "UNIQUE",
+          "fontSize": "14px",
+          "color": "rgb(0, 0, 0)",
+          "margin": "4px 0px 0px"
+        },
+        {
+          "tag": "DT",
+          "text": "分桶数量",
+          "fontSize": "13px",
+          "color": "rgb(83, 103, 95)",
+          "margin": "0px"
+        },
+        {
+          "tag": "DD",
+          "text": "1",
+          "fontSize": "14px",
+          "color": "rgb(0, 0, 0)",
+          "margin": "4px 0px 0px"
+        }
+      ]
+    }
+  }
+]
