@@ -184,6 +184,7 @@ final class DorisTableMetadata {
         scale,
         hasDefault,
         unicode,
-        capacity);
+        capacity,
+        JdbcDialect.Doris);
   }
 }

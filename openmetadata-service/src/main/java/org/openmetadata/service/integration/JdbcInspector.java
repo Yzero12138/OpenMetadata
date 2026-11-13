@@ -92,7 +92,8 @@ public final class JdbcInspector {
                 metadata.getScale(index),
                 false,
                 national,
-                unicodeCapacity));
+                unicodeCapacity,
+                endpoint.dialect()));
       }
       return new TableDefinition(schema, "sql_result", List.copyOf(columns));
     } catch (SQLException e) {
@@ -283,7 +284,8 @@ public final class JdbcInspector {
                 result.getInt("DECIMAL_DIGITS"),
                 result.getString("COLUMN_DEF") != null,
                 unicode,
-                unicodeCapacity));
+                unicodeCapacity,
+                endpoint.dialect()));
       }
     }
     return new TableDefinition(schema, name, List.copyOf(columns));

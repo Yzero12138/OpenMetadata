@@ -10,6 +10,8 @@
 
 This is the first independently testable sub-project of the approved oracle-sqlserver-cdc-adaptation-plan.md. The remaining approved work continues with engine packaging/runtime validation, CDC adapter/preflight APIs and PC UI; this plan does not treat type fixes alone as completing Oracle CDC.
 
+Completion evidence: type foundation implemented and independently reviewed. Initial red41/46passed with5intendedfailures; extended green94/94passed. Quality review caught and corrected a legacy identical-LOB regression (red48/50, green50/50). Spec PASS, final quality APPROVE; independent reviewer13/13new foundation tests passed. Spotlessapply/check anddiffcheck passed. No DB/runtime mutation. Runtime oversize/CDC semantics remain in the next sub-project.
+
 ## Task 1: Oracle temporal and large-text mapping
 
 **Files:**

@@ -199,7 +199,33 @@ public final class IntegrationModels {
       @JsonIgnore int scale,
       @JsonIgnore boolean hasDefault,
       @JsonIgnore boolean unicodeSafeTarget,
-      @JsonIgnore int unicodeCapacity) {
+      @JsonIgnore int unicodeCapacity,
+      @JsonIgnore JdbcDialect inspectedDialect) {
+    public ColumnDefinition(
+        String name,
+        String dataType,
+        boolean nullable,
+        boolean primaryKey,
+        int jdbcType,
+        int size,
+        int scale,
+        boolean hasDefault,
+        boolean unicodeSafeTarget,
+        int unicodeCapacity) {
+      this(
+          name,
+          dataType,
+          nullable,
+          primaryKey,
+          jdbcType,
+          size,
+          scale,
+          hasDefault,
+          unicodeSafeTarget,
+          unicodeCapacity,
+          null);
+    }
+
     /** Unverified character receivers fail closed; inspectors supply explicit capabilities. */
     public ColumnDefinition(
         String name,

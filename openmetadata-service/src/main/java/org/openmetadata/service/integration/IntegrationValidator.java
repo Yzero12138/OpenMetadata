@@ -214,18 +214,20 @@ public final class IntegrationValidator {
     boolean invalidSourceKey =
         sql
             ? !sourceColumns.containsKey(input.primaryKey)
-            : sourceKeys.size() != 1 || !sourceKeys.getFirst().name().equals(input.primaryKey);
+            : sourceKeys.size() != 1
+                || !sourceKeys.getFirst().name().equals(input.primaryKey)
+                || sourceKeys.getFirst().nullable();
     if (invalidSourceKey
         || targetKeys.size() != 1
         || !targetKeys.getFirst().name().equals(mappedKey)
-        || (sql && targetKeys.getFirst().nullable())) {
+        || targetKeys.getFirst().nullable()) {
       error(
           errors,
           "primaryKey",
           "INVALID_PRIMARY_KEY",
           sql
               ? "Declare one non-null unique result key and map it to the target primary key."
-              : "Map the actual single-column source primary key to the target primary key.");
+              : "Map the actual single-column non-null source primary key to a non-null target primary key.");
     }
     for (ColumnDefinition column : target.columns()) {
       if (!column.nullable() && !column.hasDefault() && !targets.contains(column.name())) {
@@ -242,6 +244,19 @@ public final class IntegrationValidator {
   private static boolean compatible(ColumnDefinition source, ColumnDefinition target) {
     int from = source.jdbcType();
     int to = target.jdbcType();
+    if (Set.of(Types.CLOB, Types.NCLOB).contains(from)) {
+      if (source.primaryKey() || target.primaryKey()) {
+        return false;
+      }
+      if (from == to && source.dataType().equalsIgnoreCase(target.dataType())) {
+        return true;
+      }
+      // Unbounded LOB metadata relies on strict sink rejection of values exceeding STRING limits.
+      return source.inspectedDialect() == JdbcDialect.Oracle
+          && target.inspectedDialect() == JdbcDialect.Doris
+          && to == Types.LONGVARCHAR
+          && "STRING".equalsIgnoreCase(target.dataType());
+    }
     if (from == Types.BIT && to == Types.BOOLEAN && source.size() == 1) {
       return true;
     }
@@ -277,7 +292,11 @@ public final class IntegrationValidator {
     if (from == to
         && Set.of(Types.TIME, Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE).contains(from)) {
       if (Set.of("datetime", "smalldatetime").contains(target.dataType().toLowerCase(Locale.ROOT))
-          && !source.dataType().equalsIgnoreCase(target.dataType())) {
+          && !source.dataType().equalsIgnoreCase(target.dataType())
+          && !(source.inspectedDialect() == JdbcDialect.Oracle
+              && target.inspectedDialect() == JdbcDialect.Doris
+              && "DATE".equalsIgnoreCase(source.dataType())
+              && "DATETIME".equalsIgnoreCase(target.dataType()))) {
         return false;
       }
       return source.scale() <= target.scale();

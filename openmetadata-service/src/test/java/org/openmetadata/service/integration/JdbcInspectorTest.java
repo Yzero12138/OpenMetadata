@@ -50,6 +50,8 @@ class JdbcInspectorTest {
       assertEquals(40, table.columns().get(2).size());
       assertTrue(table.columns().get(2).nullable());
       assertTrue(table.columns().stream().noneMatch(c -> c.primaryKey()));
+      assertTrue(
+          table.columns().stream().allMatch(c -> c.inspectedDialect() == JdbcDialect.Postgres));
       assertTrue(operations.contains("readOnly=true"));
       assertTrue(operations.contains("timeout=5"));
       assertTrue(operations.contains("maxRows=1"));

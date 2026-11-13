@@ -200,6 +200,14 @@ final class DorisTableDdl {
         type = "DECIMAL(" + size + "," + scale + ")";
         jdbc = Types.DECIMAL;
       }
+      case Types.CLOB, Types.NCLOB -> {
+        if (!"Oracle".equals(family)
+            || source.inspectedDialect() != JdbcDialect.Oracle
+            || source.primaryKey()) {
+          throw unsupported();
+        }
+        return DorisTableMetadata.column(name, "STRING", source.nullable(), false, false);
+      }
       case Types.CHAR,
           Types.NCHAR,
           Types.VARCHAR,
@@ -257,7 +265,8 @@ final class DorisTableDdl {
         scale,
         false,
         unicode,
-        capacity);
+        capacity,
+        JdbcDialect.Doris);
   }
 
   private static ColumnDefinition declaredColumn(ColumnDefinition column, boolean key) {
@@ -271,7 +280,8 @@ final class DorisTableDdl {
         column.scale(),
         column.hasDefault(),
         column.unicodeSafeTarget(),
-        column.unicodeCapacity());
+        column.unicodeCapacity(),
+        column.inspectedDialect());
   }
 
   private static IntegrationException unsupported() {
