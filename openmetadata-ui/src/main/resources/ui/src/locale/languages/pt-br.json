@@ -102,7 +102,7 @@
     "extendedString": "Uma cadeia mapeada excede 4.000 bytes reais; este caminho CDC não foi verificado.",
     "failed": "Falhou",
     "fetchSize": "Tamanho do lote de leitura",
-    "identifiers": "A tabela e todas as colunas da origem devem respeitar o limite LogMiner verificado de 30 caracteres.",
+    "identifiers": "Os nomes de esquema e tabela do Oracle CDC não podem conter $; os identificadores da tabela e de todas as colunas de origem devem respeitar o limite verificado do LogMiner de 30 caracteres ASCII.",
     "integerRange": "Inteiro de {{min}} a {{max}}",
     "latestCompletedAt": "Último ponto de controle confirmado",
     "latestSavepointAt": "Último ponto de salvamento confirmado",

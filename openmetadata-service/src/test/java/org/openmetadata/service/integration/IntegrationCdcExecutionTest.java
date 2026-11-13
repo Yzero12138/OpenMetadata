@@ -350,6 +350,40 @@ class IntegrationCdcExecutionTest {
     assertNull(store.get(UUID.fromString(task.id)).latestRun);
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void oracleDollarRoutesRemainValidDraftsButCannotSubmitBeforeFreshPreflight(boolean dollarSchema)
+      throws Exception {
+    String schema = dollarSchema ? "HOS$" : "HIS";
+    String table = dollarSchema ? "ORDERS" : "PAT$ENT";
+    var fixture = oracleFixture(schema);
+    var input = oracleInput(fixture.source.toString());
+    input.sourceSchema = schema;
+    input.sourceTable = table;
+    var columns = jdbc.table(input.sourceConnectionId, schema, "ORDERS").columns();
+    when(jdbc.table(input.sourceConnectionId, schema, table))
+        .thenReturn(new TableDefinition(schema, table, columns));
+    var task = service.create(input, "admin");
+    assertTrue(service.validate(input).valid());
+    var result = service.cdcPreflight(input);
+    assertFalse(result.ready());
+    assertTrue(
+        result.checks().stream()
+            .anyMatch(
+                check ->
+                    check.id().equals("logminer-identifiers")
+                        && check.status().equals("FAIL")
+                        && check.required()
+                        && check.code().equals("ORACLE_CDC_IDENTIFIER_UNSUPPORTED")));
+    assertEquals(
+        "CDC_PREFLIGHT_FAILED",
+        assertThrows(IntegrationException.class, () -> service.run(task.id, false, "admin"))
+            .code());
+    assertNull(store.get(UUID.fromString(task.id)).latestRun);
+    assertTrue(submitted.isEmpty());
+    verify(engine, never()).submit(anyString(), anyString(), anyMap(), anyBoolean());
+  }
+
   @Test
   void legacyOracleSavepointCannotResumeWithoutFingerprint() throws Exception {
     var fixture = oracleFixture();
@@ -594,9 +628,14 @@ class IntegrationCdcExecutionTest {
   }
 
   private IntegrationCdcPreflightTest.OracleFixture oracleFixture() throws Exception {
+    return oracleFixture("HIS");
+  }
+
+  private IntegrationCdcPreflightTest.OracleFixture oracleFixture(String schema) throws Exception {
     Fernet.getInstance().setFernetKey(Base64.getUrlEncoder().encodeToString(new byte[32]));
     var sourceInput = IntegrationConnectionsTest.input("Oracle");
     sourceInput.tlsMode = "VERIFY";
+    sourceInput.schemas = List.of(schema);
     var definition = service.createConnection(sourceInput, "admin");
     var fixture = new IntegrationCdcPreflightTest.OracleFixture();
     fixture.source = new IntegrationConfiguration.JdbcEndpoint(definition, sourceInput.password);
@@ -612,10 +651,10 @@ class IntegrationCdcExecutionTest {
             List.of(
                 DorisTableMetadata.column("id", "decimal(18,0)", false, true, false),
                 DorisTableMetadata.column("name", "string", true, false, false)));
-    when(jdbc.table(definition.id, "HIS", "ORDERS"))
+    when(jdbc.table(definition.id, schema, "ORDERS"))
         .thenReturn(
             new TableDefinition(
-                "HIS",
+                schema,
                 "ORDERS",
                 List.of(
                     new IntegrationModels.ColumnDefinition(

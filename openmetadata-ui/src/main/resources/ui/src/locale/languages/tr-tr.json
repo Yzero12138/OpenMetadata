@@ -102,7 +102,7 @@
     "extendedString": "Eşlenen dize 4.000 gerçek baytı aşıyor; bu CDC yolu doğrulanmamış.",
     "failed": "Başarısız",
     "fetchSize": "Okuma toplu boyutu",
-    "identifiers": "Tablo ve tüm kaynak sütun adları doğrulanmış LogMiner 30 karakter sınırına uymalı.",
+    "identifiers": "Oracle CDC şema ve tablo adları $ içermemelidir; tablo ve tüm kaynak sütun tanımlayıcıları, doğrulanmış LogMiner sınırı olan 30 ASCII karakterini aşmamalıdır.",
     "integerRange": "{{min}} ile {{max}} arasında tam sayı",
     "latestCompletedAt": "Son doğrulanmış denetim noktası",
     "latestSavepointAt": "Son doğrulanmış kayıt noktası",

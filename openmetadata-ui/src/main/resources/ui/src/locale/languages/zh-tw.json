@@ -102,7 +102,7 @@
     "extendedString": "對應字串超過 4,000 個實際位元組，此路徑尚未驗證。",
     "failed": "失敗",
     "fetchSize": "讀取批次大小",
-    "identifiers": "表名及每個來源欄位識別碼均須符合 LogMiner 30 字元限制。",
+    "identifiers": "Oracle CDC 的結構描述名稱與資料表名稱不能包含 $；資料表及所有來源欄位識別碼須符合已驗證的 LogMiner 30 個 ASCII 字元限制。",
     "integerRange": "{{min}} 至 {{max}} 的整數",
     "latestCompletedAt": "最近確認完成的檢查點",
     "latestSavepointAt": "最近確認的儲存點",

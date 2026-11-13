@@ -102,7 +102,7 @@
     "extendedString": "Een gekoppelde tekenreeks overschrijdt 4.000 werkelijke bytes; dit CDC-pad is niet geverifieerd.",
     "failed": "Mislukt",
     "fetchSize": "Leesbatchgrootte",
-    "identifiers": "Tabel en alle bronkolommen moeten binnen de geverifieerde LogMiner-limiet van 30 tekens blijven.",
+    "identifiers": "Schema- en tabelnamen voor Oracle CDC mogen geen $ bevatten; de tabelnaam en alle bronkolomidentificaties moeten voldoen aan de geverifieerde LogMiner-limiet van 30 ASCII-tekens.",
     "integerRange": "Geheel getal van {{min}} tot {{max}}",
     "latestCompletedAt": "Laatst bevestigde controlepunt",
     "latestSavepointAt": "Laatst bevestigde opslagpunt",

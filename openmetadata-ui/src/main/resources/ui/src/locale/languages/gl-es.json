@@ -102,7 +102,7 @@
     "extendedString": "Unha cadea asociada supera 4.000 bytes reais; esta ruta CDC non está verificada.",
     "failed": "Fallado",
     "fetchSize": "Tamaño de lectura",
-    "identifiers": "A táboa e todas as columnas da orixe deben respectar o límite LogMiner de 30 caracteres.",
+    "identifiers": "Os nomes de esquema e táboa de Oracle CDC non poden conter $; os identificadores da táboa e de todas as columnas de orixe deben respectar o límite verificado de LogMiner de 30 caracteres ASCII.",
     "integerRange": "Enteiro entre {{min}} e {{max}}",
     "latestCompletedAt": "Último punto de control confirmado",
     "latestSavepointAt": "Último punto de gardado confirmado",

@@ -24,6 +24,33 @@ class CdcAdaptersTest {
       new IntegrationRuntimeOptions.Resolved(1200, 9000, 1000, 30, 300);
 
   @Test
+  void oracleRejectsDollarInSchemaAndTableButPreservesDollarColumnNames() {
+    for (String[] route :
+        List.of(new String[] {"HOS$", "ORDERS"}, new String[] {"HIS", "PAT$ENT"})) {
+      assertCode(
+          "ORACLE_CDC_IDENTIFIER_UNSUPPORTED",
+          () ->
+              oracle(
+                  endpoint("Oracle", "VERIFY", route[0]),
+                  new TableDefinition(route[0], route[1], table(number(18, 0), date()).columns()),
+                  MAPPINGS,
+                  OPTIONS));
+    }
+    var dollarColumn =
+        new ColumnDefinition(
+            "AT$", "DATE", true, false, Types.TIMESTAMP, 7, 0, false, false, 0, JdbcDialect.Oracle);
+    var source =
+        oracle(
+            endpoint("Oracle", "VERIFY"),
+            table(number(18, 0), dollarColumn),
+            List.of(new FieldMapping("ID", "id"), new FieldMapping("AT$", "at")),
+            OPTIONS);
+    assertEquals(
+        Map.of("ID", "DECIMAL(18,0)", "AT$", "TIMESTAMP"),
+        ((Map<?, ?>) source.get("schema")).get("fields"));
+  }
+
+  @Test
   void oracleUsesNativeIdentityExplicitTrustedSchemaAndDescriptorTransport() {
     var endpoint = endpoint("Oracle", "VERIFY");
     Map<String, Object> source = oracle(endpoint, table(number(18, 0), date()), MAPPINGS, OPTIONS);
@@ -275,6 +302,10 @@ class CdcAdaptersTest {
   }
 
   static JdbcEndpoint endpoint(String type, String tls) {
+    return endpoint(type, tls, "HIS");
+  }
+
+  static JdbcEndpoint endpoint(String type, String tls, String oracleSchema) {
     var definition = new ConnectionDefinition();
     definition.id = "synthetic-source";
     definition.databaseType = type;
@@ -283,7 +314,7 @@ class CdcAdaptersTest {
     definition.port = type.equals("Oracle") ? 1521 : 5432;
     definition.database = "service_alias";
     definition.username = "synthetic_user";
-    definition.schemas = List.of(type.equals("Oracle") ? "HIS" : "public");
+    definition.schemas = List.of(type.equals("Oracle") ? oracleSchema : "public");
     definition.oracleConnectionType = type.equals("Oracle") ? "SERVICE_NAME" : null;
     definition.tlsMode = tls;
     return new JdbcEndpoint(definition, "password-secret-never-expose");

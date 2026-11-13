@@ -102,7 +102,7 @@
     "extendedString": "映射字符串的实际长度超过 4,000 字节，此 CDC 路径尚未验证。",
     "failed": "失败",
     "fetchSize": "读取批量",
-    "identifiers": "表名及来源表每一列的标识符均须符合已验证的 LogMiner 30 字符限制。",
+    "identifiers": "Oracle CDC 的模式名和表名不能包含 $；表及所有来源列标识符须符合已验证的 LogMiner 30 个 ASCII 字符限制。",
     "integerRange": "{{min}} 至 {{max}} 的整数",
     "latestCompletedAt": "最近确认完成的检查点",
     "latestSavepointAt": "最近确认的保存点",

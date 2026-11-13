@@ -132,13 +132,17 @@ public final class OracleCdcAdapter implements CdcSourceAdapter {
   }
 
   static void requireIdentifiers(TableDefinition table) {
-    if (!logMinerIdentifier(table.schema())
-        || !logMinerIdentifier(table.name())
+    if (!sourceRouteIdentifier(table.schema())
+        || !sourceRouteIdentifier(table.name())
         || table.columns() == null
         || table.columns().stream()
             .anyMatch(column -> column == null || !logMinerIdentifier(column.name()))) {
       throw new IntegrationException("ORACLE_CDC_IDENTIFIER_UNSUPPORTED", 400);
     }
+  }
+
+  private static boolean sourceRouteIdentifier(String identifier) {
+    return logMinerIdentifier(identifier) && identifier.indexOf('$') < 0;
   }
 
   private static boolean logMinerIdentifier(String identifier) {

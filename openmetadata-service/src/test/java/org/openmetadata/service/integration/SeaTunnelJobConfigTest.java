@@ -20,6 +20,88 @@ import org.openmetadata.service.integration.IntegrationModels.RunSummary;
 
 class SeaTunnelJobConfigTest {
   @Test
+  void oracleDollarRouteCannotBypassBuilderWithASyntheticReadyInspection() {
+    var task = task();
+    task.mode = "CDC";
+    task.sourceSchema = "HOS$";
+    task.sourceTable = "PAT$ENT";
+    task.primaryKey = "ID";
+    task.cdc = new IntegrationCdcModels.CdcOptions("HISDB", "Asia/Shanghai", null, null);
+    task.fieldMappings = List.of(new FieldMapping("ID", "id"), new FieldMapping("AT", "name"));
+    var endpoint = CdcAdaptersTest.endpoint("Oracle", "VERIFY", task.sourceSchema);
+    var builder =
+        new SeaTunnelJobConfig(
+            id -> task.sourceConnectionId.equals(id) ? endpoint : configuration().endpoint(id));
+    var inspection =
+        new IntegrationCdcPreflight.Inspection(
+            new IntegrationCdcModels.CdcPreflightResult(
+                task.sourceConnectionId, "Oracle", "19.0.0.0.0", "HISDB", true, true, List.of()),
+            new IntegrationModels.TableDefinition(
+                task.sourceSchema,
+                task.sourceTable,
+                List.of(CdcAdaptersTest.number(18, 0), CdcAdaptersTest.date())),
+            new IntegrationModels.TableDefinition(
+                task.targetSchema, task.targetTable, IntegrationValidatorTest.target().columns()),
+            task.fieldMappings);
+    assertEquals(
+        "ORACLE_CDC_IDENTIFIER_UNSUPPORTED",
+        assertThrows(IntegrationException.class, () -> builder.build(task, null, inspection))
+            .code());
+  }
+
+  @Test
+  void oracleFullAndSqlKeepDollarSchemaTableAndColumnNames() {
+    var definition = new ConnectionDefinition();
+    definition.copyInput(IntegrationConnectionsTest.input("Oracle"));
+    definition.id = "01234567-1234-1234-1234-123456789012";
+    definition.schemas = List.of("HOS$");
+    var endpoint = new IntegrationConfiguration.JdbcEndpoint(definition, "synthetic-secret");
+    var target = DorisTableDdlTest.targetConnection();
+    target.host = "doris.example.internal";
+    target.port = 9030;
+    target.dorisHttpPort = 8030;
+    target.username = "synthetic-writer";
+    target.tlsMode = "DISABLED";
+    var targetEndpoint =
+        new IntegrationConfiguration.JdbcEndpoint(target, "synthetic-target-secret");
+    var builder =
+        new SeaTunnelJobConfig(id -> definition.id.equals(id) ? endpoint : targetEndpoint);
+    for (String mode : List.of("FULL", "SQL_T1")) {
+      var task =
+          IntegrationTask.from(
+              mode.equals("SQL_T1")
+                  ? IntegrationValidatorTest.sqlInput()
+                  : IntegrationValidatorTest.validInput());
+      task.id = "12345678-1234-1234-1234-1234567890ab";
+      task.sourceConnectionId = definition.id;
+      task.sourceSchema = "HOS$";
+      task.sourceTable = mode.equals("SQL_T1") ? "sql_result" : "PAT$ENT";
+      task.targetConnectionId = target.id;
+      task.targetSchema = target.database;
+      task.mode = mode;
+      task.primaryKey = "ID$";
+      task.fieldMappings =
+          List.of(new FieldMapping("ID$", "id"), new FieldMapping("VALUE$", "name"));
+      if (mode.equals("SQL_T1")) {
+        task.sourceQuery =
+            "SELECT \"ID$\", \"VALUE$\" FROM \"HOS$\".\"PAT$ENT\" WHERE \"AT$\" >= TO_DATE(:biz_date, 'YYYY-MM-DD')";
+      }
+      var run = new RunSummary();
+      run.jobId = "123456789";
+      run.businessDate = "2024-02-29";
+      var source = (Map<?, ?>) ((List<?>) builder.build(task, run).get("source")).getFirst();
+      String query =
+          mode.equals("SQL_T1")
+              ? (String) source.get("query")
+              : (String) ((Map<?, ?>) ((List<?>) source.get("table_list")).getFirst()).get("query");
+      assertEquals("Jdbc", source.get("plugin_name"));
+      assertTrue(query.contains("\"HOS$\".\"PAT$ENT\""), query);
+      assertTrue(query.contains("\"ID$\""), query);
+      assertTrue(query.contains("\"VALUE$\""), query);
+    }
+  }
+
+  @Test
   void legacyPostgresCdcStillRejectsDottedDatabaseNames() {
     var definition = new ConnectionDefinition();
     definition.copyInput(IntegrationConnectionsTest.input("Postgres"));

@@ -102,7 +102,7 @@
     "extendedString": "Une chaîne associée dépasse 4 000 octets réels ; ce chemin CDC n’est pas vérifié.",
     "failed": "Échec",
     "fetchSize": "Taille de lecture",
-    "identifiers": "La table et toutes les colonnes source doivent respecter la limite LogMiner vérifiée de 30 caractères.",
+    "identifiers": "Les noms de schéma et de table Oracle CDC ne doivent pas contenir $ ; les identifiants de la table et de chaque colonne source doivent respecter la limite LogMiner vérifiée de 30 caractères ASCII.",
     "integerRange": "Entier de {{min}} à {{max}}",
     "latestCompletedAt": "Dernier point de contrôle confirmé",
     "latestSavepointAt": "Dernier point de sauvegarde confirmé",

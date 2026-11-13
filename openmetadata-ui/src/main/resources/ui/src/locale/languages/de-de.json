@@ -102,7 +102,7 @@
     "extendedString": "Eine zugeordnete Zeichenfolge überschreitet 4.000 tatsächliche Bytes; dieser CDC-Pfad ist ungeprüft.",
     "failed": "Fehlgeschlagen",
     "fetchSize": "Abrufgröße",
-    "identifiers": "Tabelle und alle Quellspalten müssen die geprüfte LogMiner-Grenze von 30 Zeichen einhalten.",
+    "identifiers": "Schema- und Tabellennamen für Oracle CDC dürfen kein $ enthalten; der Tabellenbezeichner und sämtliche Quellspaltenbezeichner müssen die geprüfte LogMiner-Grenze von 30 ASCII-Zeichen einhalten.",
     "integerRange": "Ganze Zahl von {{min}} bis {{max}}",
     "latestCompletedAt": "Letzter bestätigter Prüfpunkt",
     "latestSavepointAt": "Letzter bestätigter Sicherungspunkt",

@@ -102,7 +102,7 @@
     "extendedString": "매핑 문자열이 실제 4,000바이트를 넘으며 이 CDC 경로는 검증되지 않았습니다.",
     "failed": "실패",
     "fetchSize": "읽기 배치 크기",
-    "identifiers": "테이블 이름과 모든 원본 열 식별자가 검증된 LogMiner 30자 제한을 따라야 합니다.",
+    "identifiers": "Oracle CDC의 스키마 이름과 테이블 이름에는 $를 사용할 수 없습니다. 테이블과 모든 원본 열의 식별자는 검증된 LogMiner 제한인 ASCII 30자 이내여야 합니다.",
     "integerRange": "{{min}}~{{max}} 사이의 정수",
     "latestCompletedAt": "최근 확인된 완료 체크포인트",
     "latestSavepointAt": "최근 확인된 저장점",

@@ -37,6 +37,39 @@ class IntegrationCdcPreflightTest {
   private static final CdcOptions OPTIONS = new CdcOptions("HISDB", "Asia/Shanghai", null, null);
 
   @Test
+  void sourceAndTaskPreflightRejectDollarSchemaAndTableNamesButAcceptDollarColumns() {
+    for (String[] route :
+        List.of(new String[] {"HOS$", "ORDERS"}, new String[] {"HIS", "PAT$ENT"})) {
+      var fixture = new OracleFixture();
+      fixture.source = CdcAdaptersTest.endpoint("Oracle", "VERIFY", route[0]);
+      fixture.target = target(false);
+      var request =
+          new CdcPreflightInput(route[0], route[1], List.of("ID", "AT"), OPTIONS, null, null, null);
+      var sourceResult = fixture.preflight().check("synthetic-source", request);
+      assertFalse(sourceResult.ready());
+      assertCheck(
+          sourceResult, "logminer-identifiers", "FAIL", "ORACLE_CDC_IDENTIFIER_UNSUPPORTED", true);
+      var task = task();
+      task.sourceSchema = route[0];
+      task.sourceTable = route[1];
+      var taskResult = fixture.preflight().check(task);
+      assertFalse(taskResult.ready());
+      assertCheck(
+          taskResult, "logminer-identifiers", "FAIL", "ORACLE_CDC_IDENTIFIER_UNSUPPORTED", true);
+    }
+    var fixture = new OracleFixture();
+    fixture.columns =
+        List.of(
+            fixture.column("ID", "NUMBER", "N", 18, 0),
+            fixture.column("AT$", "DATE", "Y", null, null));
+    fixture.target = target(false);
+    var task = task();
+    task.fieldMappings = List.of(new FieldMapping("ID", "id"), new FieldMapping("AT$", "at"));
+    assertTrue(fixture.preflight().check("synthetic-source", input(List.of("ID", "AT$"))).ready());
+    assertTrue(fixture.preflight().check(task).ready());
+  }
+
+  @Test
   void selectOnlyPreflightProvesKnownNonCdbPrerequisitesWithoutClaimingRuntimeAcceptance() {
     var fixture = new OracleFixture();
     var result = fixture.preflight().check("synthetic-source", input(List.of("ID", "AT")));

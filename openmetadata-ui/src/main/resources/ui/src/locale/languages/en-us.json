@@ -102,7 +102,7 @@
     "extendedString": "A mapped string exceeds 4,000 actual bytes and is not verified for this CDC path.",
     "failed": "Failed",
     "fetchSize": "Fetch batch size",
-    "identifiers": "The table and every source column identifier must fit the verified 30-character LogMiner limit.",
+    "identifiers": "Oracle CDC schema and table names must not contain $; table and every source column identifier must satisfy the verified LogMiner limit of 30 ASCII characters.",
     "integerRange": "Whole number from {{min}} to {{max}}",
     "latestCompletedAt": "Latest confirmed checkpoint",
     "latestSavepointAt": "Latest confirmed savepoint",

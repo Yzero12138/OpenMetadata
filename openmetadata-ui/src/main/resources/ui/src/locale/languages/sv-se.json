@@ -102,7 +102,7 @@
     "extendedString": "En mappad sträng överstiger 4 000 verkliga byte; CDC-vägen är overifierad.",
     "failed": "Misslyckades",
     "fetchSize": "Läsbatchstorlek",
-    "identifiers": "Tabellen och alla källkolumner måste följa LogMiners verifierade gräns på 30 tecken.",
+    "identifiers": "Schema- och tabellnamn för Oracle CDC får inte innehålla $; identifieraren för tabellen och för varje källkolumn måste följa LogMiners verifierade gräns på 30 ASCII-tecken.",
     "integerRange": "Heltal från {{min}} till {{max}}",
     "latestCompletedAt": "Senast bekräftade kontrollpunkt",
     "latestSavepointAt": "Senast bekräftade sparpunkt",

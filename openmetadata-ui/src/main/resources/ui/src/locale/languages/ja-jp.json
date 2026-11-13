@@ -102,7 +102,7 @@
     "extendedString": "マッピング文字列が実際に 4,000 バイトを超えています。この CDC 経路は未検証です。",
     "failed": "失敗",
     "fetchSize": "取得バッチサイズ",
-    "identifiers": "テーブル名と全ソース列名は検証済みの LogMiner 30 文字制限を満たす必要があります。",
+    "identifiers": "Oracle CDC のスキーマ名とテーブル名に $ は使用できません。テーブルとすべてのソース列の識別子は、検証済みの LogMiner の制限である ASCII 30 文字以内にする必要があります。",
     "integerRange": "{{min}}～{{max}} の整数",
     "latestCompletedAt": "最後に完了を確認したチェックポイント",
     "latestSavepointAt": "最後に確認した保存点",

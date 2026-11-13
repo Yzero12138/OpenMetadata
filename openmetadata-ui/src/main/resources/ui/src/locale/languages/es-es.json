@@ -102,7 +102,7 @@
     "extendedString": "Una cadena asignada supera los 4.000 bytes reales; esta ruta CDC no está verificada.",
     "failed": "Fallido",
     "fetchSize": "Tamaño de lectura",
-    "identifiers": "La tabla y todas las columnas del origen deben respetar el límite LogMiner verificado de 30 caracteres.",
+    "identifiers": "Los nombres de esquema y tabla de Oracle CDC no deben contener $; el identificador de la tabla y los de todas las columnas de origen deben cumplir el límite verificado de LogMiner de 30 caracteres ASCII.",
     "integerRange": "Entero entre {{min}} y {{max}}",
     "latestCompletedAt": "Último punto de control confirmado",
     "latestSavepointAt": "Último punto de guardado confirmado",
