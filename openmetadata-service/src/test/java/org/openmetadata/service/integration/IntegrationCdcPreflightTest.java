@@ -717,8 +717,10 @@ class IntegrationCdcPreflightTest {
     return row;
   }
 
-  private static final class OracleFixture {
+  static final class OracleFixture {
     JdbcEndpoint source = CdcAdaptersTest.endpoint("Oracle", "VERIFY");
+    String targetConnectionId = "doris-ods-validation";
+    JdbcEndpoint targetEndpoint = endpoint("Doris");
     String version = "11.2.0.1.0";
     String logMode = "ARCHIVELOG";
     String minimum = "IMPLICIT";
@@ -758,13 +760,13 @@ class IntegrationCdcPreflightTest {
 
     IntegrationCdcPreflight preflight() {
       return new IntegrationCdcPreflight(
-          id -> "doris-ods-validation".equals(id) ? endpoint("Doris") : source,
+          id -> targetConnectionId.equals(id) ? targetEndpoint : source,
           (endpoint, properties) -> connection(),
           (id, schema, table) -> {
             if (targetFailure) {
               throw new IntegrationException("jdbc:secret password-secret-never-expose", 503);
             }
-            return "doris-ods-validation".equals(id) ? target : sourceTable;
+            return targetConnectionId.equals(id) ? target : sourceTable;
           },
           plugin -> {
             plugins.add(plugin);

@@ -121,6 +121,36 @@ public final class JdbcInspector {
     }
   }
 
+  public long targetCount(String connectionId, String schema, String table) {
+    IntegrationValidator.requireTable(schema, table);
+    JdbcEndpoint endpoint = endpoints.apply(connectionId);
+    if (!endpoint.schemas().contains(schema)) {
+      throw new IntegrationException("SCHEMA_NOT_ALLOWED", 400);
+    }
+    String query =
+        "SELECT COUNT(*) FROM "
+            + endpoint.dialect().quote(schema)
+            + "."
+            + endpoint.dialect().quote(table);
+    try (Connection connection = open(endpoint);
+        var statement = connection.prepareStatement(query)) {
+      statement.setQueryTimeout(5);
+      statement.setMaxRows(1);
+      try (var rows = statement.executeQuery()) {
+        if (!rows.next()) {
+          throw new IntegrationException("TARGET_COUNT_UNAVAILABLE", 503);
+        }
+        var count = rows.getBigDecimal(1);
+        if (count == null || count.signum() < 0) {
+          throw new IntegrationException("TARGET_COUNT_UNAVAILABLE", 503);
+        }
+        return count.longValueExact();
+      }
+    } catch (SQLException | ArithmeticException e) {
+      throw new IntegrationException("TARGET_COUNT_UNAVAILABLE", 503);
+    }
+  }
+
   public List<TableDefinition> tables(String connectionId) {
     return tables(connectionId, true);
   }

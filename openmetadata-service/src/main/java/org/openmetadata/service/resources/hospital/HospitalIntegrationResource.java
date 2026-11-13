@@ -23,6 +23,7 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.integration.DorisTableDesignModels.DorisAddColumnsInput;
 import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableDesignInput;
 import org.openmetadata.service.integration.EntityExtensionTaskStore;
+import org.openmetadata.service.integration.IntegrationCdcModels.CdcPreflightInput;
 import org.openmetadata.service.integration.IntegrationConfiguration;
 import org.openmetadata.service.integration.IntegrationException;
 import org.openmetadata.service.integration.IntegrationModels;
@@ -128,6 +129,21 @@ public final class HospitalIntegrationResource {
       @Context SecurityContext securityContext, @PathParam("id") String id) {
     authorizer.authorizeAdmin(securityContext);
     return respond(() -> Response.ok(service.testConnection(id)).build());
+  }
+
+  @POST
+  @Path("/connections/{id}/cdc-preflight")
+  public Response cdcPreflight(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.cdcPreflight(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), CdcPreflightInput.class)))
+                .build());
   }
 
   @GET
@@ -308,6 +324,26 @@ public final class HospitalIntegrationResource {
                     service.validate(
                         IntegrationModels.readInput(IntegrationModels.readBody(input), false)))
                 .build());
+  }
+
+  @POST
+  @Path("/tasks/cdc-preflight")
+  public Response cdcPreflight(@Context SecurityContext securityContext, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.cdcPreflight(
+                        IntegrationModels.readInput(IntegrationModels.readBody(input), false)))
+                .build());
+  }
+
+  @GET
+  @Path("/tasks/{id}/target-count")
+  public Response targetCount(
+      @Context SecurityContext securityContext, @PathParam("id") String id) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(() -> Response.ok(service.targetCount(id)).build());
   }
 
   @POST

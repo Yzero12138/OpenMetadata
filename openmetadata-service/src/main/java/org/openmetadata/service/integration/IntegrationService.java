@@ -11,6 +11,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -19,6 +21,9 @@ import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableDes
 import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableDesignPreview;
 import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableMutationResult;
 import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableStructure;
+import org.openmetadata.service.integration.IntegrationCdcModels.CdcPreflightInput;
+import org.openmetadata.service.integration.IntegrationCdcModels.CdcPreflightResult;
+import org.openmetadata.service.integration.IntegrationCdcModels.TargetRowCount;
 import org.openmetadata.service.integration.IntegrationConfiguration.JdbcEndpoint;
 import org.openmetadata.service.integration.IntegrationModels.CatalogSummary;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionDefinition;
@@ -62,6 +67,7 @@ public final class IntegrationService {
   private final DorisTableDesignService tableDesign;
   private final Clock clock;
   private SeaTunnelClient engine;
+  private IntegrationCdcPreflight cdcPreflight;
   private int listRefreshCursor;
 
   public IntegrationService(IntegrationConfiguration configuration, IntegrationTaskStore store) {
@@ -165,6 +171,41 @@ public final class IntegrationService {
         input.schema(),
         input.query(),
         businessDate(input.businessDate(), "Asia/Shanghai"));
+  }
+
+  public CdcPreflightResult cdcPreflight(String id, CdcPreflightInput input) {
+    configuration.requireReady();
+    synchronized (TASK_LOCK) {
+      connections.requireRole(id, "SOURCE", "FULL");
+      if (input != null && input.targetConnectionId() != null) {
+        connections.requireRole(input.targetConnectionId(), "TARGET", "FULL");
+      }
+      return preflight().check(id, input);
+    }
+  }
+
+  public CdcPreflightResult cdcPreflight(TaskInput input) {
+    configuration.requireReady();
+    synchronized (TASK_LOCK) {
+      if (!IntegrationValidator.validateStructure(input).valid() || !"CDC".equals(input.mode)) {
+        throw new IntegrationException("INVALID_CONFIGURATION", 400);
+      }
+      connections.requireRole(input.sourceConnectionId, "SOURCE", "FULL");
+      connections.requireRole(input.targetConnectionId, "TARGET", "FULL");
+      validateCdcOptions(input);
+      return preflight().check(input);
+    }
+  }
+
+  public TargetRowCount targetCount(String id) {
+    configuration.requireReady();
+    synchronized (TASK_LOCK) {
+      var task = load(id);
+      connections.requireRole(task.targetConnectionId, "TARGET", "FULL");
+      return new TargetRowCount(
+          inspector.targetCount(task.targetConnectionId, task.targetSchema, task.targetTable),
+          clock.millis());
+    }
   }
 
   public TargetTablePreview previewTargetTable(String id, TargetTableInput input) {
@@ -295,6 +336,7 @@ public final class IntegrationService {
       }
       connections.requireRole(input.sourceConnectionId, "SOURCE", input.mode);
       connections.requireRole(input.targetConnectionId, "TARGET", input.mode);
+      validateCdcOptions(input);
       if ("SQL_T1".equals(input.mode)) {
         requireDorisTarget(input.targetConnectionId);
         IntegrationSchedule.validate(input.schedule);
@@ -429,8 +471,8 @@ public final class IntegrationService {
           return task;
         }
         if (result == RefreshResult.NOT_FOUND) {
-          requireValid(task);
-          submit(task, uncertainResume, actor);
+          requireSubmissionValid(task);
+          submit(task, uncertainResume, actor, true);
           return task;
         }
       }
@@ -438,16 +480,17 @@ public final class IntegrationService {
         if (task.latestRun == null || !Boolean.TRUE.equals(task.latestRun.canResume)) {
           throw new IntegrationException("SAVEPOINT_UNAVAILABLE", 409);
         }
-        requireValid(task);
+        requireSubmissionValid(task);
         task.latestRun.submittedAt = clock.millis();
         task.latestRun.finishedAt = null;
-        submit(task, true, actor);
+        submit(task, true, actor, true);
         return task;
       }
       if (blocked(task.latestRun)) {
         throw new IntegrationException("TASK_ACTIVE", 409);
       }
-      requireValid(task);
+      requireSubmissionValid(task);
+      requireTargetAvailable(task);
       RunSummary run = new RunSummary();
       run.jobId = newJobId();
       run.status = "SUBMITTING";
@@ -534,19 +577,62 @@ public final class IntegrationService {
   }
 
   private void submit(IntegrationTask task, boolean resume, String actor) {
+    submit(task, resume, actor, false);
+  }
+
+  private void submit(IntegrationTask task, boolean resume, String actor, boolean continuing) {
+    requireTargetAvailable(task);
+    SeaTunnelJobConfig execution =
+        task.initializationState != null
+                && IntegrationInitialization.started(task.initializationState)
+            ? new SeaTunnelJobConfig(id -> initializationEndpoint(task, id))
+            : jobs;
+    Map<String, Object> job;
+    if ("CDC".equals(task.mode)) {
+      connections.requireRole(task.sourceConnectionId, "SOURCE", task.mode);
+      connections.requireRole(task.targetConnectionId, "TARGET", task.mode);
+      validateCdcOptions(task);
+      var inspection = preflight().inspect(task);
+      if (!inspection.result().ready()) {
+        throw new IntegrationException("CDC_PREFLIGHT_FAILED", 409);
+      }
+      var source = connections.endpoint(task.sourceConnectionId);
+      boolean legacy = continuing && task.latestRun.configurationFingerprint == null;
+      if (legacy && source.dialect() != JdbcDialect.Postgres) {
+        throw new IntegrationException("CDC_LEGACY_RESUME_UNSAFE", 409);
+      }
+      String fingerprint =
+          IntegrationCdcFingerprint.of(
+              task, source, connections.endpoint(task.targetConnectionId), inspection);
+      if (continuing && !legacy && !fingerprint.equals(task.latestRun.configurationFingerprint)) {
+        throw new IntegrationException("CDC_CONFIGURATION_CHANGED", 409);
+      }
+      if (resume) {
+        try {
+          if (!engine().hasCompletedSavepoint(task.latestRun.jobId)) {
+            throw new IntegrationException("SAVEPOINT_UNAVAILABLE", 409);
+          }
+        } catch (IntegrationException e) {
+          throw new IntegrationException("SAVEPOINT_UNAVAILABLE", 409);
+        }
+      }
+      job =
+          legacy
+              ? execution.buildLegacyCdc(task, task.latestRun)
+              : execution.build(task, task.latestRun, inspection);
+      if (!legacy) {
+        task.latestRun.configurationFingerprint = fingerprint;
+      }
+    } else {
+      job = execution.build(task, task.latestRun);
+    }
     task.latestRun.status = resume ? "RESUMING" : "SUBMITTING";
     task.latestRun.canResume = false;
     task.latestRun.errorCode = null;
     task.latestRun.errorMessage = null;
     save(task, actor);
     try {
-      SeaTunnelJobConfig execution =
-          task.initializationState != null
-                  && IntegrationInitialization.started(task.initializationState)
-              ? new SeaTunnelJobConfig(id -> initializationEndpoint(task, id))
-              : jobs;
-      engine()
-          .submit(task.latestRun.jobId, task.name, execution.build(task, task.latestRun), resume);
+      engine().submit(task.latestRun.jobId, task.name, job, resume);
       task.latestRun.status = resume ? "RESUMING" : "SUBMITTED";
     } catch (IntegrationException e) {
       task.latestRun.status =
@@ -599,6 +685,17 @@ public final class IntegrationService {
         run.errorMessage = null;
       }
       run.canResume = false;
+      if ("RUNNING".equals(run.status) && System.nanoTime() < deadline) {
+        try {
+          var checkpoints = engine().checkpoints(run.jobId, remaining(deadline));
+          if (checkpoints != null) {
+            run.checkpoints = checkpoints;
+            run.checkpointsCheckedAt = clock.millis();
+          }
+        } catch (IntegrationException ignored) {
+          // Completed jobs lose this monitor; retain the last successful sample for this run.
+        }
+      }
       if (TERMINAL.contains(run.status)) {
         if (run.finishedAt == null) {
           // SeaTunnel 3.0 does not report a finish time; record the first terminal observation.
@@ -662,6 +759,24 @@ public final class IntegrationService {
     }
   }
 
+  private void requireSubmissionValid(IntegrationTask task) {
+    if (!"CDC".equals(task.mode)) {
+      requireValid(task);
+    } else if (!IntegrationValidator.validateStructure(task).valid()) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
+  }
+
+  private void validateCdcOptions(TaskInput input) {
+    if (input.cdc != null) {
+      if (!"CDC".equals(input.mode)
+          || connections.endpoint(input.sourceConnectionId).dialect() != JdbcDialect.Oracle) {
+        throw new IntegrationException("INVALID_CONFIGURATION", 400);
+      }
+      IntegrationCdcPreflight.validateOracleOptions(input.cdc);
+    }
+  }
+
   private void requireUniqueRoute(TaskInput input, String id, List<IntegrationTask> existing) {
     if (existing.stream()
         .anyMatch(
@@ -691,7 +806,8 @@ public final class IntegrationService {
 
   private boolean blocked(RunSummary run) {
     return run != null
-        && (!TERMINAL.contains(run.status)
+        && (run.status == null
+            || !TERMINAL.contains(run.status)
             || ("SAVEPOINT_DONE".equals(run.status) && !"INITIALIZATION".equals(run.trigger))
             || Boolean.TRUE.equals(run.canResume));
   }
@@ -719,6 +835,48 @@ public final class IntegrationService {
       engine = new SeaTunnelClient(configuration.engineUri(), Duration.ofSeconds(10));
     }
     return engine;
+  }
+
+  private IntegrationCdcPreflight preflight() {
+    if (cdcPreflight == null) {
+      cdcPreflight = new IntegrationCdcPreflight(connections::endpoint, inspector, engine());
+    }
+    return cdcPreflight;
+  }
+
+  private void requireTargetAvailable(IntegrationTask task) {
+    var target = connections.connection(task.targetConnectionId);
+    for (var other : store.list()) {
+      if (Objects.equals(task.id, other.id)
+          || !(blocked(other.latestRun)
+              || (IntegrationInitialization.started(other.initializationState)
+                  && IntegrationInitialization.active(other)))) {
+        continue;
+      }
+      ConnectionDefinition otherTarget;
+      try {
+        otherTarget = connections.connection(other.targetConnectionId);
+      } catch (IntegrationException e) {
+        throw new IntegrationException("TARGET_WRITER_ACTIVE", 409);
+      }
+      if (physicalTarget(target, task.targetSchema, task.targetTable)
+          .equals(physicalTarget(otherTarget, other.targetSchema, other.targetTable))) {
+        throw new IntegrationException("TARGET_WRITER_ACTIVE", 409);
+      }
+    }
+  }
+
+  private String physicalTarget(ConnectionDefinition endpoint, String schema, String table) {
+    return (endpoint.host
+            + ":"
+            + endpoint.port
+            + "/"
+            + endpoint.database
+            + "/"
+            + schema
+            + "/"
+            + table)
+        .toLowerCase(Locale.ROOT);
   }
 
   private IntegrationTask copy(IntegrationTask task) {
@@ -923,6 +1081,7 @@ public final class IntegrationService {
 
   private void runInitialization(
       IntegrationTask task, IntegrationInitialization.Batch batch, String actor) {
+    requireTargetAvailable(task);
     bindInitializationConnections(task);
     requireValid(task);
     RunSummary run = new RunSummary();
@@ -987,9 +1146,11 @@ public final class IntegrationService {
         return task;
       }
       requireValid(task);
+      requireTargetAvailable(task);
       task.latestRun.submittedAt = clock.millis();
       submit(
-          task, false, actor); // Same job ID and business date; never allocate a new uncertain job.
+          task, false, actor,
+          true); // Same job ID and business date; never allocate a new uncertain job.
       return task;
     }
     if (blocked(task.latestRun)) {
@@ -1024,6 +1185,7 @@ public final class IntegrationService {
       scheduledFor = task.scheduleState.nextRunAt;
     }
     requireValid(task);
+    requireTargetAvailable(task);
     RunSummary run = new RunSummary();
     run.jobId = newJobId();
     run.status = "SUBMITTING";
@@ -1132,7 +1294,9 @@ public final class IntegrationService {
         }
       } catch (IntegrationException e) {
         // Another pod may have won CAS; keep its reservation intact and retry on the next poll.
-        if (attempted != null && !Set.of("VERSION_CONFLICT", "TASK_ACTIVE").contains(e.code())) {
+        if (attempted != null
+            && !Set.of("VERSION_CONFLICT", "TASK_ACTIVE", "TARGET_WRITER_ACTIVE")
+                .contains(e.code())) {
           recordScheduleError(attempted.id, attempted.version, e.code());
         }
       }

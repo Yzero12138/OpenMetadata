@@ -594,7 +594,7 @@ public final class IntegrationCdcPreflight {
     }
   }
 
-  private static void validateOracleOptions(CdcOptions options) {
+  static void validateOracleOptions(CdcOptions options) {
     if (options != null
         && ((options.databaseName() != null && !OracleCdcAdapter.nativeName(options.databaseName()))
             || (options.serverTimeZone() != null

@@ -10,12 +10,16 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import org.openmetadata.service.integration.IntegrationCdcModels.CdcOptions;
+import org.openmetadata.service.integration.IntegrationCdcModels.CheckpointSummary;
 import org.openmetadata.service.integration.IntegrationCdcModels.RuntimeOptions;
 
 public final class IntegrationModels {
@@ -30,6 +34,10 @@ public final class IntegrationModels {
   private static final int MAX_INPUT_BYTES = 32768;
 
   static {
+    JSON.coercionConfigFor(LogicalType.Textual)
+        .setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
+        .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
+        .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail);
     JSON.getFactory()
         .setStreamReadConstraints(StreamReadConstraints.builder().maxNestingDepth(40).build());
   }
@@ -113,6 +121,9 @@ public final class IntegrationModels {
     public Long finishedAt;
     public Long sourceReceivedCount;
     public Long sinkWriteCount;
+    public CheckpointSummary checkpoints;
+    public Long checkpointsCheckedAt;
+    public String configurationFingerprint;
     public String errorCode;
     public String errorMessage;
     public Boolean savepointRequested;

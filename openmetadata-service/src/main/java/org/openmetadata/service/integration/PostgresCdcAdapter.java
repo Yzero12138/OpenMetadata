@@ -52,6 +52,7 @@ public final class PostgresCdcAdapter implements CdcSourceAdapter {
         "table-names", List.of(endpoint.database() + "." + table.schema() + "." + table.name()));
     source.put("decoding.plugin.name", "pgoutput");
     source.put("startup.mode", "initial");
+    source.put("incremental.parallelism", 1);
     source.put("snapshot.fetch.size", runtime.fetchSize());
     source.put("snapshot.split.size", runtime.splitSize());
     source.put("slot.name", replicationName);

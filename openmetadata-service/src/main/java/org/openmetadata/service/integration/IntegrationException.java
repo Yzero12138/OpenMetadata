@@ -14,6 +14,23 @@ public final class IntegrationException extends RuntimeException {
           Map.entry("JOB_NOT_FOUND", "The engine has no record of this job."),
           Map.entry("INVALID_CONFIGURATION", "The integration configuration is invalid."),
           Map.entry(
+              "CDC_PREFLIGHT_FAILED",
+              "CDC prerequisites are not ready. Refresh the preflight checks before running."),
+          Map.entry(
+              "CDC_TRUSTED_INSPECTION_REQUIRED", "CDC execution requires fresh trusted metadata."),
+          Map.entry(
+              "CDC_CONFIGURATION_CHANGED",
+              "The CDC configuration or inspected table shape changed. Stop and revalidate before starting a new job."),
+          Map.entry(
+              "CDC_LEGACY_RESUME_UNSAFE",
+              "This CDC run has no compatible configuration fingerprint and cannot be resumed safely."),
+          Map.entry(
+              "TARGET_WRITER_ACTIVE",
+              "Another active, uncertain or resumable task owns this target table."),
+          Map.entry(
+              "TARGET_COUNT_UNAVAILABLE",
+              "The target row count could not be read. Check target connectivity and SELECT permissions."),
+          Map.entry(
               "INITIALIZATION_IN_PROGRESS",
               "Finish or continue historical initialization before starting another SQL run."),
           Map.entry(

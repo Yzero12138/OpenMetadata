@@ -10,10 +10,12 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.openmetadata.service.integration.IntegrationCdcPreflight.Inspection;
 import org.openmetadata.service.integration.IntegrationConfiguration.JdbcEndpoint;
 import org.openmetadata.service.integration.IntegrationModels.FieldMapping;
 import org.openmetadata.service.integration.IntegrationModels.IntegrationTask;
 import org.openmetadata.service.integration.IntegrationModels.RunSummary;
+import org.openmetadata.service.integration.IntegrationModels.TableDefinition;
 
 public final class SeaTunnelJobConfig {
   private final Function<String, JdbcEndpoint> endpoints;
@@ -31,17 +33,22 @@ public final class SeaTunnelJobConfig {
   }
 
   public Map<String, Object> build(IntegrationTask task, RunSummary run) {
-    return build(task, run, false);
+    return build(task, run, false, null);
+  }
+
+  public Map<String, Object> build(IntegrationTask task, RunSummary run, Inspection inspection) {
+    return build(task, run, false, inspection);
   }
 
   public Map<String, Object> buildLegacyCdc(IntegrationTask task, RunSummary run) {
     if (task == null || !"CDC".equals(task.mode)) {
       throw new IntegrationException("MODE_UNSUPPORTED", 400);
     }
-    return build(task, run, true);
+    return build(task, run, true, null);
   }
 
-  private Map<String, Object> build(IntegrationTask task, RunSummary run, boolean legacyCdc) {
+  private Map<String, Object> build(
+      IntegrationTask task, RunSummary run, boolean legacyCdc, Inspection inspection) {
     if (!IntegrationValidator.validateStructure(task).valid()) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
@@ -55,9 +62,30 @@ public final class SeaTunnelJobConfig {
       throw new IntegrationException("MODE_UNSUPPORTED", 400);
     }
     if (cdc
+        && legacyCdc
         && (sourceConnection.dialect() != JdbcDialect.Postgres
             || sourceConnection.database().contains("."))) {
       throw new IntegrationException("MODE_UNSUPPORTED", 400);
+    }
+    if (cdc
+        && !legacyCdc
+        && sourceConnection.dialect() == JdbcDialect.Oracle
+        && inspection == null) {
+      throw new IntegrationException("CDC_TRUSTED_INSPECTION_REQUIRED", 400);
+    }
+    if (cdc
+        && inspection != null
+        && (!inspection.result().ready()
+            || !task.sourceConnectionId.equals(inspection.result().connectionId())
+            || !sourceConnection.dialect().name().equals(inspection.result().databaseType())
+            || inspection.source() == null
+            || inspection.target() == null
+            || !task.sourceSchema.equals(inspection.source().schema())
+            || !task.sourceTable.equals(inspection.source().name())
+            || !task.targetSchema.equals(inspection.target().schema())
+            || !task.targetTable.equals(inspection.target().name())
+            || !task.fieldMappings.equals(inspection.mappings()))) {
+      throw new IntegrationException("CDC_TRUSTED_INSPECTION_REQUIRED", 400);
     }
     if (!sourceConnection.schemas().contains(task.sourceSchema)
         || !targetConnection.schemas().contains(task.targetSchema)) {
@@ -69,77 +97,93 @@ public final class SeaTunnelJobConfig {
             .map(FieldMapping::target)
             .findFirst()
             .orElseThrow(() -> new IntegrationException("INVALID_CONFIGURATION", 400));
-    Map<String, Object> source = new LinkedHashMap<>();
-    source.put("plugin_name", cdc ? "Postgres-CDC" : "Jdbc");
-    source.put("plugin_output", "source");
-    source.put("url", sourceConnection.jdbcUrl());
-    source.put("username", sourceConnection.username());
-    source.put("password", sourceConnection.password());
-    if (cdc) {
-      String replicationName = "hospital_" + task.id.replace("-", "");
-      source.put("database-names", List.of(sourceConnection.database()));
-      source.put("schema-names", List.of(task.sourceSchema));
-      source.put(
-          "table-names",
-          List.of(sourceConnection.database() + "." + task.sourceSchema + "." + task.sourceTable));
-      source.put("decoding.plugin.name", "pgoutput");
-      source.put("startup.mode", "initial");
-      source.put("slot.name", replicationName);
-      source.put(
-          "debezium",
-          Map.of(
-              "publication.name",
-              replicationName,
-              "publication.autocreate.mode",
-              "filtered",
-              "slot.drop.on.stop",
-              "false",
-              "database.sslmode",
-              "VERIFY".equals(sourceConnection.tlsMode()) ? "verify-full" : "disable",
-              "schema.include.list",
-              Pattern.quote(task.sourceSchema),
-              "table.include.list",
-              Pattern.quote(task.sourceSchema) + "\\." + Pattern.quote(task.sourceTable)));
+    Map<String, Object> source;
+    if (cdc && !legacyCdc) {
+      source =
+          CdcAdapters.require(sourceConnection.dialect())
+              .buildSource(
+                  task.id,
+                  sourceConnection,
+                  inspection == null
+                      ? new TableDefinition(task.sourceSchema, task.sourceTable, List.of())
+                      : inspection.source(),
+                  task.fieldMappings,
+                  inspection == null ? task.cdc : inspection.resolvedOptions(task.cdc),
+                  runtime);
     } else {
-      source.put("driver", sourceConnection.driver());
-      source.put("fetch_size", runtime.fetchSize());
-      source.put("query_timeout_sec", 60);
-      String query =
-          sql
-              ? sqlQuery(task, run, sourceConnection)
-              : "SELECT "
-                  + task.fieldMappings.stream()
-                      .map(
-                          mapping ->
-                              sourceConnection.dialect().quote(mapping.source())
-                                  + " AS "
-                                  + sourceConnection.dialect().quote(mapping.target()))
-                      .collect(Collectors.joining(", "))
-                  + " FROM "
-                  + sourceConnection.dialect().quote(task.sourceSchema)
-                  + "."
-                  + sourceConnection.dialect().quote(task.sourceTable);
-      if (!sql && sourceConnection.dialect() == JdbcDialect.Oracle) {
-        source.put("table_list", List.of(Map.of("query", query, "partition_column", targetKey)));
-        source.put("split.size", runtime.splitSize());
-        source.put("split.allow-sampling", false);
-        source.put("skip_analyze", true);
-        source.put("use_select_count", true);
-        source.put("enable_concurrent_read", true);
-      } else {
-        source.put("query", query);
-      }
-      if (sourceConnection.dialect() == JdbcDialect.Oracle) {
-        source.put("dialect", "HospitalOracle");
+      source = new LinkedHashMap<>();
+      source.put("plugin_name", cdc ? "Postgres-CDC" : "Jdbc");
+      source.put("plugin_output", "source");
+      source.put("url", sourceConnection.jdbcUrl());
+      source.put("username", sourceConnection.username());
+      source.put("password", sourceConnection.password());
+      if (cdc) {
+        String replicationName = "hospital_" + task.id.replace("-", "");
+        source.put("database-names", List.of(sourceConnection.database()));
+        source.put("schema-names", List.of(task.sourceSchema));
         source.put(
-            "properties",
+            "table-names",
+            List.of(
+                sourceConnection.database() + "." + task.sourceSchema + "." + task.sourceTable));
+        source.put("decoding.plugin.name", "pgoutput");
+        source.put("startup.mode", "initial");
+        source.put("slot.name", replicationName);
+        source.put(
+            "debezium",
             Map.of(
-                "oracle.net.CONNECT_TIMEOUT",
-                "5000",
-                "oracle.jdbc.ReadTimeout",
-                "15000",
-                "oracle.jdbc.timezoneAsRegion",
-                "false"));
+                "publication.name",
+                replicationName,
+                "publication.autocreate.mode",
+                "filtered",
+                "slot.drop.on.stop",
+                "false",
+                "database.sslmode",
+                "VERIFY".equals(sourceConnection.tlsMode()) ? "verify-full" : "disable",
+                "schema.include.list",
+                Pattern.quote(task.sourceSchema),
+                "table.include.list",
+                Pattern.quote(task.sourceSchema) + "\\." + Pattern.quote(task.sourceTable)));
+      } else {
+        source.put("driver", sourceConnection.driver());
+        source.put("fetch_size", runtime.fetchSize());
+        source.put("query_timeout_sec", 60);
+        String query =
+            sql
+                ? sqlQuery(task, run, sourceConnection)
+                : "SELECT "
+                    + task.fieldMappings.stream()
+                        .map(
+                            mapping ->
+                                sourceConnection.dialect().quote(mapping.source())
+                                    + " AS "
+                                    + sourceConnection.dialect().quote(mapping.target()))
+                        .collect(Collectors.joining(", "))
+                    + " FROM "
+                    + sourceConnection.dialect().quote(task.sourceSchema)
+                    + "."
+                    + sourceConnection.dialect().quote(task.sourceTable);
+        if (!sql && sourceConnection.dialect() == JdbcDialect.Oracle) {
+          source.put("table_list", List.of(Map.of("query", query, "partition_column", targetKey)));
+          source.put("split.size", runtime.splitSize());
+          source.put("split.allow-sampling", false);
+          source.put("skip_analyze", true);
+          source.put("use_select_count", true);
+          source.put("enable_concurrent_read", true);
+        } else {
+          source.put("query", query);
+        }
+        if (sourceConnection.dialect() == JdbcDialect.Oracle) {
+          source.put("dialect", "HospitalOracle");
+          source.put(
+              "properties",
+              Map.of(
+                  "oracle.net.CONNECT_TIMEOUT",
+                  "5000",
+                  "oracle.jdbc.ReadTimeout",
+                  "15000",
+                  "oracle.jdbc.timezoneAsRegion",
+                  "false"));
+        }
       }
     }
     List<Map<String, Object>> transform = List.of();

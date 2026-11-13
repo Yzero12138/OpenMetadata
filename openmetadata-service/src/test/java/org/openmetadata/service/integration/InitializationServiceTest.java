@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -370,6 +371,26 @@ class InitializationServiceTest {
 
   private LocalDate today() {
     return LocalDate.now(clock.withZone(ZoneId.of("Asia/Shanghai")));
+  }
+
+  @Test
+  void historyInitializationDoesNotClaimOrAdvanceWhileAnotherWriterOwnsTarget() {
+    var task = service.create(input(), "admin");
+    var alias = IntegrationCdcExecutionTest.mysqlTargetAlias(service);
+    var blocker =
+        IntegrationCdcExecutionTest.blockingWriter(store, "daily_visits", "SUBMISSION_UNKNOWN");
+    blocker.targetConnectionId = alias.id;
+    store.save(blocker);
+    service.dispatchScheduled(clock.instant());
+    var persisted = store.get(UUID.fromString(task.id));
+    assertEquals(task.version, persisted.version);
+    assertEquals(task.initializationState.nextDate, persisted.initializationState.nextDate);
+    assertEquals(0, persisted.initializationState.completedBatches);
+    assertNull(persisted.initializationState.pendingJobId);
+    assertNull(persisted.initializationState.startedAt);
+    assertNull(persisted.initializationState.lastError);
+    assertNull(persisted.latestRun);
+    assertTrue(submitted.isEmpty());
   }
 
   private TaskInput input() {

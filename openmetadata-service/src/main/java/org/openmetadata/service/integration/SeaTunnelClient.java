@@ -254,13 +254,20 @@ public final class SeaTunnelClient {
     requireJobId(jobId);
     JsonNode response = request("GET", "/jobs/checkpoints/" + jobId, null, false, requestTimeout);
     JsonNode pipelines = response.path("pipelines");
-    if (!pipelines.isArray() || pipelines.isEmpty()) {
+    if (!response.isObject()
+        || !response.path("jobId").isTextual()
+        || !jobId.equals(response.path("jobId").textValue())
+        || !pipelines.isArray()
+        || pipelines.isEmpty()) {
       return false;
     }
     for (JsonNode pipeline : pipelines) {
       JsonNode savepoint = pipeline.path("latestSavepoint");
       if (!"COMPLETED".equals(savepoint.path("status").asText())
-          || !"savepoint".equalsIgnoreCase(savepoint.path("checkpointType").asText())) {
+          || !"savepoint".equalsIgnoreCase(savepoint.path("checkpointType").asText())
+          || !savepoint.path("completedTimestamp").isIntegralNumber()
+          || !savepoint.path("completedTimestamp").canConvertToLong()
+          || savepoint.path("completedTimestamp").longValue() < 0) {
         return false;
       }
     }

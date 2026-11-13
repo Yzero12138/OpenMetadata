@@ -312,6 +312,66 @@ class SqlT1ServiceTest {
   }
 
   @Test
+  void sqlManualAndScheduledRunsBlockOtherTargetWritersWithoutAdvancingCursor() {
+    var task = service.create(input(true), "admin");
+    task.scheduleState.nextRunAt = Instant.parse("2026-11-10T18:00:00Z").toEpochMilli();
+    store.save(task);
+    var alias = IntegrationCdcExecutionTest.mysqlTargetAlias(service);
+    var blocker =
+        IntegrationCdcExecutionTest.blockingWriter(store, "daily_visits", "SAVEPOINT_DONE");
+    blocker.targetConnectionId = alias.id;
+    store.save(blocker);
+    String id = task.id;
+    assertEquals(
+        "TARGET_WRITER_ACTIVE",
+        assertThrows(
+                IntegrationException.class,
+                () -> service.run(id, new RunInput(false, "2026-11-10", false), "admin"))
+            .code());
+    long version = store.get(UUID.fromString(id)).version;
+    service.dispatchScheduled(Instant.parse("2026-11-12T00:00:00Z"));
+    var persisted = store.get(UUID.fromString(id));
+    assertEquals(version, persisted.version);
+    assertEquals(task.scheduleState.nextRunAt, persisted.scheduleState.nextRunAt);
+    assertNull(persisted.scheduleState.pendingBusinessDate);
+    assertNull(persisted.scheduleState.lastError);
+    assertNull(persisted.latestRun);
+    assertTrue(submitted.isEmpty());
+  }
+
+  @Test
+  void uncertainSqlRetryAndScheduledRetryPreserveOriginalReservationWhenTargetIsBusy() {
+    var task = service.create(input(true), "admin");
+    task = service.run(task.id, new RunInput(false, "2026-11-01", false), "admin");
+    task.latestRun.status = "SUBMISSION_UNKNOWN";
+    task.latestRun.submittedAt = System.currentTimeMillis() - 60000;
+    store.save(task);
+    String id = task.id;
+    String job = task.latestRun.jobId;
+    long submittedAt = task.latestRun.submittedAt;
+    var alias = IntegrationCdcExecutionTest.mysqlTargetAlias(service);
+    var blocker = IntegrationCdcExecutionTest.blockingWriter(store, "daily_visits", "RUNNING");
+    blocker.targetConnectionId = alias.id;
+    store.save(blocker);
+    when(engine.info(anyString(), any(Duration.class)))
+        .thenThrow(new IntegrationException("JOB_NOT_FOUND", 404));
+    clearInvocations(engine);
+    assertEquals(
+        "TARGET_WRITER_ACTIVE",
+        assertThrows(
+                IntegrationException.class,
+                () -> service.run(id, new RunInput(false, null, true), "admin"))
+            .code());
+    service.dispatchScheduled(Instant.now());
+    var persisted = store.get(UUID.fromString(id));
+    assertEquals(job, persisted.latestRun.jobId);
+    assertEquals("2026-11-01", persisted.latestRun.businessDate);
+    assertEquals(submittedAt, persisted.latestRun.submittedAt);
+    assertEquals(1, persisted.runs.size());
+    assertEquals(0L, submissionCount());
+  }
+
+  @Test
   void atomicStoreRejectsAStaleReservation() {
     var task = service.create(input(false), "admin");
     var second = IntegrationModels.deserialize(IntegrationModels.serialize(task));

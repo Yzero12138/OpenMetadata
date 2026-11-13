@@ -138,13 +138,47 @@ class SeaTunnelClientTest {
         "/jobs/checkpoints/" + JOB_ID,
         exchange -> {
           byte[] response =
-              "{\"pipelines\":[{\"latestSavepoint\":{\"status\":\"COMPLETED\",\"checkpointType\":\"savepoint\"}}]}"
+              ("{\"jobId\":\""
+                      + JOB_ID
+                      + "\",\"pipelines\":[{\"latestSavepoint\":{\"status\":\"COMPLETED\",\"checkpointType\":\"savepoint\",\"completedTimestamp\":1234}}]}")
                   .getBytes(StandardCharsets.UTF_8);
           exchange.sendResponseHeaders(200, response.length);
           exchange.getResponseBody().write(response);
           exchange.close();
         });
     assertEquals("3.0.0", client.version());
+    assertTrue(client.hasCompletedSavepoint(JOB_ID));
+  }
+
+  @Test
+  void resumeEvidenceRequiresExactJobIdentityAndCompletedSavepointTypeAndTimestamp() {
+    var response = new AtomicReference<String>();
+    server.createContext(
+        "/jobs/checkpoints/" + JOB_ID,
+        exchange -> {
+          byte[] body = response.get().getBytes(StandardCharsets.UTF_8);
+          exchange.sendResponseHeaders(200, body.length);
+          exchange.getResponseBody().write(body);
+          exchange.close();
+        });
+    String valid =
+        "{\"jobId\":\""
+            + JOB_ID
+            + "\",\"pipelines\":[{\"latestSavepoint\":{\"status\":\"COMPLETED\",\"checkpointType\":\"savepoint\",\"completedTimestamp\":1234}}]}";
+    for (String malformed :
+        new String[] {
+          valid.replace(JOB_ID, "12345"),
+          valid.replace("\"jobId\":\"" + JOB_ID + "\",", ""),
+          valid.replace("\"" + JOB_ID + "\"", JOB_ID),
+          valid.replace("\"savepoint\"", "\"checkpoint\""),
+          valid.replace("COMPLETED", "IN_PROGRESS"),
+          valid.replace("1234", "-1"),
+          valid.replace(",\"completedTimestamp\":1234", "")
+        }) {
+      response.set(malformed);
+      assertFalse(client.hasCompletedSavepoint(JOB_ID), malformed);
+    }
+    response.set(valid);
     assertTrue(client.hasCompletedSavepoint(JOB_ID));
   }
 

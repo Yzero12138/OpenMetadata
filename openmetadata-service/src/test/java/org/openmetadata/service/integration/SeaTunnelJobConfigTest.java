@@ -20,6 +20,22 @@ import org.openmetadata.service.integration.IntegrationModels.RunSummary;
 
 class SeaTunnelJobConfigTest {
   @Test
+  void legacyPostgresCdcStillRejectsDottedDatabaseNames() {
+    var definition = new ConnectionDefinition();
+    definition.copyInput(IntegrationConnectionsTest.input("Postgres"));
+    definition.database = "source.db";
+    var source = new IntegrationConfiguration.JdbcEndpoint(definition, "secret");
+    var task = task();
+    task.mode = "CDC";
+    var builder =
+        new SeaTunnelJobConfig(
+            id -> task.sourceConnectionId.equals(id) ? source : configuration().endpoint(id));
+    assertEquals(
+        "MODE_UNSUPPORTED",
+        assertThrows(IntegrationException.class, () -> builder.buildLegacyCdc(task, null)).code());
+  }
+
+  @Test
   void legacyPostgresCdcKeepsTheCompletePriorJdbcAndDorisGraphs() throws Exception {
     var task = task();
     task.mode = "CDC";
@@ -494,7 +510,7 @@ class SeaTunnelJobConfigTest {
       if (!type.equals("Postgres")) {
         task.mode = "CDC";
         assertEquals(
-            "MODE_UNSUPPORTED",
+            type.equals("Oracle") ? "CDC_TRUSTED_INSPECTION_REQUIRED" : "MODE_UNSUPPORTED",
             assertThrows(IntegrationException.class, () -> builder.build(task)).code());
       }
     }
