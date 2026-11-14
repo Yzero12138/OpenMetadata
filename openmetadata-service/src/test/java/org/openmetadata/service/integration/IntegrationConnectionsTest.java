@@ -142,7 +142,9 @@ class IntegrationConnectionsTest {
       assertFalse(endpoint.jdbcUrl().contains(input.password));
       assertFalse(endpoint.jdbcUrl().contains(input.username));
       assertEquals(
-          List.of("Postgres", "Oracle").contains(type) ? List.of("FULL", "CDC") : List.of("FULL"),
+          List.of("Postgres", "Oracle", "Mssql").contains(type)
+              ? List.of("FULL", "CDC")
+              : List.of("FULL"),
           created.supportedModes);
       assertEquals(
           type.equals("Mysql") ? "`patient`" : type.equals("Mssql") ? "[patient]" : "\"patient\"",

@@ -10,7 +10,9 @@ public final class CdcAdapters {
           JdbcDialect.Postgres,
           new PostgresCdcAdapter(),
           JdbcDialect.Oracle,
-          new OracleCdcAdapter());
+          new OracleCdcAdapter(),
+          JdbcDialect.Mssql,
+          new SqlServerCdcAdapter());
 
   private CdcAdapters() {}
 
@@ -36,6 +38,9 @@ public final class CdcAdapters {
     }
     if ("Oracle".equals(input.databaseType)) {
       return supportedModes(JdbcDialect.Oracle);
+    }
+    if ("Mssql".equals(input.databaseType)) {
+      return supportedModes(JdbcDialect.Mssql);
     }
     if ("Postgres".equals(input.databaseType)
         && input.database != null

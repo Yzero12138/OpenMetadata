@@ -56,7 +56,16 @@ public final class IntegrationCdcPreflight {
       CdcPreflightResult result,
       TableDefinition source,
       TableDefinition target,
-      List<FieldMapping> mappings) {
+      List<FieldMapping> mappings,
+      SqlServerCaptureIdentity sqlServerIdentity) {
+    public Inspection(
+        CdcPreflightResult result,
+        TableDefinition source,
+        TableDefinition target,
+        List<FieldMapping> mappings) {
+      this(result, source, target, mappings, null);
+    }
+
     public Inspection {
       source = snapshot(source);
       target = snapshot(target);
@@ -135,9 +144,78 @@ public final class IntegrationCdcPreflight {
     }
     engine(checks, CdcAdapters.require(endpoint.dialect()).pluginName());
     add(checks, "engine-network", "UNKNOWN", "ENGINE_SOURCE_NETWORK_UNVERIFIED", false);
-    return endpoint.dialect() == JdbcDialect.Oracle
-        ? oracle(connectionId, endpoint, input, requestedMappings, requestedKey, checks)
-        : postgres(connectionId, endpoint, input, requestedMappings, requestedKey, checks);
+    return switch (endpoint.dialect()) {
+      case Oracle -> oracle(connectionId, endpoint, input, requestedMappings, requestedKey, checks);
+      case Mssql -> sqlServer(
+          connectionId, endpoint, input, requestedMappings, requestedKey, checks);
+      default -> postgres(connectionId, endpoint, input, requestedMappings, requestedKey, checks);
+    };
+  }
+
+  private Inspection sqlServer(
+      String connectionId,
+      JdbcEndpoint endpoint,
+      CdcPreflightInput input,
+      List<FieldMapping> requestedMappings,
+      String requestedKey,
+      List<CdcCheck> checks) {
+    SqlServerCdcAdapter.validateOptions(input.cdc());
+    if (input.targetConnectionId() != null) {
+      JdbcEndpoint targetEndpoint = endpoints.apply(input.targetConnectionId());
+      if (targetEndpoint == null) {
+        throw new IntegrationException("CONNECTION_NOT_FOUND", 404);
+      }
+      if (!targetEndpoint.schemas().contains(input.targetSchema())) {
+        throw new IntegrationException("SCHEMA_NOT_ALLOWED", 400);
+      }
+    }
+    add(checks, "runtime-certification", "UNKNOWN", "MSSQL_CDC_RUNTIME_UNVERIFIED", false);
+    try {
+      SqlServerCdcAdapter.requireRoute(endpoint);
+      add(checks, "source-route", "PASS", "MSSQL_CDC_ROUTE_PROVEN", true);
+    } catch (IntegrationException e) {
+      add(checks, "source-route", "FAIL", "MSSQL_CDC_ROUTE_UNSUPPORTED", true);
+      return inspection(connectionId, endpoint, null, null, true, checks, null, null, List.of());
+    }
+    long deadline = System.nanoTime() + 20_000_000_000L;
+    SqlServerCdcPreflight.Evidence evidence =
+        new SqlServerCdcPreflight.Evidence(null, null, null, List.of(), null);
+    try (Connection connection = open(endpoint)) {
+      evidence =
+          new SqlServerCdcPreflight(
+                  new SqlServerCdcMetadata(connection, deadline), checks, endpoint.database())
+              .inspect(input, requestedMappings, requestedKey);
+    } catch (SQLException e) {
+      add(checks, "source-connection", "UNKNOWN", "CDC_SOURCE_METADATA_UNVERIFIED", true);
+    }
+    TableDefinition target =
+        input.targetConnectionId() == null
+            ? null
+            : target(
+                checks,
+                connectionId,
+                endpoint,
+                input,
+                evidence.source(),
+                evidence.mappings(),
+                requestedKey);
+    var inspected =
+        inspection(
+            connectionId,
+            endpoint,
+            evidence.version(),
+            evidence.database(),
+            true,
+            checks,
+            evidence.source(),
+            target,
+            evidence.mappings());
+    return new Inspection(
+        inspected.result(),
+        inspected.source(),
+        inspected.target(),
+        inspected.mappings(),
+        evidence.identity());
   }
 
   private Inspection oracle(
@@ -342,9 +420,17 @@ public final class IntegrationCdcPreflight {
         add(checks, "target-mapping", "UNKNOWN", "CDC_TARGET_METADATA_UNVERIFIED", true);
         return target;
       }
-      if (sourceEndpoint.dialect() == JdbcDialect.Oracle
+      if ((sourceEndpoint.dialect() == JdbcDialect.Oracle
+              || sourceEndpoint.dialect() == JdbcDialect.Mssql)
           && endpoint.dialect() != JdbcDialect.Doris) {
-        add(checks, "target-mapping", "FAIL", "ORACLE_CDC_TARGET_UNSUPPORTED", true);
+        add(
+            checks,
+            "target-mapping",
+            "FAIL",
+            sourceEndpoint.dialect() == JdbcDialect.Mssql
+                ? "MSSQL_CDC_TARGET_UNSUPPORTED"
+                : "ORACLE_CDC_TARGET_UNSUPPORTED",
+            true);
         return target;
       }
       TaskInput validation = new TaskInput();
@@ -367,10 +453,18 @@ public final class IntegrationCdcPreflight {
       validation.fieldMappings = mappings;
       Set<String> mapped = new HashSet<>();
       mappings.forEach(mapping -> mapped.add(mapping.target()));
-      if (sourceEndpoint.dialect() == JdbcDialect.Oracle
+      if ((sourceEndpoint.dialect() == JdbcDialect.Oracle
+              || sourceEndpoint.dialect() == JdbcDialect.Mssql)
           && !mapped.equals(
               new HashSet<>(target.columns().stream().map(ColumnDefinition::name).toList()))) {
-        add(checks, "target-mapping", "FAIL", "ORACLE_CDC_TARGET_PROJECTION_INCOMPLETE", true);
+        add(
+            checks,
+            "target-mapping",
+            "FAIL",
+            sourceEndpoint.dialect() == JdbcDialect.Mssql
+                ? "MSSQL_CDC_TARGET_PROJECTION_INCOMPLETE"
+                : "ORACLE_CDC_TARGET_PROJECTION_INCOMPLETE",
+            true);
       } else {
         boolean valid = IntegrationValidator.validateTables(validation, source, target).valid();
         add(

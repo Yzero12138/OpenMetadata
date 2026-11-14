@@ -194,7 +194,12 @@ public final class IntegrationValidator {
             "fieldMappings",
             "COLUMN_NOT_FOUND",
             "Each mapped column must exist in its selected table.");
-      } else if (!compatible(from, to)
+      } else if (("CDC".equals(input.mode)
+              && from.inspectedDialect() == JdbcDialect.Mssql
+              && "tinyint".equalsIgnoreCase(from.dataType())
+              && to.inspectedDialect() == JdbcDialect.Doris
+              && to.jdbcType() == Types.TINYINT)
+          || !compatible(from, to)
           || (from.nullable()
               && !to.nullable()
               && !(sql && from.name().equals(input.primaryKey)))) {

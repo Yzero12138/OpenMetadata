@@ -286,8 +286,8 @@ class CdcAdaptersTest {
     assertFalse(source.containsKey("schema"));
     assertEquals(1200, source.get("snapshot.fetch.size"));
     assertEquals(9000, source.get("snapshot.split.size"));
-    assertCode("MODE_UNSUPPORTED", () -> CdcAdapters.require(JdbcDialect.Mssql));
-    assertEquals(List.of("FULL"), JdbcDialect.Mssql.supportedModes());
+    assertCode("MODE_UNSUPPORTED", () -> CdcAdapters.require(JdbcDialect.Mysql));
+    assertEquals(List.of("FULL"), JdbcDialect.Mysql.supportedModes());
     assertEquals(List.of("FULL", "CDC"), JdbcDialect.Oracle.supportedModes());
   }
 

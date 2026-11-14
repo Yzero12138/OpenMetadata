@@ -650,9 +650,9 @@ class IntegrationCdcPreflightTest {
   }
 
   @Test
-  void sqlServerRemainsFullOnlyWithoutSourceQueries() {
+  void mysqlRemainsFullOnlyWithoutSourceQueries() {
     var fixture = new OracleFixture();
-    fixture.source = endpoint("Mssql");
+    fixture.source = endpoint("Mysql");
     var result = fixture.preflight().check("synthetic-source", input(List.of("ID")));
     assertFalse(result.implemented());
     assertFalse(result.ready());

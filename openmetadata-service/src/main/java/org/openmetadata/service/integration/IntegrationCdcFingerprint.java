@@ -19,7 +19,10 @@ final class IntegrationCdcFingerprint {
     try {
       var bytes = new ByteArrayOutputStream();
       var data = new DataOutputStream(bytes);
-      value(data, "CDC_GRAPH_V1");
+      boolean sqlServer = source.dialect() == JdbcDialect.Mssql;
+      SqlServerCaptureIdentity identity =
+          sqlServer ? SqlServerCaptureIdentity.require(inspection) : null;
+      value(data, sqlServer ? "CDC_GRAPH_MSSQL_V1" : "CDC_GRAPH_V1");
       value(data, task.id);
       route(data, source);
       route(data, target);
@@ -45,6 +48,28 @@ final class IntegrationCdcFingerprint {
       for (var mapping : inspection.mappings()) {
         value(data, mapping.source());
         value(data, mapping.target());
+      }
+      if (identity != null) {
+        value(data, identity.databaseName());
+        value(data, identity.databaseId());
+        value(data, identity.databaseCreateDate());
+        value(data, identity.schema());
+        value(data, identity.table());
+        value(data, identity.sourceObjectId());
+        value(data, identity.captureObjectId());
+        value(data, identity.captureSourceObjectId());
+        value(data, identity.captureName());
+        value(data, identity.captureCreateDate());
+        value(data, identity.roleName());
+        value(data, identity.indexName());
+        data.writeInt(identity.columns().size());
+        for (var column : identity.columns()) {
+          value(data, column.id());
+          value(data, column.name());
+          value(data, column.ordinal());
+          value(data, column.type());
+          value(data, column.computed());
+        }
       }
       data.flush();
       return HexFormat.of()

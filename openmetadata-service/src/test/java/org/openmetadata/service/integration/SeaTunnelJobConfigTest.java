@@ -592,7 +592,9 @@ class SeaTunnelJobConfigTest {
       if (!type.equals("Postgres")) {
         task.mode = "CDC";
         assertEquals(
-            type.equals("Oracle") ? "CDC_TRUSTED_INSPECTION_REQUIRED" : "MODE_UNSUPPORTED",
+            List.of("Oracle", "Mssql").contains(type)
+                ? "CDC_TRUSTED_INSPECTION_REQUIRED"
+                : "MODE_UNSUPPORTED",
             assertThrows(IntegrationException.class, () -> builder.build(task)).code());
       }
     }

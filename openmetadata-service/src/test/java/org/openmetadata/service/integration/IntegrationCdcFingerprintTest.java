@@ -27,6 +27,22 @@ class IntegrationCdcFingerprintTest {
   private final Inspection inspection = inspection("HISDB", columns(), targetColumns());
 
   @Test
+  void preservesOracleV1FingerprintBytes() {
+    assertEquals(
+        "1d6c9e955dbbd0aad86b6f2372769e050432e90190be0afc2dc16fe2e1dcd807",
+        fingerprint(inspection));
+  }
+
+  @Test
+  void preservesPostgresV1FingerprintBytes() {
+    definition.copyInput(IntegrationConnectionsTest.input("Postgres"));
+    assertEquals(
+        "7bd8b44b2aa7fff568cde0022381faf035041a2cac068bcbde72977f8f77d2ec",
+        IntegrationCdcFingerprint.of(
+            task, new JdbcEndpoint(definition, "old-secret"), target, inspection));
+  }
+
+  @Test
   void secretAndConnectionVersionRotationAreStableButUsernameAndRoutesAreBound() {
     String fingerprint = fingerprint(inspection);
     definition.version = 2;

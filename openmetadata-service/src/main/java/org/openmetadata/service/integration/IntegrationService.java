@@ -769,11 +769,14 @@ public final class IntegrationService {
 
   private void validateCdcOptions(TaskInput input) {
     if (input.cdc != null) {
-      if (!"CDC".equals(input.mode)
-          || connections.endpoint(input.sourceConnectionId).dialect() != JdbcDialect.Oracle) {
+      if (!"CDC".equals(input.mode)) {
         throw new IntegrationException("INVALID_CONFIGURATION", 400);
       }
-      IntegrationCdcPreflight.validateOracleOptions(input.cdc);
+      switch (connections.endpoint(input.sourceConnectionId).dialect()) {
+        case Oracle -> IntegrationCdcPreflight.validateOracleOptions(input.cdc);
+        case Mssql -> SqlServerCdcAdapter.validateOptions(input.cdc);
+        default -> throw new IntegrationException("INVALID_CONFIGURATION", 400);
+      }
     }
   }
 

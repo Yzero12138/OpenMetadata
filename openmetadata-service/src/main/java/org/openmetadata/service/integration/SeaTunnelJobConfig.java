@@ -69,7 +69,8 @@ public final class SeaTunnelJobConfig {
     }
     if (cdc
         && !legacyCdc
-        && sourceConnection.dialect() == JdbcDialect.Oracle
+        && (sourceConnection.dialect() == JdbcDialect.Oracle
+            || sourceConnection.dialect() == JdbcDialect.Mssql)
         && inspection == null) {
       throw new IntegrationException("CDC_TRUSTED_INSPECTION_REQUIRED", 400);
     }
@@ -86,6 +87,22 @@ public final class SeaTunnelJobConfig {
             || !task.targetTable.equals(inspection.target().name())
             || !task.fieldMappings.equals(inspection.mappings()))) {
       throw new IntegrationException("CDC_TRUSTED_INSPECTION_REQUIRED", 400);
+    }
+    if (cdc && sourceConnection.dialect() == JdbcDialect.Mssql) {
+      SqlServerCaptureIdentity.require(inspection);
+      if (targetConnection.dialect() != JdbcDialect.Doris
+          || !IntegrationValidator.validateTables(task, inspection.source(), inspection.target())
+              .valid()) {
+        throw new IntegrationException("CDC_PREFLIGHT_FAILED", 409);
+      }
+      Set<String> mapped =
+          task.fieldMappings.stream().map(FieldMapping::target).collect(Collectors.toSet());
+      if (!mapped.equals(
+          inspection.target().columns().stream()
+              .map(column -> column.name())
+              .collect(Collectors.toSet()))) {
+        throw new IntegrationException("MSSQL_CDC_TARGET_PROJECTION_INCOMPLETE", 400);
+      }
     }
     if (!sourceConnection.schemas().contains(task.sourceSchema)
         || !targetConnection.schemas().contains(task.targetSchema)) {
