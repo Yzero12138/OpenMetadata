@@ -1,0 +1,20 @@
+[
+  {
+    "coordinate": "org.apache.seatunnel:connector-cdc-oracle:3.0.0",
+    "file": "connector-cdc-oracle-3.0.0.jar",
+    "bytes": 31590975,
+    "sha256": "a9333a2f03c9207ba7a5a96cc839831000c000343a50473942338c7686f1df4f",
+    "sha1": "f33f56cd8ad2625ad91e634b93fe96ef8f24e6a5",
+    "url": "https://repo.maven.apache.org/maven2/org/apache/seatunnel/connector-cdc-oracle/3.0.0/connector-cdc-oracle-3.0.0.jar",
+    "sha1Url": "https://repo.maven.apache.org/maven2/org/apache/seatunnel/connector-cdc-oracle/3.0.0/connector-cdc-oracle-3.0.0.jar.sha1"
+  },
+  {
+    "coordinate": "org.apache.seatunnel:connector-cdc-sqlserver:3.0.0",
+    "file": "connector-cdc-sqlserver-3.0.0.jar",
+    "bytes": 12484442,
+    "sha256": "85bb3d911e5f387e4c5570868914928fc674b9cee2acaee603505450a4b876de",
+    "sha1": "0e06e20e9510915b5e90eabc077bcfb6ce777368",
+    "url": "https://repo.maven.apache.org/maven2/org/apache/seatunnel/connector-cdc-sqlserver/3.0.0/connector-cdc-sqlserver-3.0.0.jar",
+    "sha1Url": "https://repo.maven.apache.org/maven2/org/apache/seatunnel/connector-cdc-sqlserver/3.0.0/connector-cdc-sqlserver-3.0.0.jar.sha1"
+  }
+]
