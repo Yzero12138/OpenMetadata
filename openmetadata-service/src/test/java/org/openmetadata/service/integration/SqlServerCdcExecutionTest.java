@@ -90,6 +90,18 @@ class SqlServerCdcExecutionTest {
   }
 
   @Test
+  void wrongCatalogCaseOnCiDatabaseNeverSubmitsAnEngineGraph() {
+    var task = service.create(input, "admin");
+    fixture.table.put("table_name", "Orders");
+    assertEquals(
+        "CDC_PREFLIGHT_FAILED",
+        assertThrows(IntegrationException.class, () -> service.run(task.id, false, "admin"))
+            .code());
+    assertTrue(submitted.isEmpty());
+    assertNull(store.get(UUID.fromString(task.id)).latestRun);
+  }
+
+  @Test
   void freshMetadataOnResumeBlocksChangedCaptureWithoutMutatingCheckpointFingerprint() {
     var task = service.run(service.create(input, "admin").id, false, "admin");
     String fingerprint = task.latestRun.configurationFingerprint;

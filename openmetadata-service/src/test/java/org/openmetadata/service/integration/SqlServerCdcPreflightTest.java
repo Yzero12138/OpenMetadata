@@ -328,6 +328,23 @@ class SqlServerCdcPreflightTest {
   }
 
   @Test
+  void tableAndSchemaIdentityUseActualCatalogCaseAndRejectDifferentRequestCase() {
+    for (String field : List.of("schema_name", "table_name")) {
+      var fixture = new Fixture();
+      fixture.table.put(field, field.equals("schema_name") ? "DBO" : "Orders");
+      var inspection = fixture.preflight().inspect(task());
+      check(
+          inspection.result(),
+          "source-identifiers",
+          "FAIL",
+          "MSSQL_CDC_IDENTIFIER_UNSUPPORTED",
+          true);
+      assertEquals(fixture.table.get("schema_name"), inspection.source().schema());
+      assertEquals(fixture.table.get("table_name"), inspection.source().name());
+    }
+  }
+
+  @Test
   void missingPrecisionAndKeyEvidenceRemainUnknownAndInvalidMappingsHaveOneColumnsCheck() {
     var fixture = new Fixture();
     fixture.columns.get(1).put("scale", null);
@@ -439,6 +456,10 @@ class SqlServerCdcPreflightTest {
     final Map<String, Object> adr = row("is_accelerated_database_recovery_on", 0);
     final Map<String, Object> table =
         row(
+            "schema_name",
+            "dbo",
+            "table_name",
+            "ORDERS",
             "object_id",
             100,
             "is_tracked_by_cdc",

@@ -134,7 +134,9 @@ final class SqlServerCdcPreflight {
       return new Evidence(server.text("product_version"), name, null, List.of(), null);
     }
     var table = row(() -> metadata.table(input.schema(), input.table()));
-    if (!positive(table.number("object_id"))) {
+    if (!positive(table.number("object_id"))
+        || !table.known("schema_name")
+        || !table.known("table_name")) {
       unknown("table-metadata", "CDC_TABLE_METADATA_UNVERIFIED");
       return new Evidence(server.text("product_version"), name, null, List.of(), null);
     }
@@ -203,7 +205,8 @@ final class SqlServerCdcPreflight {
                             && column.number("column_id").equals(key.number("column_id"))
                             && Objects.equals(column.text("name"), key.text("name"))))
             .toList();
-    var source = new TableDefinition(input.schema(), input.table(), definitions);
+    var source =
+        new TableDefinition(table.text("schema_name"), table.text("table_name"), definitions);
     List<FieldMapping> mappings =
         requested != null
             ? List.copyOf(requested)
@@ -214,6 +217,9 @@ final class SqlServerCdcPreflight {
     List<ColumnDefinition> selected;
     try {
       SqlServerCdcAdapter.requireIdentifiers(source);
+      if (!input.schema().equals(source.schema()) || !input.table().equals(source.name())) {
+        throw new IntegrationException("MSSQL_CDC_IDENTIFIER_UNSUPPORTED", 400);
+      }
       pass("source-identifiers", "MSSQL_CDC_IDENTIFIERS_PROVEN");
     } catch (IntegrationException e) {
       fail("source-identifiers", "MSSQL_CDC_IDENTIFIER_UNSUPPORTED");
@@ -350,8 +356,8 @@ final class SqlServerCdcPreflight {
               name,
               database.number("database_id"),
               database.time("create_date").toString(),
-              input.schema(),
-              input.table(),
+              source.schema(),
+              source.name(),
               sourceId,
               capture.number("object_id"),
               capture.number("source_object_id"),

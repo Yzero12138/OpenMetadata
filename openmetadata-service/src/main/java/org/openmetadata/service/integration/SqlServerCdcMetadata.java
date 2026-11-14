@@ -47,8 +47,8 @@ final class SqlServerCdcMetadata {
 
   Row table(String schema, String table) throws SQLException {
     return one(
-        "SELECT TOP (1) t.object_id, t.is_tracked_by_cdc, t.is_memory_optimized, t.is_filetable, t.temporal_type, t.is_external, t.is_ms_shipped, CASE WHEN EXISTS (SELECT 1 FROM sys.indexes AS i WHERE i.object_id = t.object_id AND i.type IN (5, 6)) THEN 1 ELSE 0 END AS has_columnstore FROM sys.tables AS t JOIN sys.schemas AS s ON s.schema_id = t.schema_id WHERE s.name = ? AND t.name = ?",
-        "object_id is_tracked_by_cdc is_memory_optimized is_filetable temporal_type is_external is_ms_shipped has_columnstore",
+        "SELECT TOP (1) s.name AS schema_name, t.name AS table_name, t.object_id, t.is_tracked_by_cdc, t.is_memory_optimized, t.is_filetable, t.temporal_type, t.is_external, t.is_ms_shipped, CASE WHEN EXISTS (SELECT 1 FROM sys.indexes AS i WHERE i.object_id = t.object_id AND i.type IN (5, 6)) THEN 1 ELSE 0 END AS has_columnstore FROM sys.tables AS t JOIN sys.schemas AS s ON s.schema_id = t.schema_id WHERE s.name = ? AND t.name = ?",
+        "schema_name table_name object_id is_tracked_by_cdc is_memory_optimized is_filetable temporal_type is_external is_ms_shipped has_columnstore",
         schema,
         table);
   }
