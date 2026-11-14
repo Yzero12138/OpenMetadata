@@ -322,11 +322,9 @@ final class SqlServerCdcPreflight {
         row(
             () ->
                 metadata.permissions(capture.text("role_name"), capture.text("capture_instance")));
-    List<Row> capturedSources =
-        columns.stream().filter(column -> capturedNames.contains(column.text("name"))).toList();
+    // Native initial snapshots use SELECT *, including columns outside the capture instance.
     List<Integer> select =
-        new ArrayList<>(
-            capturedSources.stream().map(column -> column.number("can_select")).toList());
+        new ArrayList<>(columns.stream().map(column -> column.number("can_select")).toList());
     select.add(permission.number("can_select_changes"));
     if (capture.text("role_name") != null
         && !permission.is("is_sysadmin", 1)
@@ -335,7 +333,7 @@ final class SqlServerCdcPreflight {
     permissions(
         permission,
         "metadata-permissions",
-        List.of("can_view_database_state", "can_view_server_state"),
+        List.of("can_view_database_state", "can_view_definition", "can_view_server_state"),
         "MSSQL_CDC_STATE");
     var range = row(() -> metadata.lsn(capture.text("capture_instance")));
     byte[] min = range.bytes("min_lsn");

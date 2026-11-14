@@ -102,6 +102,36 @@ class SqlServerCdcExecutionTest {
   }
 
   @Test
+  void missingDatabaseViewDefinitionNeverSubmitsOrPersistsARun() {
+    var task = service.create(input, "admin");
+    for (Integer permission : new Integer[] {0, null}) {
+      fixture.permissions.put("can_view_definition", permission);
+      assertEquals(
+          "CDC_PREFLIGHT_FAILED",
+          assertThrows(IntegrationException.class, () -> service.run(task.id, false, "admin"))
+              .code());
+      assertTrue(submitted.isEmpty());
+      assertNull(store.get(UUID.fromString(task.id)).latestRun);
+    }
+  }
+
+  @Test
+  void missingSelectOnUncapturedSnapshotColumnNeverSubmitsOrPersistsARun() {
+    var task = service.create(input, "admin");
+    var uncaptured = SqlServerCdcPreflightTest.Fixture.column(3, "UNCAPTURED", "xml", -1, 0, 0, 1);
+    fixture.columns.add(uncaptured);
+    for (Integer permission : new Integer[] {0, null}) {
+      uncaptured.put("can_select", permission);
+      assertEquals(
+          "CDC_PREFLIGHT_FAILED",
+          assertThrows(IntegrationException.class, () -> service.run(task.id, false, "admin"))
+              .code());
+      assertTrue(submitted.isEmpty());
+      assertNull(store.get(UUID.fromString(task.id)).latestRun);
+    }
+  }
+
+  @Test
   void freshMetadataOnResumeBlocksChangedCaptureWithoutMutatingCheckpointFingerprint() {
     var task = service.run(service.create(input, "admin").id, false, "admin");
     String fingerprint = task.latestRun.configurationFingerprint;

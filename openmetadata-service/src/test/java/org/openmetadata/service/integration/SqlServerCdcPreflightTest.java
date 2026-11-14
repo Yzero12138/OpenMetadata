@@ -198,6 +198,39 @@ class SqlServerCdcPreflightTest {
   }
 
   @Test
+  void snapshotPartitionMetadataRequiresEffectiveDatabaseViewDefinition() {
+    for (Integer permission : new Integer[] {0, null}) {
+      var fixture = new Fixture();
+      fixture.permissions.put("can_view_definition", permission);
+      check(
+          fixture.check(),
+          "metadata-permissions",
+          permission == null ? "UNKNOWN" : "FAIL",
+          permission == null ? "MSSQL_CDC_STATE_UNVERIFIED" : "MSSQL_CDC_STATE_DENIED",
+          true);
+    }
+  }
+
+  @Test
+  void nativeInitialSnapshotRequiresSelectOnUncapturedColumnsWithoutExpandingTypeGuards() {
+    var fixture = new Fixture();
+    var uncaptured = Fixture.column(3, "UNCAPTURED", "xml", -1, 0, 0, 1);
+    fixture.columns.add(uncaptured);
+    assertTrue(fixture.check().ready());
+    for (Integer permission : new Integer[] {0, null}) {
+      uncaptured.put("can_select", permission);
+      check(
+          fixture.check(),
+          "source-permissions",
+          permission == null ? "UNKNOWN" : "FAIL",
+          permission == null ? "MSSQL_CDC_SELECT_UNVERIFIED" : "MSSQL_CDC_SELECT_DENIED",
+          true);
+    }
+    uncaptured.put("can_select", 1);
+    assertTrue(fixture.check().ready());
+  }
+
+  @Test
   void agentAndJobsMustBelongToTheCurrentLifetimeAndCleanupMustHaveFutureSchedule() {
     for (String field : List.of("last_startup_time", "status")) {
       var fixture = new Fixture();
@@ -555,6 +588,8 @@ class SqlServerCdcPreflightTest {
             "can_select_changes",
             1,
             "can_view_database_state",
+            1,
+            "can_view_definition",
             1,
             "can_view_server_state",
             1);

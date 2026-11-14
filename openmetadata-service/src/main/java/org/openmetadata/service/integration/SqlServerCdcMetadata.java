@@ -87,8 +87,8 @@ final class SqlServerCdcMetadata {
 
   Row permissions(String role, String capture) throws SQLException {
     return one(
-        "SELECT IS_SRVROLEMEMBER(N'sysadmin') AS is_sysadmin, IS_ROLEMEMBER(N'db_owner') AS is_db_owner, IS_ROLEMEMBER(?) AS is_gating_role_member, HAS_PERMS_BY_NAME(?, N'OBJECT', N'SELECT') AS can_select_changes, HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'VIEW DATABASE STATE') AS can_view_database_state, HAS_PERMS_BY_NAME(NULL, NULL, N'VIEW SERVER STATE') AS can_view_server_state",
-        "is_sysadmin is_db_owner is_gating_role_member can_select_changes can_view_database_state can_view_server_state",
+        "SELECT IS_SRVROLEMEMBER(N'sysadmin') AS is_sysadmin, IS_ROLEMEMBER(N'db_owner') AS is_db_owner, IS_ROLEMEMBER(?) AS is_gating_role_member, HAS_PERMS_BY_NAME(?, N'OBJECT', N'SELECT') AS can_select_changes, HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'VIEW DATABASE STATE') AS can_view_database_state, HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'VIEW DEFINITION') AS can_view_definition, HAS_PERMS_BY_NAME(NULL, NULL, N'VIEW SERVER STATE') AS can_view_server_state",
+        "is_sysadmin is_db_owner is_gating_role_member can_select_changes can_view_database_state can_view_definition can_view_server_state",
         role,
         "[cdc].[fn_cdc_get_all_changes_" + capture.replace("]", "]]") + "]");
   }
