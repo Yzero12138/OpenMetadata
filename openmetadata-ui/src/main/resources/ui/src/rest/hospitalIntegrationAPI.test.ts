@@ -120,6 +120,28 @@ describe('CDC inspection HTTP boundary', () => {
       })
     ).toEqual({ code, conflict: false, uncertain: false });
   });
+
+  it.each([
+    'MSSQL_CDC_OPTIONS_INVALID',
+    'MSSQL_CDC_ROUTE_UNSUPPORTED',
+    'MSSQL_DB_NAME_MISMATCH',
+    'MSSQL_CDC_IDENTIFIER_UNSUPPORTED',
+    'MSSQL_CDC_TYPE_UNSUPPORTED',
+    'MSSQL_CDC_TARGET_PROJECTION_INCOMPLETE',
+  ])(
+    'keeps known SQL Server prerequisite rejection %s out of submission uncertainty',
+    (code) => {
+      expect(
+        getIntegrationFailure({
+          isAxiosError: true,
+          response: {
+            status: 503,
+            data: { code, message: 'private SQL diagnostic' },
+          },
+        })
+      ).toEqual({ code, conflict: false, uncertain: false });
+    }
+  );
 });
 
 describe('Hospital managed connection HTTP boundary', () => {

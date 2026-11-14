@@ -22,6 +22,7 @@ import {
 import { IntegrationSourcePreflightProps } from './HospitalIntegrationPage.interface';
 import { integrationErrorKey } from './HospitalIntegrationUtils';
 import { IntegrationCdcPreflight } from './IntegrationCdcPreflight';
+import { IntegrationMssqlCdcOptions } from './IntegrationMssqlCdcOptions';
 import { IntegrationOracleCdcOptions } from './IntegrationOracleCdcOptions';
 import { useIntegrationScopedRead } from './useIntegrationScopedRead';
 import { useIntegrationTables } from './useIntegrationTables';
@@ -123,6 +124,16 @@ export const IntegrationSourcePreflight = ({
           <section>
             <h2>{t('hospitalCdc.oracleSettings')}</h2>
             <IntegrationOracleCdcOptions
+              disabled={preflight.loading}
+              value={cdc}
+              onChange={setCdc}
+            />
+          </section>
+        )}
+        {connection.databaseType === 'Mssql' && (
+          <section>
+            <h2>{t('hospitalCdc.mssqlSettings')}</h2>
+            <IntegrationMssqlCdcOptions
               disabled={preflight.loading}
               value={cdc}
               onChange={setCdc}

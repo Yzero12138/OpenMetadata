@@ -12,13 +12,13 @@
  */
 import { Input } from '@openmetadata/ui-core-components';
 import { useTranslation } from 'react-i18next';
-import { IntegrationOracleCdcOptionsProps } from './HospitalIntegrationPage.interface';
+import { IntegrationCdcOptionsProps } from './HospitalIntegrationPage.interface';
 
 export const IntegrationOracleCdcOptions = ({
   value,
   disabled,
   onChange,
-}: IntegrationOracleCdcOptionsProps) => {
+}: IntegrationCdcOptionsProps) => {
   const { t } = useTranslation();
 
   return (

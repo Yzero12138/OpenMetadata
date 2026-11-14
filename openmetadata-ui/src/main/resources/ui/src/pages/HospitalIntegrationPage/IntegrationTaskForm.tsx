@@ -38,6 +38,7 @@ import { IntegrationCdcPreflight } from './IntegrationCdcPreflight';
 import { changeIntegrationMode } from './IntegrationCdcUtils';
 import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
 import { IntegrationExecutionSettings } from './IntegrationExecutionSettings';
+import { IntegrationMssqlCdcOptions } from './IntegrationMssqlCdcOptions';
 import { IntegrationOracleCdcOptions } from './IntegrationOracleCdcOptions';
 import { IntegrationTargetTableForm } from './IntegrationTargetTableForm';
 
@@ -176,7 +177,8 @@ export const IntegrationTaskForm = ({
     (mode) =>
       mode !== 'CDC' ||
       sourceConnection?.databaseType === 'Oracle' ||
-      sourceConnection?.databaseType === 'Postgres'
+      sourceConnection?.databaseType === 'Postgres' ||
+      sourceConnection?.databaseType === 'Mssql'
   );
   const modes =
     supportedModes.includes('FULL') && !supportedModes.includes('SQL_T1')
@@ -291,7 +293,8 @@ export const IntegrationTaskForm = ({
                   (connection.supportedModes.includes(value.mode) &&
                     (value.mode !== 'CDC' ||
                       connection.databaseType === 'Oracle' ||
-                      connection.databaseType === 'Postgres')) ||
+                      connection.databaseType === 'Postgres' ||
+                      connection.databaseType === 'Mssql')) ||
                   (value.mode === 'SQL_T1' &&
                     connection.supportedModes.includes('FULL'))
                     ? value.mode
@@ -493,6 +496,18 @@ export const IntegrationTaskForm = ({
             {t('hospitalCdc.oracleSettings')}
           </h2>
           <IntegrationOracleCdcOptions
+            disabled={disabled}
+            value={value.cdc}
+            onChange={(cdc) => onChange({ ...value, cdc })}
+          />
+        </section>
+      )}
+      {value.mode === 'CDC' && sourceConnection?.databaseType === 'Mssql' && (
+        <section aria-labelledby="integration-mssql-options-title">
+          <h2 id="integration-mssql-options-title">
+            {t('hospitalCdc.mssqlSettings')}
+          </h2>
+          <IntegrationMssqlCdcOptions
             disabled={disabled}
             value={value.cdc}
             onChange={(cdc) => onChange({ ...value, cdc })}

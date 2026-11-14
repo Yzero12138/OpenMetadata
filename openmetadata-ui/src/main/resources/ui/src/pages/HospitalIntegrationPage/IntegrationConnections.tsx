@@ -64,7 +64,9 @@ export const IntegrationConnections = ({
           item.role === 'SOURCE' &&
           item.enabled &&
           item.supportedModes.includes('CDC') &&
-          (item.databaseType === 'Oracle' || item.databaseType === 'Postgres')
+          (item.databaseType === 'Oracle' ||
+            item.databaseType === 'Postgres' ||
+            item.databaseType === 'Mssql')
       )
     : undefined;
   const [editor, setEditor] = useState<IntegrationConnection | 'create'>();
@@ -487,7 +489,8 @@ export const IntegrationConnections = ({
                           {connection.role === 'SOURCE' &&
                             connection.supportedModes.includes('CDC') &&
                             (connection.databaseType === 'Oracle' ||
-                              connection.databaseType === 'Postgres') && (
+                              connection.databaseType === 'Postgres' ||
+                              connection.databaseType === 'Mssql') && (
                               <Button
                                 color="link-color"
                                 isDisabled={

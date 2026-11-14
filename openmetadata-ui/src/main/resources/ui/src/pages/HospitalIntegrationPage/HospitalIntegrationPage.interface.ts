@@ -134,7 +134,7 @@ export interface IntegrationExecutionSettingsProps {
   onDraftChange?: (dirty: boolean) => void;
 }
 
-export interface IntegrationOracleCdcOptionsProps {
+export interface IntegrationCdcOptionsProps {
   value?: IntegrationCdcOptions;
   disabled: boolean;
   onChange: (value: IntegrationCdcOptions) => void;

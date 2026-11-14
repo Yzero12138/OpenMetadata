@@ -126,6 +126,16 @@ const businessConnection: api.IntegrationConnection = {
   managed: false,
   synthetic: false,
 };
+const mssqlConnection: api.IntegrationConnection = {
+  ...businessConnection,
+  id: 'mssql-source',
+  name: 'mssql_source',
+  displayName: 'Synthetic SQL Server source',
+  databaseType: 'Mssql',
+  databaseVersion: '2019',
+  database: 'MiXeD_Source',
+  port: 1433,
+};
 
 const task: api.IntegrationTask = {
   id: 'fixture-task',
@@ -215,6 +225,14 @@ const click = async (element: HTMLElement) => {
   await act(async () => {
     fireEvent.click(element);
   });
+};
+const choose = async (id: string, label: string) => {
+  const trigger = document.getElementById(id);
+
+  expect(trigger).toBeDefined();
+
+  await click(trigger!);
+  await click(await screen.findByRole('option', { name: label }));
 };
 const openTask = async () => {
   await click(await screen.findByRole('button', { name: task.displayName }));
@@ -808,6 +826,465 @@ describe('Hospital integration workbench behavior', () => {
     expect(mockApi.getIntegrationTargetCount).not.toHaveBeenCalled();
   });
 
+  it('offers SQL Server CDC only for an advertised, enabled source and keeps other connectors gated', async () => {
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      mssqlConnection,
+      {
+        ...mssqlConnection,
+        id: 'full-only',
+        displayName: 'Full only SQL Server',
+        supportedModes: ['FULL'],
+      },
+      {
+        ...mssqlConnection,
+        id: 'disabled',
+        displayName: 'Disabled SQL Server',
+        enabled: false,
+      },
+      {
+        ...mssqlConnection,
+        id: 'target',
+        displayName: 'Target SQL Server',
+        role: 'TARGET',
+      },
+      {
+        ...mssqlConnection,
+        id: 'mysql',
+        displayName: 'MySQL source',
+        databaseType: 'Mysql',
+      },
+    ]);
+    await renderSources();
+    const action = (id: string) =>
+      within(
+        screen.getByTestId('integration-connection-row-' + id)
+      ).queryByRole('button', { name: 'hospitalCdc.sourcePreflight' });
+
+    expect(action(mssqlConnection.id)).toBeEnabled();
+    expect(action('disabled')).toBeDisabled();
+    expect(action('full-only')).not.toBeInTheDocument();
+    expect(action('target')).not.toBeInTheDocument();
+    expect(action('mysql')).not.toBeInTheDocument();
+  });
+
+  it('discovers the exact SQL Server database without filling the optional hint or exposing Oracle fields', async () => {
+    mockApi.getIntegrationConnections.mockResolvedValue([mssqlConnection]);
+    mockApi.preflightIntegrationConnection.mockResolvedValue({
+      connectionId: mssqlConnection.id,
+      databaseType: 'Mssql',
+      databaseName: 'MiXeD_Source',
+      implemented: true,
+      ready: false,
+      checks: [
+        {
+          id: 'server-time-zone',
+          code: 'MSSQL_TIME_ZONE_REQUIRED',
+          status: 'FAIL',
+          required: true,
+        },
+      ],
+    });
+    await renderSources();
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.sourcePreflight' })
+    );
+    await choose('integration-preflight-source-table', table.name);
+
+    expect(screen.getByText('hospitalCdc.mssqlSettings')).toBeInTheDocument();
+    expect(
+      screen.getByText('hospitalCdc.mssqlDatabaseHint')
+    ).toBeInTheDocument();
+    expect(
+      document.getElementById('integration-cdc-server-time-zone')
+    ).toBeRequired();
+    expect(
+      document.getElementById('integration-cdc-database-name')
+    ).toHaveValue('');
+    expect(
+      document.getElementById('integration-cdc-pdb')
+    ).not.toBeInTheDocument();
+    expect(
+      document.getElementById('integration-cdc-root')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('hospitalCdc.oracleSettings')
+    ).not.toBeInTheDocument();
+
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+
+    expect(mockApi.preflightIntegrationConnection).toHaveBeenLastCalledWith(
+      mssqlConnection.id,
+      { schema: 'public', table: table.name },
+      expect.any(AbortSignal)
+    );
+    expect(
+      within(
+        screen.getByTestId('integration-source-preflight-drawer')
+      ).getByText('MiXeD_Source')
+    ).toBeInTheDocument();
+    expect(
+      document.getElementById('integration-cdc-database-name')
+    ).toHaveValue('');
+    expect(screen.getByText('hospitalCdc.sourceOnly')).toBeInTheDocument();
+    expect(screen.getByText('hospitalCdc.requiredBlocked')).toBeInTheDocument();
+
+    fireEvent.change(
+      document.getElementById('integration-cdc-server-time-zone')!,
+      { target: { value: 'Asia/Shanghai' } }
+    );
+    mockApi.preflightIntegrationConnection.mockResolvedValue({
+      connectionId: mssqlConnection.id,
+      databaseType: 'Mssql',
+      implemented: true,
+      ready: true,
+      checks: [],
+    });
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+
+    expect(mockApi.preflightIntegrationConnection).toHaveBeenLastCalledWith(
+      mssqlConnection.id,
+      {
+        schema: 'public',
+        table: table.name,
+        cdc: { serverTimeZone: 'Asia/Shanghai' },
+      },
+      expect.any(AbortSignal)
+    );
+    expect(mockApi.preflightIntegrationTask).not.toHaveBeenCalled();
+    expect(mockApi.runIntegrationTask).not.toHaveBeenCalled();
+  });
+
+  it('saves native SQL Server options with exact database case while required execution checks remain blocked', async () => {
+    const mssqlTask = { ...task, sourceConnectionId: mssqlConnection.id };
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      mssqlConnection,
+      targetConnection,
+    ]);
+    mockApi.getIntegrationTask.mockResolvedValue(mssqlTask);
+    mockApi.preflightIntegrationTask.mockResolvedValue({
+      connectionId: mssqlConnection.id,
+      databaseType: 'Mssql',
+      databaseName: 'MiXeD_Source',
+      implemented: true,
+      ready: false,
+      checks: [
+        {
+          id: 'column-types',
+          code: 'MSSQL_CDC_TYPE_UNSUPPORTED',
+          status: 'FAIL',
+          required: true,
+        },
+      ],
+    });
+    mockApi.updateIntegrationTask.mockImplementation(async (_id, input) => ({
+      ...mssqlTask,
+      ...input,
+    }));
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'hospitalCdc.check' })
+      ).toBeEnabled()
+    );
+
+    expect(document.getElementById('integration-mode')).toHaveTextContent(
+      'hospitalIntegration.cdc'
+    );
+    expect(screen.getByText('hospitalCdc.mssqlSettings')).toBeInTheDocument();
+    expect(
+      screen.queryByText('hospitalCdc.oracleSettings')
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(
+      document.getElementById('integration-cdc-server-time-zone')!,
+      { target: { value: 'Asia/Shanghai' } }
+    );
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+
+    expect(screen.getByText('hospitalCdc.mssqlTypes')).toBeInTheDocument();
+    expect(
+      document.getElementById('integration-cdc-database-name')
+    ).toHaveValue('');
+    expect(mockApi.preflightIntegrationTask).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cdc: { serverTimeZone: 'Asia/Shanghai' } }),
+      expect.any(AbortSignal)
+    );
+
+    fireEvent.change(
+      document.getElementById('integration-cdc-database-name')!,
+      { target: { value: 'MiXeD_Source' } }
+    );
+    await click(screen.getByRole('button', { name: 'label.save' }));
+
+    expect(mockApi.updateIntegrationTask).toHaveBeenCalledWith(
+      task.id,
+      expect.objectContaining({
+        mode: 'CDC',
+        cdc: { databaseName: 'MiXeD_Source', serverTimeZone: 'Asia/Shanghai' },
+      }),
+      task.version
+    );
+    expect(mockApi.runIntegrationTask).not.toHaveBeenCalled();
+
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+
+    expect(
+      document.getElementById('integration-cdc-database-name')
+    ).toHaveValue('MiXeD_Source');
+    expect(
+      document.getElementById('integration-cdc-server-time-zone')
+    ).toHaveValue('Asia/Shanghai');
+  });
+
+  it('preserves CDC when switching to an advertised SQL Server source and clears all previous Oracle options', async () => {
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      { ...sourceConnection, databaseType: 'Oracle' },
+      mssqlConnection,
+      targetConnection,
+    ]);
+    mockApi.getIntegrationTask.mockResolvedValue({
+      ...task,
+      cdc: {
+        databaseName: 'ORCL',
+        serverTimeZone: 'UTC',
+        pdbName: 'PDB1',
+        rootServiceName: 'ROOT',
+      },
+    });
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await choose('integration-source-connection', mssqlConnection.displayName);
+
+    expect(document.getElementById('integration-mode')).toHaveTextContent(
+      'hospitalIntegration.cdc'
+    );
+    expect(
+      document.getElementById('integration-cdc-database-name')
+    ).toHaveValue('');
+    expect(
+      document.getElementById('integration-cdc-server-time-zone')
+    ).toHaveValue('');
+    expect(
+      document.getElementById('integration-cdc-pdb')
+    ).not.toBeInTheDocument();
+    expect(
+      document.getElementById('integration-cdc-root')
+    ).not.toBeInTheDocument();
+    expect(
+      document.getElementById('integration-source-table')
+    ).not.toHaveTextContent(table.name);
+    expect(
+      document.getElementById('integration-target-table')
+    ).toHaveTextContent(table.name);
+
+    await choose('integration-source-connection', sourceConnection.displayName);
+
+    expect(
+      document.getElementById('integration-cdc-database-name')
+    ).toHaveValue('');
+    expect(
+      document.getElementById('integration-cdc-server-time-zone')
+    ).toHaveValue('');
+    expect(
+      document.getElementById('integration-cdc-pdb')
+    ).not.toBeInTheDocument();
+  });
+
+  it('allows a valid SQL Server CDC draft to omit the execution time zone', async () => {
+    const mssqlTask = { ...task, sourceConnectionId: mssqlConnection.id };
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      mssqlConnection,
+      targetConnection,
+    ]);
+    mockApi.getIntegrationTask.mockResolvedValue(mssqlTask);
+    mockApi.preflightIntegrationTask.mockResolvedValue({
+      connectionId: mssqlConnection.id,
+      databaseType: 'Mssql',
+      implemented: true,
+      ready: false,
+      checks: [
+        {
+          id: 'server-time-zone',
+          code: 'MSSQL_TIME_ZONE_REQUIRED',
+          status: 'FAIL',
+          required: true,
+        },
+      ],
+    });
+    mockApi.updateIntegrationTask.mockResolvedValue(mssqlTask);
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'hospitalCdc.check' })
+      ).toBeEnabled()
+    );
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+
+    expect(screen.getByText('hospitalCdc.requiredBlocked')).toBeInTheDocument();
+    expect(
+      document.getElementById('integration-cdc-server-time-zone')
+    ).toHaveValue('');
+
+    await click(screen.getByRole('button', { name: 'label.save' }));
+
+    expect(mockApi.updateIntegrationTask).toHaveBeenCalledWith(
+      task.id,
+      expect.objectContaining({ mode: 'CDC' }),
+      task.version
+    );
+    expect(mockApi.updateIntegrationTask.mock.calls[0][1].cdc).toBeUndefined();
+    expect(mockApi.runIntegrationTask).not.toHaveBeenCalled();
+  });
+
+  it('does not resurrect SQL Server proof after changing the database hint away and back', async () => {
+    const mssqlTask = {
+      ...task,
+      sourceConnectionId: mssqlConnection.id,
+      cdc: { databaseName: 'MiXeD_Source', serverTimeZone: 'Asia/Shanghai' },
+    };
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      mssqlConnection,
+      targetConnection,
+    ]);
+    mockApi.getIntegrationTask.mockResolvedValue(mssqlTask);
+    mockApi.preflightIntegrationTask.mockResolvedValue({
+      connectionId: mssqlConnection.id,
+      databaseType: 'Mssql',
+      implemented: true,
+      ready: true,
+      checks: [],
+    });
+    await renderWorkspace();
+    await openTask();
+    await click(screen.getByRole('button', { name: 'label.edit' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'hospitalCdc.check' })
+      ).toBeEnabled()
+    );
+    await click(screen.getByRole('button', { name: 'hospitalCdc.check' }));
+
+    const drawer = within(screen.getByTestId('integration-task-drawer'));
+
+    expect(drawer.getByText('hospitalCdc.ready')).toBeInTheDocument();
+
+    fireEvent.change(
+      document.getElementById('integration-cdc-database-name')!,
+      { target: { value: 'Other_Source' } }
+    );
+    fireEvent.change(
+      document.getElementById('integration-cdc-database-name')!,
+      { target: { value: 'MiXeD_Source' } }
+    );
+
+    expect(drawer.queryByText('hospitalCdc.ready')).not.toBeInTheDocument();
+    expect(drawer.getByText('hospitalCdc.checkRequired')).toBeInTheDocument();
+    expect(mockApi.preflightIntegrationTask).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks a SQL Server run when the fresh server preflight cannot prove metadata visibility', async () => {
+    mockApi.getIntegrationConnections.mockResolvedValue([
+      mssqlConnection,
+      targetConnection,
+    ]);
+    mockApi.getIntegrationTask.mockResolvedValue({
+      ...task,
+      sourceConnectionId: mssqlConnection.id,
+    });
+    mockApi.preflightIntegrationTask.mockResolvedValue({
+      connectionId: mssqlConnection.id,
+      databaseType: 'Mssql',
+      implemented: true,
+      ready: true,
+      checks: [],
+    });
+    await renderWorkspace();
+    await openTask();
+    await click(
+      screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+    );
+    await click(screen.getByRole('button', { name: 'label.close' }));
+    mockApi.preflightIntegrationTask.mockResolvedValueOnce({
+      connectionId: mssqlConnection.id,
+      databaseType: 'Mssql',
+      implemented: true,
+      ready: true,
+      checks: [
+        {
+          id: 'metadata-permissions',
+          code: 'MSSQL_CDC_STATE_UNVERIFIED',
+          status: 'UNKNOWN',
+          required: true,
+        },
+      ],
+    });
+    await click(screen.getByRole('button', { name: 'label.run' }));
+
+    expect(mockApi.preflightIntegrationTask).toHaveBeenCalledTimes(2);
+    expect(mockApi.runIntegrationTask).not.toHaveBeenCalled();
+    expect(
+      screen.getByText('hospitalCdc.mssqlStatePermissions')
+    ).toBeInTheDocument();
+    expect(screen.getByText('hospitalCdc.requiredBlocked')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['CDC_CONFIGURATION_CHANGED', 'configurationChanged'],
+    ['CDC_LEGACY_RESUME_UNSAFE', 'legacyResume'],
+  ])(
+    'explains a SQL Server resume rejection %s without exposing SQL diagnostics or inventing a version conflict',
+    async (code, key) => {
+      mockApi.getIntegrationConnections.mockResolvedValue([
+        mssqlConnection,
+        targetConnection,
+      ]);
+      mockApi.getIntegrationTask.mockResolvedValue({
+        ...withRun({ ...finished, status: 'SAVEPOINT_DONE', canResume: true }),
+        sourceConnectionId: mssqlConnection.id,
+      });
+      mockApi.preflightIntegrationTask.mockResolvedValue({
+        connectionId: mssqlConnection.id,
+        databaseType: 'Mssql',
+        implemented: true,
+        ready: true,
+        checks: [],
+      });
+      mockApi.runIntegrationTask.mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          status: 409,
+          data: { code, message: 'Private SQL Server SELECT diagnostic' },
+        },
+      });
+      await renderWorkspace();
+      await openTask();
+      await click(
+        screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+      );
+      await click(screen.getByRole('button', { name: 'label.close' }));
+      await click(screen.getByRole('button', { name: 'label.resume' }));
+
+      expect(mockApi.preflightIntegrationTask).toHaveBeenCalledTimes(2);
+      expect(mockApi.runIntegrationTask).toHaveBeenCalledWith(task.id, true);
+      expect(screen.getByText('hospitalCdc.' + key)).toBeInTheDocument();
+      expect(screen.queryByText(code)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Private SQL Server SELECT diagnostic')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('hospitalIntegration.errors.SUBMISSION_UNKNOWN')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('integration-task-reload')
+      ).not.toBeInTheDocument();
+    }
+  );
+
   it('opens a new task with the actual Doris table chosen from table management', async () => {
     const target: api.IntegrationConnection = {
       ...targetConnection,
@@ -1288,14 +1765,6 @@ describe('Hospital integration workbench behavior', () => {
         screen.getByTestId('integration-connection-row-business-source')
       ).getByRole('button', { name: 'label.edit' })
     );
-  };
-  const choose = async (id: string, label: string) => {
-    const trigger = document.getElementById(id);
-
-    expect(trigger).toBeDefined();
-
-    await click(trigger!);
-    await click(await screen.findByRole('option', { name: label }));
   };
 
   it('keeps the task list mounted behind a native right drawer', async () => {

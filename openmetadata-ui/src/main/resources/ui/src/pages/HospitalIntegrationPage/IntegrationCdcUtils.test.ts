@@ -17,6 +17,7 @@ import {
 } from './HospitalIntegrationUtils';
 import {
   cdcCheckMessageKey,
+  cdcErrorKey,
   cdcPreflightReady,
   changeIntegrationMode,
   integrationTaskPreflightKey,
@@ -42,6 +43,211 @@ const task: IntegrationTask = {
 };
 
 describe('CDC options and inspection identity', () => {
+  it.each(
+    (
+      [
+        ['mssqlRuntime', ['MSSQL_CDC_RUNTIME_UNVERIFIED']],
+        [
+          'mssqlRoute',
+          ['MSSQL_CDC_ROUTE_PROVEN', 'MSSQL_CDC_ROUTE_UNSUPPORTED'],
+        ],
+        [
+          'mssqlVersion',
+          [
+            'MSSQL_CDC_2019_BASELINE',
+            'MSSQL_CDC_EDITION_UNSUPPORTED',
+            'MSSQL_CDC_VERSION_UNCERTIFIED',
+          ],
+        ],
+        [
+          'mssqlDatabaseHint',
+          [
+            'MSSQL_DB_NAME_PROVEN',
+            'MSSQL_DB_NAME_MISMATCH',
+            'MSSQL_DB_NAME_UNVERIFIED',
+          ],
+        ],
+        [
+          'timeZoneHint',
+          ['MSSQL_TIME_ZONE_CONFIGURED', 'MSSQL_TIME_ZONE_REQUIRED'],
+        ],
+        [
+          'mssqlDatabaseCdc',
+          [
+            'MSSQL_DATABASE_CDC_ENABLED',
+            'MSSQL_DATABASE_CDC_DISABLED',
+            'MSSQL_DATABASE_CDC_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlTopology',
+          [
+            'MSSQL_STANDALONE_METADATA_PROVEN',
+            'MSSQL_CDC_TOPOLOGY_UNSUPPORTED',
+            'MSSQL_TOPOLOGY_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlAdr',
+          [
+            'MSSQL_ADR_DISABLED',
+            'MSSQL_CDC_ADR_INCOMPATIBLE',
+            'MSSQL_ADR_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlDatabaseCollation',
+          [
+            'MSSQL_CDC_DATABASE_COLLATION_PROVEN',
+            'MSSQL_CDC_DATABASE_COLLATION_UNSUPPORTED',
+            'MSSQL_CDC_DATABASE_COLLATION_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlNativeMetadata',
+          [
+            'MSSQL_CDC_NATIVE_METADATA_PROVEN',
+            'MSSQL_CDC_NATIVE_METADATA_DENIED',
+            'MSSQL_CDC_NATIVE_METADATA_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlTable',
+          [
+            'MSSQL_TABLE_CDC_ENABLED',
+            'MSSQL_TABLE_CDC_DISABLED',
+            'MSSQL_TABLE_CDC_UNVERIFIED',
+            'MSSQL_CDC_TABLE_KIND_PROVEN',
+            'MSSQL_CDC_TABLE_KIND_UNSUPPORTED',
+            'MSSQL_CDC_TABLE_KIND_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlIdentifiers',
+          ['MSSQL_CDC_IDENTIFIERS_PROVEN', 'MSSQL_CDC_IDENTIFIER_UNSUPPORTED'],
+        ],
+        ['columns', ['MSSQL_CDC_COLUMNS_UNVERIFIED']],
+        ['primaryKey', ['MSSQL_PRIMARY_KEY_UNVERIFIED']],
+        [
+          'mssqlCaptureInstance',
+          [
+            'MSSQL_CAPTURE_INSTANCE_PROVEN',
+            'MSSQL_CAPTURE_INSTANCE_UNSUPPORTED',
+            'MSSQL_CAPTURE_DROP_PENDING',
+            'MSSQL_CAPTURE_INSTANCE_UNVERIFIED',
+            'MSSQL_CAPTURE_IDENTITY_PROVEN',
+            'MSSQL_CAPTURE_IDENTITY_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlCapturedColumns',
+          [
+            'MSSQL_CAPTURED_COLUMNS_PROVEN',
+            'MSSQL_CAPTURED_COLUMNS_INCOMPLETE',
+            'MSSQL_CAPTURED_COLUMNS_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlTypes',
+          [
+            'MSSQL_CDC_TYPES_PROVEN',
+            'MSSQL_CDC_TYPE_UNSUPPORTED',
+            'MSSQL_CDC_TYPES_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlColumnCollation',
+          [
+            'MSSQL_CDC_COLLATION_PROVEN',
+            'MSSQL_CDC_COLLATION_RISK',
+            'MSSQL_CDC_COLLATION_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlPermissions',
+          [
+            'MSSQL_CDC_SELECT_PROVEN',
+            'MSSQL_CDC_SELECT_DENIED',
+            'MSSQL_CDC_SELECT_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlStatePermissions',
+          [
+            'MSSQL_CDC_STATE_PROVEN',
+            'MSSQL_CDC_STATE_DENIED',
+            'MSSQL_CDC_STATE_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlAgent',
+          [
+            'MSSQL_AGENT_RUNNING',
+            'MSSQL_AGENT_NOT_RUNNING',
+            'MSSQL_AGENT_STATE_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlCaptureJob',
+          [
+            'MSSQL_CAPTURE_JOB_RUNNING',
+            'MSSQL_CAPTURE_JOB_UNAVAILABLE',
+            'MSSQL_CAPTURE_JOB_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlCleanup',
+          [
+            'MSSQL_CLEANUP_RETENTION_CONFIGURED',
+            'MSSQL_CLEANUP_RETENTION_INVALID',
+            'MSSQL_CLEANUP_RETENTION_UNVERIFIED',
+          ],
+        ],
+        [
+          'mssqlLsnRange',
+          ['MSSQL_CDC_LSN_RANGE_AVAILABLE', 'MSSQL_CDC_LSN_RANGE_UNAVAILABLE'],
+        ],
+        [
+          'mssqlHealth',
+          [
+            'MSSQL_CDC_CURRENT_SCAN_NO_ERRORS',
+            'MSSQL_CDC_CURRENT_SCAN_ERRORS',
+            'MSSQL_CDC_CAPTURE_HEALTH_UNVERIFIED',
+          ],
+        ],
+        ['targetMapping', ['MSSQL_CDC_TARGET_UNSUPPORTED']],
+        ['targetProjection', ['MSSQL_CDC_TARGET_PROJECTION_INCOMPLETE']],
+      ] as const
+    ).flatMap(([key, codes]) => codes.map((code) => [code, key]))
+  )(
+    'explains native SQL Server check %s without Oracle-specific guidance',
+    (code, key) => {
+      expect(cdcCheckMessageKey(code)).toBe('hospitalCdc.' + key);
+    }
+  );
+
+  it.each([
+    ['MSSQL_CDC_OPTIONS_INVALID', 'mssqlOptions'],
+    ['MSSQL_CDC_ROUTE_UNSUPPORTED', 'mssqlRoute'],
+    ['MSSQL_DB_NAME_MISMATCH', 'mssqlDatabaseHint'],
+    ['MSSQL_CDC_IDENTIFIER_UNSUPPORTED', 'mssqlIdentifiers'],
+    ['MSSQL_CDC_TYPE_UNSUPPORTED', 'mssqlTypes'],
+    ['MSSQL_CDC_TARGET_PROJECTION_INCOMPLETE', 'targetProjection'],
+    ['CDC_TRUSTED_INSPECTION_REQUIRED', 'requiredBlocked'],
+    ['CDC_PREFLIGHT_FAILED', 'requiredBlocked'],
+    ['CDC_CONFIGURATION_CHANGED', 'configurationChanged'],
+    ['CDC_LEGACY_RESUME_UNSAFE', 'legacyResume'],
+  ])('explains SQL Server action rejection %s safely', (code, key) => {
+    expect(cdcErrorKey(code)).toBe('hospitalCdc.' + key);
+  });
+
+  it('keeps an unknown SQL Server code behind the safe fallback', () => {
+    expect(cdcCheckMessageKey('MSSQL_FUTURE_SQL_ERROR')).toBe(
+      'hospitalCdc.unknownCheck'
+    );
+    expect(cdcErrorKey('MSSQL_FUTURE_SQL_ERROR')).toBeUndefined();
+  });
+
   it.each([
     ['EXECUTE_GRANT_PROVEN', 'packageExecute'],
     ['EXECUTE_GRANT_UNVERIFIED', 'packageExecute'],
