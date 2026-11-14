@@ -6,6 +6,12 @@
     "driver": "oracle.jdbc.OracleDriver"
   },
   {
+    "url": "https://repo.maven.apache.org/maven2/com/oracle/database/nls/orai18n/19.32.0.0/orai18n-19.32.0.0.jar",
+    "file": "orai18n-19.32.0.0.jar",
+    "sha256": "b709d6cee59d23658b4dbd66cd1088b65380b43c68678bc107f2a1a5cd112c56",
+    "kind": "charset"
+  },
+  {
     "url": "https://repo.maven.apache.org/maven2/com/microsoft/sqlserver/mssql-jdbc/13.6.0.jre11/mssql-jdbc-13.6.0.jre11.jar",
     "file": "mssql-jdbc-13.6.0.jre11.jar",
     "sha256": "4c566e4022c4dcf1489aeb639fe49a0f6ffae3d796fdc2f56b5b8882d4c3bf5a",

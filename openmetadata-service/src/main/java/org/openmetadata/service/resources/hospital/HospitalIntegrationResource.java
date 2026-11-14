@@ -20,13 +20,19 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.function.Supplier;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.integration.DorisTableDesignModels.DorisAddColumnsInput;
+import org.openmetadata.service.integration.DorisTableDesignModels.DorisTableDesignInput;
 import org.openmetadata.service.integration.EntityExtensionTaskStore;
+import org.openmetadata.service.integration.IntegrationCdcModels.CdcPreflightInput;
 import org.openmetadata.service.integration.IntegrationConfiguration;
 import org.openmetadata.service.integration.IntegrationException;
 import org.openmetadata.service.integration.IntegrationModels;
 import org.openmetadata.service.integration.IntegrationModels.ConnectionUpdate;
+import org.openmetadata.service.integration.IntegrationModels.InitializationInput;
+import org.openmetadata.service.integration.IntegrationModels.QuerySchemaInput;
 import org.openmetadata.service.integration.IntegrationModels.RunInput;
 import org.openmetadata.service.integration.IntegrationModels.StopInput;
+import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
 import org.openmetadata.service.integration.IntegrationModels.UpdateInput;
 import org.openmetadata.service.integration.IntegrationService;
 import org.openmetadata.service.resources.Collection;
@@ -125,6 +131,21 @@ public final class HospitalIntegrationResource {
     return respond(() -> Response.ok(service.testConnection(id)).build());
   }
 
+  @POST
+  @Path("/connections/{id}/cdc-preflight")
+  public Response cdcPreflight(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.cdcPreflight(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), CdcPreflightInput.class)))
+                .build());
+  }
+
   @GET
   @Path("/connections/{id}/tables")
   public Response tables(@Context SecurityContext securityContext, @PathParam("id") String id) {
@@ -155,6 +176,136 @@ public final class HospitalIntegrationResource {
     return respond(() -> Response.ok(service.table(id, schema, table)).build());
   }
 
+  @POST
+  @Path("/query/schema")
+  public Response querySchema(@Context SecurityContext securityContext, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.querySchema(
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), QuerySchemaInput.class)))
+                .build());
+  }
+
+  @POST
+  @Path("/connections/{id}/tables/preview")
+  public Response previewTargetTable(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.previewTargetTable(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), TargetTableInput.class)))
+                .build());
+  }
+
+  @POST
+  @Path("/connections/{id}/tables")
+  public Response createTargetTable(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.status(Response.Status.CREATED)
+                .entity(
+                    service.createTargetTable(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), TargetTableInput.class)))
+                .build());
+  }
+
+  @GET
+  @Path("/connections/{id}/tables/{schema}/{table}/structure")
+  public Response targetTableStructure(
+      @Context SecurityContext securityContext,
+      @PathParam("id") String id,
+      @PathParam("schema") String schema,
+      @PathParam("table") String table) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(() -> Response.ok(service.targetTableStructure(id, schema, table)).build());
+  }
+
+  @POST
+  @Path("/connections/{id}/table-design/preview")
+  public Response previewDesignedTargetTable(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.previewDesignedTargetTable(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), DorisTableDesignInput.class)))
+                .build());
+  }
+
+  @POST
+  @Path("/connections/{id}/table-design")
+  public Response createDesignedTargetTable(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.status(Response.Status.CREATED)
+                .entity(
+                    service.createDesignedTargetTable(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), DorisTableDesignInput.class),
+                        actor(securityContext)))
+                .build());
+  }
+
+  @POST
+  @Path("/connections/{id}/tables/{schema}/{table}/columns/preview")
+  public Response previewTargetTableColumns(
+      @Context SecurityContext securityContext,
+      @PathParam("id") String id,
+      @PathParam("schema") String schema,
+      @PathParam("table") String table,
+      InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.previewTargetTableColumns(
+                        id,
+                        schema,
+                        table,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), DorisAddColumnsInput.class)))
+                .build());
+  }
+
+  @POST
+  @Path("/connections/{id}/tables/{schema}/{table}/columns")
+  public Response addTargetTableColumns(
+      @Context SecurityContext securityContext,
+      @PathParam("id") String id,
+      @PathParam("schema") String schema,
+      @PathParam("table") String table,
+      InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.addTargetTableColumns(
+                        id,
+                        schema,
+                        table,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), DorisAddColumnsInput.class),
+                        actor(securityContext)))
+                .build());
+  }
+
   @GET
   @Path("/tasks")
   public Response tasks(@Context SecurityContext securityContext) {
@@ -173,6 +324,26 @@ public final class HospitalIntegrationResource {
                     service.validate(
                         IntegrationModels.readInput(IntegrationModels.readBody(input), false)))
                 .build());
+  }
+
+  @POST
+  @Path("/tasks/cdc-preflight")
+  public Response cdcPreflight(@Context SecurityContext securityContext, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.cdcPreflight(
+                        IntegrationModels.readInput(IntegrationModels.readBody(input), false)))
+                .build());
+  }
+
+  @GET
+  @Path("/tasks/{id}/target-count")
+  public Response targetCount(
+      @Context SecurityContext securityContext, @PathParam("id") String id) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(() -> Response.ok(service.targetCount(id)).build());
   }
 
   @POST
@@ -223,10 +394,28 @@ public final class HospitalIntegrationResource {
           return Response.ok(
                   service.run(
                       id,
-                      request != null && IntegrationModels.read(request, RunInput.class).resume(),
+                      request == null
+                          ? new RunInput(false)
+                          : IntegrationModels.read(request, RunInput.class),
                       actor(securityContext)))
               .build();
         });
+  }
+
+  @POST
+  @Path("/tasks/{id}/initialization")
+  public Response initialization(
+      @Context SecurityContext securityContext, @PathParam("id") String id, InputStream input) {
+    authorizer.authorizeAdmin(securityContext);
+    return respond(
+        () ->
+            Response.ok(
+                    service.initialization(
+                        id,
+                        IntegrationModels.read(
+                            IntegrationModels.readBody(input), InitializationInput.class),
+                        actor(securityContext)))
+                .build());
   }
 
   @POST

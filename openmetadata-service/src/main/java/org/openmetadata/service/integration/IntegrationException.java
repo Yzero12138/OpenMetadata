@@ -13,6 +13,56 @@ public final class IntegrationException extends RuntimeException {
               "Submission has not been confirmed. Reconcile this job before retrying."),
           Map.entry("JOB_NOT_FOUND", "The engine has no record of this job."),
           Map.entry("INVALID_CONFIGURATION", "The integration configuration is invalid."),
+          Map.entry(
+              "CDC_PREFLIGHT_FAILED",
+              "CDC prerequisites are not ready. Refresh the preflight checks before running."),
+          Map.entry(
+              "CDC_TRUSTED_INSPECTION_REQUIRED", "CDC execution requires fresh trusted metadata."),
+          Map.entry(
+              "CDC_CONFIGURATION_CHANGED",
+              "The CDC configuration or inspected table shape changed. Stop and revalidate before starting a new job."),
+          Map.entry(
+              "CDC_LEGACY_RESUME_UNSAFE",
+              "This CDC run has no compatible configuration fingerprint and cannot be resumed safely."),
+          Map.entry(
+              "TARGET_WRITER_ACTIVE",
+              "Another active, uncertain or resumable task owns this target table."),
+          Map.entry(
+              "TARGET_COUNT_UNAVAILABLE",
+              "The target row count could not be read. Check target connectivity and SELECT permissions."),
+          Map.entry(
+              "INITIALIZATION_IN_PROGRESS",
+              "Finish or continue historical initialization before starting another SQL run."),
+          Map.entry(
+              "INITIALIZATION_CONFIGURATION_LOCKED",
+              "Historical progress is already bound to this configuration. Keep its dates, flow, key, mappings and time zone unchanged."),
+          Map.entry(
+              "INITIALIZATION_UNAVAILABLE",
+              "This task has no incomplete historical initialization."),
+          Map.entry(
+              "INITIALIZATION_STATE_INVALID",
+              "The saved initialization context is inconsistent. No progress was advanced."),
+          Map.entry(
+              "SQL_INITIALIZATION_PARAMETERS_REQUIRED",
+              "Monthly initialization requires both window parameters and cannot use the single-day business date parameter."),
+          Map.entry(
+              "INVALID_SOURCE_QUERY",
+              "Use one read-only SELECT query within the configured source schemas."),
+          Map.entry(
+              "SQL_DATE_PARAMETER_REQUIRED",
+              "Include a supported business date or window parameter in the query."),
+          Map.entry("SQL_PARAMETER_UNSUPPORTED", "The query contains an unsupported parameter."),
+          Map.entry(
+              "QUERY_METADATA_UNAVAILABLE",
+              "Query columns could not be inspected. Check syntax, permissions and connectivity."),
+          Map.entry(
+              "INVALID_QUERY_COLUMNS", "Query columns must have unique supported names and types."),
+          Map.entry(
+              "BUSINESS_DATE_INVALID",
+              "Choose a valid business date before today; retries keep the original date."),
+          Map.entry(
+              "SCHEDULE_DATE_PENDING",
+              "Complete or retry the pending scheduled business date first."),
           Map.entry("VERSION_CONFLICT", "The task changed. Reload it before editing."),
           Map.entry("TASK_ACTIVE", "The task has an active, uncertain, or resumable run."),
           Map.entry("SAVEPOINT_UNAVAILABLE", "A completed savepoint has not been confirmed."),
@@ -39,6 +89,45 @@ public final class IntegrationException extends RuntimeException {
               "This data source does not support the selected collection mode."),
           Map.entry("SCHEMA_NOT_ALLOWED", "Select a schema in the configured collection scope."),
           Map.entry("TABLE_NOT_FOUND", "The selected table does not exist or is not accessible."),
+          Map.entry("TABLE_ALREADY_EXISTS", "The target table already exists. Choose a new name."),
+          Map.entry(
+              "INVALID_TABLE_DESIGN",
+              "The table or column design is invalid. Check names, types, lengths, defaults and keys."),
+          Map.entry(
+              "COLUMN_ALREADY_EXISTS",
+              "A column with this name already exists in the target table."),
+          Map.entry(
+              "TABLE_COLUMN_LIMIT_EXCEEDED", "A target table can contain at most 128 columns."),
+          Map.entry(
+              "TARGET_TABLE_MODEL_UNSUPPORTED",
+              "Only native Doris UNIQUE KEY tables support adding columns."),
+          Map.entry(
+              "TARGET_TABLE_ACTIVE",
+              "This target table has an active or uncertain integration job. Finish or reconcile it before adding columns."),
+          Map.entry(
+              "TARGET_SCHEMA_CHANGE_ACTIVE",
+              "A schema change is still active. Wait for it to finish before adding columns."),
+          Map.entry(
+              "TARGET_TABLE_PERMISSION_DENIED",
+              "The target account lacks permission. Check SELECT, CREATE or ALTER privileges for this database."),
+          Map.entry(
+              "TARGET_TABLE_STRUCTURE_UNAVAILABLE",
+              "The target table structure could not be inspected safely. Check target connectivity and permissions."),
+          Map.entry(
+              "TARGET_TABLE_ALTER_FAILED",
+              "The column change could not be confirmed. Refresh the actual structure and schema change state before retrying."),
+          Map.entry(
+              "DORIS_LABEL_INVALID",
+              "Doris database and table names must use ASCII letters, digits or underscores and total at most 67 characters."),
+          Map.entry(
+              "TABLE_PREVIEW_STALE",
+              "The table preview changed. Preview it again before applying the change."),
+          Map.entry(
+              "UNSUPPORTED_TARGET_TYPE",
+              "The selected source type cannot be represented safely in this target."),
+          Map.entry(
+              "TARGET_TABLE_CREATE_FAILED",
+              "The target table could not be created. Check target connectivity and permissions."),
           Map.entry(
               "TABLE_LIMIT_EXCEEDED",
               "There are too many tables. Narrow the configured schema scope."),

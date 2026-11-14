@@ -1,7 +1,9 @@
 package org.openmetadata.service.integration;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,9 +11,98 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
+import org.openmetadata.service.integration.IntegrationModels.TargetTableInput;
 
 class IntegrationModelsTest {
   private static final ObjectMapper JSON = new ObjectMapper();
+
+  @Test
+  void acceptsNullableRuntimeOptionsAndPreservesThemThroughCopiesAndStorage() throws Exception {
+    ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+    var runtime =
+        JSON.readTree(
+            """
+            {"fetchSize":2000,"splitSize":16384,"sinkBatchSize":20000,
+             "checkpointIntervalSeconds":120,"checkpointTimeoutSeconds":1200}
+            """);
+    input.set("runtime", runtime);
+    var task = IntegrationModels.IntegrationTask.from(IntegrationModels.readInput(input, false));
+    var restored = IntegrationModels.deserialize(IntegrationModels.serialize(task));
+    assertEquals(runtime, JSON.readTree(IntegrationModels.serialize(restored)).path("runtime"));
+    var replacement = IntegrationModels.IntegrationTask.from(IntegrationValidatorTest.validInput());
+    replacement.replaceInput(restored);
+    assertEquals(runtime, JSON.readTree(IntegrationModels.serialize(replacement)).path("runtime"));
+
+    input.set("runtime", JSON.readTree("{\"fetchSize\":null}"));
+    assertDoesNotThrow(() -> IntegrationModels.readInput(input, false));
+    input.putNull("runtime");
+    assertDoesNotThrow(() -> IntegrationModels.readInput(input, false));
+  }
+
+  @Test
+  void oldTaskDocumentsRemainReadableWithoutMaterializingRuntimeDefaults() throws Exception {
+    String oldDocument =
+        IntegrationModels.serialize(
+            IntegrationModels.IntegrationTask.from(IntegrationValidatorTest.validInput()));
+    var restored = IntegrationModels.deserialize(oldDocument);
+    assertNull(JSON.readTree(IntegrationModels.serialize(restored)).get("runtime"));
+  }
+
+  @Test
+  void runtimeRejectsFloatStringBooleanOverflowAndUnknownOptions() throws Exception {
+    for (String field :
+        new String[] {
+          "fetchSize",
+          "splitSize",
+          "sinkBatchSize",
+          "checkpointIntervalSeconds",
+          "checkpointTimeoutSeconds"
+        }) {
+      for (String value : new String[] {"1.5", "1000.0", "\"1000\"", "true", "2147483648", "[]"}) {
+        ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+        input.putObject("runtime").set(field, JSON.readTree(value));
+        assertEquals(
+            "INVALID_CONFIGURATION",
+            assertThrows(
+                    IntegrationException.class, () -> IntegrationModels.readInput(input, false))
+                .code(),
+            field + "=" + value);
+      }
+    }
+    ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+    input.putObject("runtime").put("checkpoint.interval", 60000);
+    assertThrows(IntegrationException.class, () -> IntegrationModels.readInput(input, false));
+  }
+
+  @Test
+  void acceptsInitializationConfigurationButNotCallerOwnedProgress() throws Exception {
+    ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+    input.put("mode", "SQL_T1");
+    input.put("sourceQuery", "SELECT id FROM public.visits WHERE day = :biz_date");
+    input.set(
+        "initialization",
+        JSON.readTree("{\"enabled\":true,\"startDate\":\"2024-01-15\",\"batchUnit\":\"DAY\"}"));
+    var task = IntegrationModels.readInput(input, false);
+    var stored =
+        JSON.readTree(IntegrationModels.serialize(IntegrationModels.IntegrationTask.from(task)));
+    assertEquals("2024-01-15", stored.path("initialization").path("startDate").asText());
+    input.putObject("initializationState").put("completedBatches", 999);
+    assertThrows(IntegrationException.class, () -> IntegrationModels.readInput(input, false));
+  }
+
+  @Test
+  void acceptsBoundedSqlTaskConfigurationButRejectsCallerScheduleState() throws Exception {
+    ObjectNode input = JSON.valueToTree(IntegrationValidatorTest.validInput());
+    input.put("mode", "SQL_T1");
+    input.put("sourceQuery", "SELECT id FROM public.visits WHERE day = :biz_date");
+    input.set(
+        "schedule",
+        JSON.readTree(
+            "{\"enabled\":false,\"dailyTime\":\"02:00\",\"timeZone\":\"Asia/Shanghai\"}"));
+    assertDoesNotThrow(() -> IntegrationModels.readInput(input, false));
+    input.putObject("scheduleState").put("nextRunAt", 1);
+    assertThrows(IntegrationException.class, () -> IntegrationModels.readInput(input, false));
+  }
 
   @Test
   void rejectsCallerSuppliedCredentialsAndEngineConfiguration() throws Exception {
@@ -50,5 +141,39 @@ class IntegrationModelsTest {
       input.set("version", JSON.readTree(version));
       assertThrows(IntegrationException.class, () -> IntegrationModels.readInput(input, true));
     }
+  }
+
+  @Test
+  void tableCreationNeverAcceptsSqlOrClientSuppliedColumnTypes() throws Exception {
+    for (String field : new String[] {"ddl", "sql", "columns", "query", "overwrite"}) {
+      var input = JSON.createObjectNode().put(field, "DROP TABLE patients");
+      assertEquals(
+          "INVALID_CONFIGURATION",
+          assertThrows(
+                  IntegrationException.class,
+                  () -> IntegrationModels.read(input, TargetTableInput.class))
+              .code());
+    }
+  }
+
+  @Test
+  void rejectsDuplicateKeysTrailingJsonAndScalarCoercion() throws Exception {
+    for (String body : new String[] {"{\"targetTable\":\"a\",\"targetTable\":\"b\"}", "{} {}"}) {
+      assertEquals(
+          "INVALID_CONFIGURATION",
+          assertThrows(
+                  IntegrationException.class,
+                  () ->
+                      IntegrationModels.readBody(
+                          new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8))))
+              .code());
+    }
+    var input = JSON.valueToTree(IntegrationConnectionsTest.input("Postgres"));
+    ((ObjectNode) input).put("port", "5432");
+    assertEquals(
+        "INVALID_CONFIGURATION",
+        assertThrows(
+                IntegrationException.class, () -> IntegrationModels.readConnection(input, false))
+            .code());
   }
 }

@@ -45,7 +45,7 @@ spec:
         fsGroup: 1000
       initContainers:
         - name: migrate
-          image: hospital-openmetadata:2.0.4-integrate-v6
+          image: harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:934be97369255e2b08bd803fb719b0de0112ff8ba0c739e90ee3d2212f41a473
           command: [/bin/bash, -ec]
           args:
             - ./bootstrap/openmetadata-ops.sh migrate
@@ -73,7 +73,7 @@ spec:
               memory: 3Gi
       containers:
         - name: openmetadata
-          image: hospital-openmetadata:2.0.4-integrate-v6
+          image: harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:f9fac7c3c8230093c501e9730be4486234fd17e1e498b928fc9e36b9f559b518
           ports:
             - name: http
               containerPort: 8585
@@ -82,9 +82,24 @@ spec:
                 name: hospital-openmetadata-config
             - configMapRef:
                 name: hospital-integration-config
+            - configMapRef:
+                name: hospital-doris-integration-config
+                optional: true
             - secretRef:
                 name: hospital-openmetadata-runtime
           env:
+            - name: HOSPITAL_DORIS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: hospital-doris-writer
+                  key: username
+                  optional: true
+            - name: HOSPITAL_DORIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hospital-doris-writer
+                  key: password
+                  optional: true
             - name: HOSPITAL_SOURCE_JDBC_PASSWORD
               valueFrom:
                 secretKeyRef:

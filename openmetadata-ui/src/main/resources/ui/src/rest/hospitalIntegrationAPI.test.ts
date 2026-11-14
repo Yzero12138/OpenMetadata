@@ -13,12 +13,22 @@
 import APIClient from '.';
 import {
   createIntegrationConnection,
+  createIntegrationTargetTable,
   deleteIntegrationConnection,
   getIntegrationConnection,
+  getIntegrationFailure,
+  getIntegrationQuerySchema,
   getIntegrationTable,
   getIntegrationTableOptions,
+  getIntegrationTargetCount,
   IntegrationConnectionInput,
+  IntegrationTaskInput,
+  preflightIntegrationConnection,
+  preflightIntegrationTask,
+  previewIntegrationTargetTable,
+  runIntegrationTask,
   updateIntegrationConnection,
+  updateIntegrationInitialization,
 } from './hospitalIntegrationAPI';
 
 jest.mock('.', () => ({
@@ -43,6 +53,96 @@ const input: IntegrationConnectionInput = {
   tlsMode: 'VERIFY',
   enabled: true,
 };
+
+describe('CDC inspection HTTP boundary', () => {
+  it('sends actual task mappings, key and options to task preflight with cancellation', async () => {
+    client.post.mockResolvedValue({ data: { ready: false } });
+    const signal = new AbortController().signal;
+    const task: IntegrationTaskInput = {
+      name: 'renamed',
+      displayName: 'Synthetic renamed CDC',
+      sourceConnectionId: 'source',
+      targetConnectionId: 'doris',
+      sourceSchema: 'HIS',
+      sourceTable: 'VISIT',
+      targetSchema: 'ods',
+      targetTable: 'visits',
+      mode: 'CDC',
+      primaryKey: 'ID',
+      fieldMappings: [{ source: 'ID', target: 'visit_id' }],
+      cdc: { serverTimeZone: 'Asia/Shanghai' },
+      runtime: { sinkBatchSize: 1000 },
+    };
+    await preflightIntegrationTask(task, signal);
+
+    expect(client.post).toHaveBeenLastCalledWith(
+      '/hospital/integration/tasks/cdc-preflight',
+      task,
+      { signal }
+    );
+
+    await preflightIntegrationConnection(
+      'source/id',
+      { schema: 'HIS', table: 'VISIT', columns: ['ID'] },
+      signal
+    );
+
+    expect(client.post).toHaveBeenLastCalledWith(
+      '/hospital/integration/connections/source%2Fid/cdc-preflight',
+      { schema: 'HIS', table: 'VISIT', columns: ['ID'] },
+      { signal }
+    );
+  });
+
+  it('counts only the explicit encoded task target and forwards cancellation', async () => {
+    client.get.mockResolvedValue({ data: { count: 0, checkedAt: 1234 } });
+    const signal = new AbortController().signal;
+
+    await expect(getIntegrationTargetCount('task/id', signal)).resolves.toEqual(
+      { count: 0, checkedAt: 1234 }
+    );
+    expect(client.get).toHaveBeenLastCalledWith(
+      '/hospital/integration/tasks/task%2Fid/target-count',
+      { signal }
+    );
+  });
+
+  it.each([
+    'CDC_PREFLIGHT_FAILED',
+    'CDC_CONFIGURATION_CHANGED',
+    'CDC_LEGACY_RESUME_UNSAFE',
+    'TARGET_WRITER_ACTIVE',
+  ])('classifies %s as a safe rejection without version conflict', (code) => {
+    expect(
+      getIntegrationFailure({
+        isAxiosError: true,
+        response: { status: 409, data: { code } },
+      })
+    ).toEqual({ code, conflict: false, uncertain: false });
+  });
+
+  it.each([
+    'MSSQL_CDC_OPTIONS_INVALID',
+    'MSSQL_CDC_ROUTE_UNSUPPORTED',
+    'MSSQL_DB_NAME_MISMATCH',
+    'MSSQL_CDC_IDENTIFIER_UNSUPPORTED',
+    'MSSQL_CDC_TYPE_UNSUPPORTED',
+    'MSSQL_CDC_TARGET_PROJECTION_INCOMPLETE',
+  ])(
+    'keeps known SQL Server prerequisite rejection %s out of submission uncertainty',
+    (code) => {
+      expect(
+        getIntegrationFailure({
+          isAxiosError: true,
+          response: {
+            status: 503,
+            data: { code, message: 'private SQL diagnostic' },
+          },
+        })
+      ).toEqual({ code, conflict: false, uncertain: false });
+    }
+  );
+});
 
 describe('Hospital managed connection HTTP boundary', () => {
   beforeEach(() => {
@@ -119,6 +219,93 @@ describe('Hospital managed connection HTTP boundary', () => {
       [
         '/hospital/integration/connections/source%2Fid/tables/schema%20name/table%2Fname',
         { signal: controller.signal },
+      ],
+    ]);
+  });
+
+  it('previews and creates a target table through structured metadata and a server preview hash', async () => {
+    const definition = {
+      sourceConnectionId: 'source',
+      sourceSchema: 'public',
+      sourceTable: 'patient',
+      targetSchema: 'hospital_ods',
+      targetTable: 'patient',
+      fieldMappings: [{ source: 'PATIENT_ID', target: 'patient_id' }],
+    };
+    const controller = new AbortController();
+    await previewIntegrationTargetTable(
+      'doris/id',
+      definition,
+      controller.signal
+    );
+    await createIntegrationTargetTable('doris/id', {
+      ...definition,
+      previewHash: 'server-generated-hash',
+    });
+
+    expect(client.post.mock.calls).toEqual([
+      [
+        '/hospital/integration/connections/doris%2Fid/tables/preview',
+        definition,
+        { signal: controller.signal },
+      ],
+      [
+        '/hospital/integration/connections/doris%2Fid/tables',
+        { ...definition, previewHash: 'server-generated-hash' },
+      ],
+    ]);
+    expect(client.post.mock.calls[1][1]).not.toHaveProperty('ddl');
+  });
+
+  it('inspects SQL columns explicitly without requesting source rows', async () => {
+    const definition = {
+      connectionId: 'source/id',
+      schema: 'public',
+      query: 'SELECT id FROM public.synthetic_visits WHERE day = :biz_date',
+    };
+    const controller = new AbortController();
+    await getIntegrationQuerySchema(definition, controller.signal);
+
+    expect(client.post).toHaveBeenCalledWith(
+      '/hospital/integration/query/schema',
+      definition,
+      { signal: controller.signal }
+    );
+  });
+
+  it('preserves legacy runs and sends an explicit business date for SQL backfill and retry', async () => {
+    await runIntegrationTask('task/id');
+    await runIntegrationTask('task/id', false, { businessDate: '2026-11-10' });
+    await runIntegrationTask('task/id', false, {
+      businessDate: '2026-11-10',
+      retry: true,
+    });
+
+    expect(client.post.mock.calls).toEqual([
+      ['/hospital/integration/tasks/task%2Fid/run', { resume: false }],
+      [
+        '/hospital/integration/tasks/task%2Fid/run',
+        { resume: false, businessDate: '2026-11-10' },
+      ],
+      [
+        '/hospital/integration/tasks/task%2Fid/run',
+        { resume: false, businessDate: '2026-11-10', retry: true },
+      ],
+    ]);
+  });
+
+  it('pauses and continues initialization with only the encoded task, action and original CAS version', async () => {
+    await updateIntegrationInitialization('task/id', 'PAUSE', 7);
+    await updateIntegrationInitialization('task/id', 'CONTINUE', 8);
+
+    expect(client.post.mock.calls).toEqual([
+      [
+        '/hospital/integration/tasks/task%2Fid/initialization',
+        { version: 7, action: 'PAUSE' },
+      ],
+      [
+        '/hospital/integration/tasks/task%2Fid/initialization',
+        { version: 8, action: 'CONTINUE' },
       ],
     ]);
   });

@@ -61,4 +61,19 @@ public final class EntityExtensionTaskStore implements IntegrationTaskStore {
       throw new IntegrationException("STORAGE_UNAVAILABLE", 503);
     }
   }
+
+  @Override
+  public boolean compareAndSave(IntegrationTask task, long expectedVersion) {
+    String json = IntegrationModels.serialize(task);
+    if (json.length() > MAX_STORED_BYTES) {
+      throw new IntegrationException("CAPACITY_EXCEEDED", 409);
+    }
+    try {
+      return dao.get()
+              .compareAndUpdateExtension(UUID.fromString(task.id), EXTENSION, expectedVersion, json)
+          == 1;
+    } catch (RuntimeException e) {
+      throw new IntegrationException("STORAGE_UNAVAILABLE", 503);
+    }
+  }
 }

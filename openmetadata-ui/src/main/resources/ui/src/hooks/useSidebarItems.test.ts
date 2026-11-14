@@ -124,11 +124,7 @@ describe('useSidebarItems', () => {
   const integrationEntry = SIDEBAR_LIST.find(
     (item) => item.key === ROUTES.HOSPITAL_INTEGRATION
   );
-  const expectedItems = [
-    mockSidebarItems[0],
-    integrationEntry,
-    ...mockSidebarItems.slice(1),
-  ];
+  const expectedItems = mockSidebarItems;
 
   beforeEach(() => {
     jest.clearAllMocks();

@@ -1,0 +1,129 @@
+.hospital-workspace {
+  --ant-navbar-height: 64px;
+  --om-page-height: calc(100vh - var(--ant-navbar-height));
+  --hospital-nav-selected-bg: color-mix(
+    in srgb,
+    var(--color-bg-brand-solid) 10%,
+    var(--color-bg-primary)
+  );
+  --ant-primary-color: var(--color-bg-brand-solid);
+  --ant-primary-color-hover: var(--color-bg-brand-solid_hover);
+  --ant-primary-color-active: var(--color-bg-brand-solid_hover);
+  --ant-primary-25: var(--hospital-nav-selected-bg);
+  --ant-primary-50: var(--hospital-nav-selected-bg);
+  --ant-primary-1: var(--hospital-nav-selected-bg);
+  --ant-primary-2: color-mix(
+    in srgb,
+    var(--color-bg-brand-solid) 20%,
+    var(--color-bg-primary)
+  );
+  --ant-primary-3: color-mix(
+    in srgb,
+    var(--color-bg-brand-solid) 30%,
+    var(--color-bg-primary)
+  );
+  --ant-primary-4: color-mix(
+    in srgb,
+    var(--color-bg-brand-solid) 40%,
+    var(--color-bg-primary)
+  );
+  --ant-primary-5: var(--color-bg-brand-solid);
+  --ant-primary-6: var(--color-bg-brand-solid);
+  --ant-primary-7: var(--color-text-brand-secondary);
+  --ant-primary-8: var(--color-text-brand-primary);
+  --ant-primary-9: var(--color-text-brand-primary);
+  --color-bg-brand-primary: var(--hospital-nav-selected-bg);
+  --color-bg-brand-primary_alt: var(--hospital-nav-selected-bg);
+  --tw-color-bg-brand-primary: var(--hospital-nav-selected-bg);
+  --tw-color-bg-brand-primary_alt: var(--hospital-nav-selected-bg);
+  --tw-color-text-brand-primary: var(--color-text-brand-primary);
+  --tw-color-text-brand-secondary: var(--color-text-brand-secondary);
+  --tw-color-text-brand-tertiary: var(--color-text-brand-secondary);
+  --tw-color-border-brand: var(--color-border-brand);
+  --tw-color-fg-brand-primary: var(--color-fg-brand-primary);
+  overflow: hidden;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  font-variant-numeric: tabular-nums;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC', system-ui,
+    sans-serif;
+
+  &.extra-banner {
+    --ant-navbar-height: 128px;
+    --om-page-height: calc(100vh - var(--ant-navbar-height));
+  }
+
+  &__main {
+    min-width: 0;
+    background: var(--color-bg-primary);
+  }
+
+  &__content {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-gutter: stable;
+    scrollbar-color: var(--color-border-secondary) var(--color-bg-primary);
+    background: var(--color-bg-primary);
+  }
+
+  &__main > .ant-layout-header {
+    flex: 0 0 64px;
+    height: 64px;
+    padding: 12px 24px;
+    line-height: 40px;
+    border-bottom: 1px solid var(--color-border-secondary);
+    background: var(--color-bg-primary);
+  }
+
+  .navbar-container {
+    min-width: 0;
+    gap: 16px;
+
+    > div:first-child {
+      min-width: 0;
+    }
+
+    .search-container {
+      width: min(32vw, 480px);
+      min-width: 180px;
+    }
+
+    .nav-bar-side-items {
+      flex-shrink: 0;
+      gap: 16px;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-border-brand);
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea {
+    caret-color: var(--color-text-brand-primary);
+    font-family: inherit;
+  }
+}
+
+@media (max-width: 1200px) {
+  .hospital-workspace {
+    &__main > .ant-layout-header {
+      padding-inline: 16px;
+    }
+
+    .navbar-container .nav-bar-side-items {
+      gap: 8px;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hospital-workspace *,
+  .hospital-workspace__submenu * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

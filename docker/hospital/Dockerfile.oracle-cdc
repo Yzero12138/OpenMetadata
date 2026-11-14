@@ -1,0 +1,15 @@
+FROM harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:f9fac7c3c8230093c501e9730be4486234fd17e1e498b928fc9e36b9f559b518
+ARG SOURCE_REVISION
+ARG SERVICE_SHA256
+ARG UI_SHA256
+LABEL org.opencontainers.image.source="https://github.com/Yzero12138/OpenMetadata" \
+      org.opencontainers.image.version="2.0.4-integrate-v16-sqlserver-cdc" \
+      org.opencontainers.image.revision="$SOURCE_REVISION" \
+      hospital.openmetadata.service.sha256="$SERVICE_SHA256" \
+      hospital.openmetadata.ui.sha256="$UI_SHA256"
+COPY --chown=1000:1000 openmetadata-service-2.0.4.jar /opt/openmetadata/libs/openmetadata-service-2.0.4.jar
+COPY --chown=1000:1000 openmetadata-ui-2.0.4.jar /opt/openmetadata/libs/openmetadata-ui-2.0.4.jar
+RUN test "${#SOURCE_REVISION}" -eq 40 \
+    && case "$SOURCE_REVISION" in *[!0-9a-f]*) exit 1;; esac \
+    && printf '%s  %s\n' "$SERVICE_SHA256" /opt/openmetadata/libs/openmetadata-service-2.0.4.jar | sha256sum -c - \
+    && printf '%s  %s\n' "$UI_SHA256" /opt/openmetadata/libs/openmetadata-ui-2.0.4.jar | sha256sum -c -

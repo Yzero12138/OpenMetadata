@@ -1,0 +1,8 @@
+# Preserve the verified JDBC, Oracle NLS and checkpoint runtime; add the pinned Doris sink.
+FROM harbor.qcrmyy.local/coop/hospital-seatunnel@sha256:ec98ba379aa824bc897ead8fbb861b0b5702ef53233ceda3b26451e3896212a7
+ARG SOURCE_REVISION
+LABEL org.opencontainers.image.source="https://github.com/Yzero12138/OpenMetadata" \
+      org.opencontainers.image.version="3.0.0-doris-v1" \
+      org.opencontainers.image.revision="$SOURCE_REVISION"
+COPY --chown=1000:1000 connector-doris-3.0.0.jar /opt/seatunnel/connectors/connector-doris-3.0.0.jar
+RUN echo "3a5ced18b856162adab3c53f513011fd4994134ed9b154639948ef8917580875  /opt/seatunnel/connectors/connector-doris-3.0.0.jar" | sha256sum -c -

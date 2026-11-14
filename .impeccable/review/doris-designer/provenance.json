@@ -1,0 +1,92 @@
+[
+  {
+    "file": "append-fields-1440.png",
+    "sha256": "b921d3f3659a55aa115183ca61ec9b714b9d36d37d25ec810bf299c69ee0dd83",
+    "bytes": 76933
+  },
+  {
+    "file": "append-fields-1920.png",
+    "sha256": "944f0d920e62fbf95281252b8c81386f3a16c046683bc1f36d564701b08800df",
+    "bytes": 82576
+  },
+  {
+    "file": "append-preview-1440.png",
+    "sha256": "a53bd2245e1f2e39977ca30005d6d65f3a26a0700fc6d0dee5c89f888ea96b99",
+    "bytes": 83263
+  },
+  {
+    "file": "append-preview-1920.png",
+    "sha256": "0cf86705a4b10e1105325f69123a4225dfb6cdcb209694094a7f25cce74acdae",
+    "bytes": 88968
+  },
+  {
+    "file": "append-submitted-1440.png",
+    "sha256": "fa28183b08c6c53959c2252f7888851bbd4a20c887a3aa57611c1ea8a6a9eab5",
+    "bytes": 78602
+  },
+  {
+    "file": "append-submitted-1920.png",
+    "sha256": "1fa92508502cfd35cb127f4ce71cea587608536fdc907c0e3367914606c7caa5",
+    "bytes": 84476
+  },
+  {
+    "file": "create-fields-1440.png",
+    "sha256": "7910c836f44ed85dac23aaf7e2dbb72c67fc42c19a12681c2cc80f82db684555",
+    "bytes": 80363
+  },
+  {
+    "file": "create-fields-1920.png",
+    "sha256": "32e578649e5ef372847cf4e4b1c55923f958bbf5c863b2181fdf6bcaa394b166",
+    "bytes": 86366
+  },
+  {
+    "file": "create-permission-1440.png",
+    "sha256": "69785343aad06605c9ed7b650bcbcafcd29e7c47f912f1d3b44e55bb189666e2",
+    "bytes": 82409
+  },
+  {
+    "file": "create-permission-1920.png",
+    "sha256": "9cd74f48ea0ad3b94281116b3cb269a24c99cbb11a83d24bbe5df369603a184b",
+    "bytes": 87954
+  },
+  {
+    "file": "create-preview-1440.png",
+    "sha256": "e27cb281171848eb3fd9d838e3fbeb1942e1c5429d8e2e03b81243582d6ac314",
+    "bytes": 80741
+  },
+  {
+    "file": "create-preview-1920.png",
+    "sha256": "495a647e9f104d52b67c0f18d938aeab674d3a2207fda959df9b0808abf96bc3",
+    "bytes": 86821
+  },
+  {
+    "file": "existing-structure-1440.png",
+    "sha256": "699564d02042c05bf88d6cc3e3761103dfd7130a4fd4c23a393909a930cd7142",
+    "bytes": 51930
+  },
+  {
+    "file": "existing-structure-1920.png",
+    "sha256": "8017fca0a4658ff7714cd92536c6b2677002cd7836d83a03a667702118bc79d8",
+    "bytes": 54386
+  },
+  {
+    "file": "long-field-error-1440.png",
+    "sha256": "b6e40b83140d7fdea8673dd7dc539c4aa800b6ac5c2361980ad43ca004615fc7",
+    "bytes": 84483
+  },
+  {
+    "file": "long-field-error-1920.png",
+    "sha256": "1169d88240a65a21e5f96088aee32a1d50f31afb49856cf28b093c55e1203d63",
+    "bytes": 91033
+  },
+  {
+    "file": "target-list-1440.png",
+    "sha256": "25510f75b9780e993dcea7af2c11dfdfd65ab7e874b27657fa21ccb536a4d964",
+    "bytes": 35863
+  },
+  {
+    "file": "target-list-1920.png",
+    "sha256": "fccdd19762ad2b48497525a79294582c046ece309e3c9fbd8fbf7c6053e7e1be",
+    "bytes": 37406
+  }
+]

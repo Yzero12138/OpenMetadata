@@ -6,12 +6,142 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.sql.Types;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.openmetadata.service.integration.IntegrationCdcModels.RuntimeOptions;
 import org.openmetadata.service.integration.IntegrationModels.ColumnDefinition;
 import org.openmetadata.service.integration.IntegrationModels.FieldMapping;
 import org.openmetadata.service.integration.IntegrationModels.TableDefinition;
 import org.openmetadata.service.integration.IntegrationModels.TaskInput;
 
 class IntegrationValidatorTest {
+  @Test
+  void runtimeOptionsRejectEveryOutOfRangeValueIncludingZeroAndNegative() {
+    List<String> fields =
+        List.of(
+            "fetchSize",
+            "splitSize",
+            "sinkBatchSize",
+            "checkpointIntervalSeconds",
+            "checkpointTimeoutSeconds");
+    int[] minimums = {100, 1000, 100, 10, 60};
+    int[] maximums = {10000, 100000, 50000, 300, 3600};
+    for (int field = 0; field < fields.size(); field++) {
+      for (int value :
+          new int[] {0, -1, minimums[field] - 1, maximums[field] + 1, Integer.MAX_VALUE}) {
+        TaskInput task = validInput();
+        Integer[] options = new Integer[5];
+        options[field] = value;
+        task.runtime =
+            new RuntimeOptions(options[0], options[1], options[2], options[3], options[4]);
+        String expectedField = "runtime." + fields.get(field);
+        assertTrue(
+            IntegrationValidator.validateStructure(task).errors().stream()
+                .anyMatch(error -> error.field().equals(expectedField)),
+            expectedField + "=" + value);
+      }
+    }
+  }
+
+  @Test
+  void runtimeOptionsAcceptInclusiveBoundsAndIndividuallyNullableSettings() {
+    for (String mode : List.of("FULL", "CDC")) {
+      TaskInput task = validInput();
+      task.mode = mode;
+      task.runtime = new RuntimeOptions(100, 1000, 100, 10, 60);
+      assertTrue(IntegrationValidator.validateStructure(task).valid(), mode);
+      task.runtime = new RuntimeOptions(10000, 100000, 50000, 300, 3600);
+      assertTrue(IntegrationValidator.validateStructure(task).valid(), mode);
+      task.runtime = new RuntimeOptions(null, null, null, null, null);
+      assertTrue(IntegrationValidator.validateStructure(task).valid(), mode);
+      task.runtime = null;
+      assertTrue(IntegrationValidator.validateStructure(task).valid(), mode);
+    }
+  }
+
+  @Test
+  void runtimeTimeoutMustCoverTwoEffectiveCheckpointIntervals() {
+    TaskInput task = validInput();
+    task.runtime = new RuntimeOptions(null, null, null, 100, 199);
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task.runtime = new RuntimeOptions(null, null, null, 100, 200);
+    assertTrue(IntegrationValidator.validateStructure(task).valid());
+    task.runtime = new RuntimeOptions(null, null, null, null, 119);
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task.mode = "CDC";
+    task.runtime = new RuntimeOptions(null, null, null, 151, null);
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task.runtime = new RuntimeOptions(null, null, null, 150, null);
+    assertTrue(IntegrationValidator.validateStructure(task).valid());
+  }
+
+  @Test
+  void sqlT1RejectsExplicitSplitSizeWithoutChangingItsQueryContract() {
+    TaskInput task = sqlInput();
+    task.runtime = new RuntimeOptions(1000, null, 100, 60, 900);
+    assertTrue(IntegrationValidator.validateStructure(task).valid());
+    task.runtime = new RuntimeOptions(1000, 8192, 100, 60, 900);
+    assertTrue(
+        IntegrationValidator.validateStructure(task).errors().stream()
+            .anyMatch(error -> error.field().equals("runtime.splitSize")));
+  }
+
+  @Test
+  void initializationConfigurationBelongsOnlyToSqlTasks() {
+    TaskInput task = validInput();
+    task.initialization = new IntegrationModels.InitializationConfig();
+    task.initialization.enabled = true;
+    task.initialization.startDate = "2024-02-14";
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task.mode = "CDC";
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task = sqlInput();
+    task.initialization = new IntegrationModels.InitializationConfig();
+    task.initialization.enabled = true;
+    task.initialization.startDate = "2024-02-14";
+    assertTrue(IntegrationValidator.validateStructure(task).valid());
+  }
+
+  @Test
+  void validatesSqlDeclaredKeyWithoutRequiringPhysicalKeyMetadata() {
+    TaskInput task = sqlInput();
+    var queryResult =
+        new TableDefinition(
+            "public",
+            "sql_result",
+            List.of(
+                column("id", "int8", true, false, Types.BIGINT, 19),
+                column("name", "varchar", true, false, Types.VARCHAR, 100)));
+    assertTrue(IntegrationValidator.validateTables(task, queryResult, target()).valid());
+    task.primaryKey = "missing";
+    assertTrue(
+        IntegrationValidator.validateTables(task, queryResult, target()).errors().stream()
+            .anyMatch(error -> error.code().equals("INVALID_PRIMARY_KEY")));
+    task.primaryKey = "name";
+    assertTrue(
+        IntegrationValidator.validateTables(task, queryResult, target()).errors().stream()
+            .anyMatch(error -> error.code().equals("INVALID_PRIMARY_KEY")));
+  }
+
+  @Test
+  void rejectsSqlQueryAndScheduleFieldsOnLegacyModesAndWrongVirtualResultName() {
+    TaskInput task = sqlInput();
+    task.sourceTable = "visits";
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task = validInput();
+    task.sourceQuery = "SELECT id FROM public.visits WHERE day = :biz_date";
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+    task.sourceQuery = null;
+    task.schedule = new IntegrationModels.ScheduleConfig();
+    assertFalse(IntegrationValidator.validateStructure(task).valid());
+  }
+
+  static TaskInput sqlInput() {
+    TaskInput task = validInput();
+    task.mode = "SQL_T1";
+    task.sourceTable = "sql_result";
+    task.sourceQuery = "SELECT id, name FROM public.visits WHERE day = :biz_date";
+    return task;
+  }
+
   @Test
   void acceptsRealMappedPrimaryKeyAndCompatibleColumns() {
     TaskInput task = validInput();

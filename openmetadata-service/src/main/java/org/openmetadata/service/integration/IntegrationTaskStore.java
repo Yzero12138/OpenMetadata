@@ -10,4 +10,15 @@ public interface IntegrationTaskStore {
   IntegrationTask get(UUID id);
 
   void save(IntegrationTask task);
+
+  /** Atomically reserve/replace an existing task; implementations backed by SQL override this. */
+  default boolean compareAndSave(IntegrationTask task, long expectedVersion) {
+    synchronized (this) {
+      if (get(UUID.fromString(task.id)).version != expectedVersion) {
+        return false;
+      }
+      save(task);
+      return true;
+    }
+  }
 }

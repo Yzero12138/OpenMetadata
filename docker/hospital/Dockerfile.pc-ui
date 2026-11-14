@@ -1,0 +1,7 @@
+# Retain the verified Doris/Integrate server; replace only the UI archive.
+FROM harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:54e4d883d86b901cb1180a9ace36dbeaa1e465b5a81060cc6974a4843dad6baa
+ARG SOURCE_REVISION
+LABEL org.opencontainers.image.source="https://github.com/Yzero12138/OpenMetadata" \
+      org.opencontainers.image.version="2.0.4-integrate-v12-pc" \
+      org.opencontainers.image.revision="$SOURCE_REVISION"
+COPY --chown=1000:1000 openmetadata-ui-2.0.4.jar /opt/openmetadata/libs/openmetadata-ui-2.0.4.jar

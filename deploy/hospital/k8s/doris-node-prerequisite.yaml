@@ -1,0 +1,64 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "name": "hospital-doris-node-prerequisite-20261020",
+    "namespace": "datahub-open-test",
+    "labels": {
+      "app.kubernetes.io/name": "hospital-doris-node-prerequisite"
+    },
+    "annotations": {
+      "hospital.qcrmyy.local/purpose": "Doris test prerequisite on worker01; baseline65530; documented rollback"
+    }
+  },
+  "spec": {
+    "backoffLimit": 0,
+    "activeDeadlineSeconds": 60,
+    "ttlSecondsAfterFinished": 600,
+    "template": {
+      "metadata": {
+        "labels": {
+          "app.kubernetes.io/name": "hospital-doris-node-prerequisite"
+        }
+      },
+      "spec": {
+        "restartPolicy": "Never",
+        "nodeSelector": {
+          "kubernetes.io/hostname": "k8s-worker01"
+        },
+        "automountServiceAccountToken": false,
+        "imagePullSecrets": [
+          {
+            "name": "harbor-cred"
+          }
+        ],
+        "containers": [
+          {
+            "name": "prepare",
+            "image": "harbor.qcrmyy.local/coop/hospital-postgres@sha256:6e5a6518f9d2ff9e9f4cba2a5a87d8f41b0f067f6f92ac847c344351a6c8d923",
+            "command": [
+              "/bin/sh",
+              "-ec",
+              "current=$(cat /proc/sys/vm/max_map_count)\nprintf 'before=%s\\n' \"$current\"\ncase \"$current\" in 65530|2000000) ;; *) echo unexpected_baseline; exit 2 ;; esac\nprintf '2000000\\n' > /proc/sys/vm/max_map_count\nactual=$(cat /proc/sys/vm/max_map_count)\n[ \"$actual\" = 2000000 ]\nprintf 'after=%s\\n' \"$actual\"\n"
+            ],
+            "securityContext": {
+              "runAsUser": 0,
+              "privileged": true,
+              "readOnlyRootFilesystem": true
+            },
+            "resources": {
+              "requests": {
+                "cpu": "10m",
+                "memory": "16Mi"
+              },
+              "limits": {
+                "cpu": "100m",
+                "memory": "64Mi"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

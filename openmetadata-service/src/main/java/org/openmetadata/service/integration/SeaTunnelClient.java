@@ -1,6 +1,7 @@
 package org.openmetadata.service.integration;
 
 import com.fasterxml.jackson.core.StreamReadConstraints;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayOutputStream;
@@ -22,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Flow;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.openmetadata.service.integration.IntegrationCdcModels.CheckpointSummary;
 
 public final class SeaTunnelClient {
   private static final int MAX_RESPONSE_BYTES = 1024 * 1024;
@@ -46,6 +48,7 @@ public final class SeaTunnelClient {
           "SAVEPOINT_DONE");
 
   static {
+    JSON.enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
     JSON.getFactory()
         .setStreamReadConstraints(
             StreamReadConstraints.builder().maxNestingDepth(40).maxStringLength(262144).build());
@@ -72,6 +75,113 @@ public final class SeaTunnelClient {
       throw new IntegrationException("ENGINE_UNAVAILABLE", 503);
     }
     return version;
+  }
+
+  public boolean hasSourceConnector(String plugin) {
+    if (plugin == null || !plugin.matches("[a-zA-Z][a-zA-Z0-9_-]{0,63}")) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
+    JsonNode response =
+        request(
+            "GET",
+            "/option-rules?type="
+                + URLEncoder.encode("source", StandardCharsets.UTF_8)
+                + "&plugin="
+                + URLEncoder.encode(plugin, StandardCharsets.UTF_8),
+            null,
+            false,
+            timeout,
+            plugin);
+    if (response == null) {
+      return false;
+    }
+    if (!response.isObject()
+        || !"seatunnel".equals(response.path("engineType").asText())
+        || !"source".equals(response.path("pluginType").asText())
+        || !plugin.equals(response.path("pluginName").asText())
+        || !response.path("optionRule").isObject()) {
+      throw new IntegrationException("ENGINE_UNAVAILABLE", 503);
+    }
+    return true;
+  }
+
+  public CheckpointSummary checkpoints(String jobId) {
+    return checkpoints(jobId, timeout);
+  }
+
+  CheckpointSummary checkpoints(String jobId, Duration requestTimeout) {
+    requireJobId(jobId);
+    JsonNode response = request("GET", "/jobs/checkpoints/" + jobId, null, false, requestTimeout);
+    JsonNode pipelines = response.path("pipelines");
+    if (!response.isObject()
+        || !response.path("jobId").isTextual()
+        || !jobId.equals(response.path("jobId").textValue())
+        || !pipelines.isArray()
+        || pipelines.isEmpty()) {
+      throw new IntegrationException("ENGINE_UNAVAILABLE", 503);
+    }
+    long triggered = 0;
+    long completed = 0;
+    long failed = 0;
+    long restored = 0;
+    Long latestCompletedAt = null;
+    Long latestSavepointAt = null;
+    try {
+      for (JsonNode pipeline : pipelines) {
+        JsonNode counts = pipeline.path("counts");
+        triggered = Math.addExact(triggered, nonnegativeLong(counts.path("triggered")));
+        completed = Math.addExact(completed, nonnegativeLong(counts.path("completed")));
+        failed = Math.addExact(failed, nonnegativeLong(counts.path("failed")));
+        restored = Math.addExact(restored, nonnegativeLong(counts.path("restored")));
+        latestCompletedAt =
+            latest(latestCompletedAt, completedAt(pipeline.path("latestCompleted")));
+        JsonNode savepoint = pipeline.path("latestSavepoint");
+        Long savepointCompletedAt = completedAt(savepoint);
+        if ("savepoint".equalsIgnoreCase(savepoint.path("checkpointType").asText())) {
+          latestSavepointAt = latest(latestSavepointAt, savepointCompletedAt);
+        }
+      }
+    } catch (ArithmeticException e) {
+      throw new IntegrationException("ENGINE_UNAVAILABLE", 503);
+    }
+    return new CheckpointSummary(
+        triggered,
+        completed,
+        failed,
+        restored,
+        latestCompletedAt,
+        latestSavepointAt,
+        optionalTimestamp(response.path("updatedAt")));
+  }
+
+  private static long nonnegativeLong(JsonNode value) {
+    if (!value.isIntegralNumber() || !value.canConvertToLong() || value.longValue() < 0) {
+      throw new IntegrationException("ENGINE_UNAVAILABLE", 503);
+    }
+    return value.longValue();
+  }
+
+  private static Long optionalTimestamp(JsonNode value) {
+    return value.isMissingNode() || value.isNull() ? null : nonnegativeLong(value);
+  }
+
+  private static Long completedAt(JsonNode checkpoint) {
+    if (checkpoint.isMissingNode() || checkpoint.isNull()) {
+      return null;
+    }
+    if (!checkpoint.isObject()) {
+      throw new IntegrationException("ENGINE_UNAVAILABLE", 503);
+    }
+    return "COMPLETED".equals(checkpoint.path("status").asText())
+        ? nonnegativeLong(checkpoint.path("completedTimestamp"))
+        : null;
+  }
+
+  private static Long latest(Long previous, Long candidate) {
+    if (previous == null) {
+      return candidate;
+    }
+    return candidate == null ? previous : Long.valueOf(Math.max(previous, candidate));
   }
 
   public void submit(
@@ -108,6 +218,9 @@ public final class SeaTunnelClient {
       throw new IntegrationException("JOB_NOT_FOUND", 404);
     }
     String status = job.path("jobStatus").asText("");
+    if ("DOING_SAVEPOINT".equals(status)) {
+      status = "STOPPING";
+    }
     if (!STATUSES.contains(status)) {
       throw new IntegrationException("ENGINE_UNAVAILABLE", 503);
     }
@@ -141,13 +254,20 @@ public final class SeaTunnelClient {
     requireJobId(jobId);
     JsonNode response = request("GET", "/jobs/checkpoints/" + jobId, null, false, requestTimeout);
     JsonNode pipelines = response.path("pipelines");
-    if (!pipelines.isArray() || pipelines.isEmpty()) {
+    if (!response.isObject()
+        || !response.path("jobId").isTextual()
+        || !jobId.equals(response.path("jobId").textValue())
+        || !pipelines.isArray()
+        || pipelines.isEmpty()) {
       return false;
     }
     for (JsonNode pipeline : pipelines) {
       JsonNode savepoint = pipeline.path("latestSavepoint");
       if (!"COMPLETED".equals(savepoint.path("status").asText())
-          || !"savepoint".equalsIgnoreCase(savepoint.path("checkpointType").asText())) {
+          || !"savepoint".equalsIgnoreCase(savepoint.path("checkpointType").asText())
+          || !savepoint.path("completedTimestamp").isIntegralNumber()
+          || !savepoint.path("completedTimestamp").canConvertToLong()
+          || savepoint.path("completedTimestamp").longValue() < 0) {
         return false;
       }
     }
@@ -178,6 +298,16 @@ public final class SeaTunnelClient {
       Map<String, Object> body,
       boolean submission,
       Duration requestTimeout) {
+    return request(method, path, body, submission, requestTimeout, null);
+  }
+
+  private JsonNode request(
+      String method,
+      String path,
+      Map<String, Object> body,
+      boolean submission,
+      Duration requestTimeout,
+      String missingSourcePlugin) {
     String error = submission ? "SUBMISSION_UNKNOWN" : "ENGINE_UNAVAILABLE";
     CompletableFuture<HttpResponse<byte[]>> pending = null;
     try {
@@ -200,9 +330,22 @@ public final class SeaTunnelClient {
       pending = http.sendAsync(builder.build(), response -> new BoundedSubscriber());
       HttpResponse<byte[]> response = pending.get(requestTimeout.toMillis(), TimeUnit.MILLISECONDS);
       if (response.statusCode() == 404 && !submission) {
+        if (missingSourcePlugin != null) {
+          JsonNode missing = JSON.readTree(response.body());
+          if (missing != null
+              && missing.isObject()
+              && "FAIL".equals(missing.path("status").asText())
+              && ("Plugin '" + missingSourcePlugin + "' not found for type 'source'.")
+                  .equals(missing.path("message").asText())) {
+            return null;
+          }
+          throw new IntegrationException(error, 503);
+        }
         throw new IntegrationException("JOB_NOT_FOUND", 404);
       }
-      if (response.statusCode() < 200 || response.statusCode() >= 300) {
+      if (response.statusCode() < 200
+          || response.statusCode() >= 300
+          || (missingSourcePlugin != null && response.statusCode() != 200)) {
         if (submission
             && response.statusCode() >= 400
             && response.statusCode() < 500
@@ -213,7 +356,9 @@ public final class SeaTunnelClient {
         }
         throw new IntegrationException(error, 503);
       }
-      return response.body().length == 0 ? JSON.createObjectNode() : JSON.readTree(response.body());
+      JsonNode parsed =
+          response.body().length == 0 ? JSON.createObjectNode() : JSON.readTree(response.body());
+      return parsed == null ? JSON.nullNode() : parsed;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IntegrationException(error, 503);

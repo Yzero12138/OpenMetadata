@@ -26,6 +26,7 @@ RUN mkdir -p /opt/seatunnel /data /opt/seatunnel/logs \
 
 COPY --from=jdbc-compat /work/connector-jdbc-3.0.0.jar /opt/seatunnel/connectors/
 COPY connector-cdc-postgres-3.0.0.jar /opt/seatunnel/connectors/
+COPY connector-doris-3.0.0.jar /opt/seatunnel/connectors/
 COPY postgresql-42.7.14.jar /opt/seatunnel/lib/
 COPY jdbc-drivers/ /opt/seatunnel/lib/
 COPY hospital-entrypoint.sh /opt/seatunnel/bin/hospital-entrypoint.sh

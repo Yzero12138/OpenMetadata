@@ -1,5 +1,5 @@
 param(
-    [string]$Image = 'hospital-seatunnel:3.0.0-jdbc-v2',
+    [string]$Image = 'hospital-seatunnel:3.0.0-doris-v1',
     [switch]$Push
 )
 $ErrorActionPreference = 'Stop'
@@ -9,6 +9,7 @@ New-Item -ItemType Directory -Path $taskContext -Force | Out-Null
 $taskAssets = @(
     @{ File = 'apache-seatunnel-3.0.0-bin.tar.gz'; Algorithm = 'SHA512'; Hash = '2825b9ef0708dcbb3c2cab238b8ed39b41fce0eb4d01582c026c57cec8cef9b047875c38ea5a03b6483737213cd49f8c6130f59c2ad6b689669ccb10cd5356e6'; Url = 'https://archive.apache.org/dist/seatunnel/3.0.0/apache-seatunnel-3.0.0-bin.tar.gz' },
     @{ File = 'connector-jdbc-3.0.0.jar'; Algorithm = 'SHA256'; Hash = 'e60700f09f0ffbdf18ec9744674c87d60a4a5180ad4b5288ae244917771f0f2d'; Url = 'https://repo.maven.apache.org/maven2/org/apache/seatunnel/connector-jdbc/3.0.0/connector-jdbc-3.0.0.jar' },
+    @{ File = 'connector-doris-3.0.0.jar'; Algorithm = 'SHA256'; Hash = '3a5ced18b856162adab3c53f513011fd4994134ed9b154639948ef8917580875'; Url = 'https://repo.maven.apache.org/maven2/org/apache/seatunnel/connector-doris/3.0.0/connector-doris-3.0.0.jar' },
     @{ File = 'connector-cdc-postgres-3.0.0.jar'; Algorithm = 'SHA256'; Hash = '65104b887447ac0522a0b1017e419af0ead6b089fa53d26507563565b9b4ad6b'; Url = 'https://repo.maven.apache.org/maven2/org/apache/seatunnel/connector-cdc-postgres/3.0.0/connector-cdc-postgres-3.0.0.jar' },
     @{ File = 'postgresql-42.7.14.jar'; Algorithm = 'SHA256'; Hash = '73914527305a40cce504b0d3d90b23caf565136912d607ae8ae7c5895512332c'; Url = 'https://repo.maven.apache.org/maven2/org/postgresql/postgresql/42.7.14/postgresql-42.7.14.jar' }
 )
@@ -30,6 +31,7 @@ $taskIgnore = @"
 !apache-seatunnel-3.0.0-bin.tar.gz
 !connector-jdbc-3.0.0.jar
 !connector-cdc-postgres-3.0.0.jar
+!connector-doris-3.0.0.jar
 !postgresql-42.7.14.jar
 !hospital-entrypoint.sh
 !jdbc-drivers/

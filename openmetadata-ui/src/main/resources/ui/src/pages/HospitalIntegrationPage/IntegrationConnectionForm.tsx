@@ -17,7 +17,7 @@ import {
   IntegrationDatabaseType,
 } from '../../rest/hospitalIntegrationAPI';
 import { IntegrationConnectionFormProps } from './HospitalIntegrationPage.interface';
-import { INTEGRATION_DATABASE_DEFAULTS } from './HospitalIntegrationUtils';
+import { changeIntegrationDatabaseType } from './HospitalIntegrationUtils';
 import { IntegrationDrawerAlert } from './IntegrationDrawerAlert';
 
 export const IntegrationConnectionForm = ({
@@ -36,27 +36,14 @@ export const IntegrationConnectionForm = ({
       type !== 'Postgres' &&
       type !== 'Oracle' &&
       type !== 'Mysql' &&
-      type !== 'Mssql'
+      type !== 'Mssql' &&
+      type !== 'Doris'
     ) {
       return;
     }
-    const { oracleConnectionType: _oracleConnectionType, ...current } = value;
-    const defaults = INTEGRATION_DATABASE_DEFAULTS[type];
-    const schemas =
-      type === 'Mysql'
-        ? value.database
-          ? [value.database]
-          : []
-        : defaults.schemas;
-    onChange({
-      ...current,
-      databaseType: type,
-      databaseVersion: '',
-      port: defaults.port,
-      schemas,
-      ...(type === 'Oracle' ? { oracleConnectionType: 'SERVICE_NAME' } : {}),
-    });
-    onSchemasChange(schemas.join(', '));
+    const next = changeIntegrationDatabaseType(value, type);
+    onChange(next);
+    onSchemasChange(next.schemas.join(', '));
   };
   const update = (patch: Partial<IntegrationConnectionInput>) =>
     onChange({ ...value, ...patch });
@@ -65,6 +52,7 @@ export const IntegrationConnectionForm = ({
     Mssql: '2016 / 2019',
     Mysql: '8',
     Postgres: '17.2',
+    Doris: '4.0.8',
   };
 
   return (
@@ -133,14 +121,19 @@ export const IntegrationConnectionForm = ({
           </Select>
           <Select
             isRequired
+            hint={
+              value.databaseType === 'Doris'
+                ? t('hospitalIntegration.dorisTargetOnly')
+                : undefined
+            }
             id="connection-databaseType"
             isDisabled={disabled}
-            items={(['Oracle', 'Mssql', 'Mysql', 'Postgres'] as const).map(
-              (type) => ({
-                id: type,
-                label: t('hospitalIntegration.databaseTypes.' + type),
-              })
-            )}
+            items={(
+              ['Oracle', 'Mssql', 'Mysql', 'Postgres', 'Doris'] as const
+            ).map((type) => ({
+              id: type,
+              label: t('hospitalIntegration.databaseTypes.' + type),
+            }))}
             label={t('label.type')}
             placeholder={t('label.type')}
             selectedKey={value.databaseType}
@@ -194,7 +187,11 @@ export const IntegrationConnectionForm = ({
             id="connection-port"
             inputDataTestId="connection-port"
             isDisabled={disabled}
-            label={t('label.port')}
+            label={t(
+              value.databaseType === 'Doris'
+                ? 'hospitalIntegration.dorisSqlPort'
+                : 'label.port'
+            )}
             type="number"
             value={
               Number.isFinite(value.port) && value.port > 0
@@ -203,6 +200,22 @@ export const IntegrationConnectionForm = ({
             }
             onChange={(port) => update({ port: Number(port) })}
           />
+          {value.databaseType === 'Doris' && (
+            <Input
+              isRequired
+              id="connection-dorisHttpPort"
+              inputDataTestId="connection-dorisHttpPort"
+              isDisabled={disabled}
+              label={t('hospitalIntegration.dorisHttpPort')}
+              type="number"
+              value={
+                value.dorisHttpPort && Number.isFinite(value.dorisHttpPort)
+                  ? String(value.dorisHttpPort)
+                  : ''
+              }
+              onChange={(port) => update({ dorisHttpPort: Number(port) })}
+            />
+          )}
           <Input
             isRequired
             id="connection-database"
@@ -214,11 +227,15 @@ export const IntegrationConnectionForm = ({
             onChange={(database) => {
               update({
                 database,
-                ...(value.databaseType === 'Mysql'
+                ...(value.databaseType === 'Mysql' ||
+                value.databaseType === 'Doris'
                   ? { schemas: database ? [database] : [] }
                   : {}),
               });
-              if (value.databaseType === 'Mysql') {
+              if (
+                value.databaseType === 'Mysql' ||
+                value.databaseType === 'Doris'
+              ) {
                 onSchemasChange(database);
               }
             }}
@@ -248,10 +265,19 @@ export const IntegrationConnectionForm = ({
           )}
           <Select
             isRequired
+            hint={
+              value.databaseType === 'Doris'
+                ? t('hospitalIntegration.dorisTlsHint')
+                : undefined
+            }
             id="connection-tlsMode"
             isDisabled={disabled}
             items={[
-              { id: 'VERIFY', label: t('hospitalIntegration.tlsVerify') },
+              ...(value.databaseType === 'Doris'
+                ? []
+                : [
+                    { id: 'VERIFY', label: t('hospitalIntegration.tlsVerify') },
+                  ]),
               { id: 'DISABLED', label: t('hospitalIntegration.tlsDisabled') },
             ]}
             label={t('hospitalIntegration.tlsMode')}
@@ -268,16 +294,28 @@ export const IntegrationConnectionForm = ({
             <Input
               isRequired
               hint={t(
-                value.databaseType === 'Mysql'
+                value.databaseType === 'Doris'
+                  ? 'hospitalIntegration.dorisScopeHint'
+                  : value.databaseType === 'Mysql'
                   ? 'hospitalIntegration.mysqlScopeHint'
                   : 'hospitalIntegration.schemasHint'
               )}
               id="connection-schemas"
               inputDataTestId="connection-schemas"
-              isDisabled={disabled || value.databaseType === 'Mysql'}
-              label={t('label.schema-plural')}
+              isDisabled={
+                disabled ||
+                value.databaseType === 'Mysql' ||
+                value.databaseType === 'Doris'
+              }
+              label={t(
+                value.databaseType === 'Doris'
+                  ? 'label.scope'
+                  : 'label.schema-plural'
+              )}
               value={
-                value.databaseType === 'Mysql' ? value.database : schemasText
+                value.databaseType === 'Mysql' || value.databaseType === 'Doris'
+                  ? value.database
+                  : schemasText
               }
               onChange={onSchemasChange}
             />

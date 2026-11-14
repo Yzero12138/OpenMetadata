@@ -1,0 +1,174 @@
+[
+  {
+    "name": "target-list",
+    "width": 1440,
+    "bounds": null,
+    "rightAligned": null,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "create-fields",
+    "width": 1440,
+    "bounds": {
+      "x": 340,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "create-preview",
+    "width": 1440,
+    "bounds": {
+      "x": 340,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "append-fields",
+    "width": 1440,
+    "bounds": {
+      "x": 340,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "append-preview",
+    "width": 1440,
+    "bounds": {
+      "x": 340,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "append-submitted",
+    "width": 1440,
+    "bounds": {
+      "x": 340,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "create-permission",
+    "width": 1440,
+    "bounds": {
+      "x": 340,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "target-list",
+    "width": 1920,
+    "bounds": null,
+    "rightAligned": null,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "create-fields",
+    "width": 1920,
+    "bounds": {
+      "x": 820,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "create-preview",
+    "width": 1920,
+    "bounds": {
+      "x": 820,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "append-fields",
+    "width": 1920,
+    "bounds": {
+      "x": 820,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "append-preview",
+    "width": 1920,
+    "bounds": {
+      "x": 820,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "append-submitted",
+    "width": 1920,
+    "bounds": {
+      "x": 820,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "name": "create-permission",
+    "width": 1920,
+    "bounds": {
+      "x": 820,
+      "y": 0,
+      "width": 1100,
+      "height": 1080
+    },
+    "rightAligned": true,
+    "overflow": false,
+    "errors": []
+  }
+]

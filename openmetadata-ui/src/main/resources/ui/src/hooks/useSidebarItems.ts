@@ -12,8 +12,6 @@
  */
 import { useMemo } from 'react';
 import { useApplicationsProvider } from '../components/Settings/Applications/ApplicationsProvider/ApplicationsProvider';
-import { ROUTES } from '../constants/constants';
-import { SIDEBAR_LIST } from '../constants/LeftSidebar.constants';
 import { filterHiddenNavigationItems } from '../utils/CustomizaNavigation/CustomizeNavigation';
 import { useCustomPages } from './useCustomPages';
 
@@ -21,26 +19,10 @@ export const useSidebarItems = () => {
   const { navigation } = useCustomPages('Navigation');
   const { plugins = [] } = useApplicationsProvider();
 
-  const sideBarItems = useMemo(() => {
-    const items = filterHiddenNavigationItems(navigation, plugins);
-    const integration = SIDEBAR_LIST.find(
-      (item) => item.key === ROUTES.HOSPITAL_INTEGRATION
-    );
-    const configured = navigation?.some(
-      (item) => item.id === ROUTES.HOSPITAL_INTEGRATION
-    );
-    if (
-      !integration ||
-      configured ||
-      items.some((item) => item.key === integration.key)
-    ) {
-      return items;
-    }
-
-    return [items[0], integration, ...items.slice(1)].filter(
-      (item) => item !== undefined
-    );
-  }, [navigation, plugins]);
+  const sideBarItems = useMemo(
+    () => filterHiddenNavigationItems(navigation, plugins),
+    [navigation, plugins]
+  );
 
   return sideBarItems;
 };

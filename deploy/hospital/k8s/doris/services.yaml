@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hospital-doris-fe-headless
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: hospital-doris-fe
+  ports:
+    - name: edit-log
+      port: 9010
+      targetPort: edit-log
+    - name: rpc
+      port: 9020
+      targetPort: rpc
+    - name: mysql
+      port: 9030
+      targetPort: mysql
+    - name: http
+      port: 8030
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hospital-doris-fe
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: hospital-doris-fe
+  ports:
+    - name: mysql
+      port: 9030
+      targetPort: mysql
+    - name: http
+      port: 8030
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hospital-doris-be-headless
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: hospital-doris-be
+  ports:
+    - name: heartbeat
+      port: 9050
+      targetPort: heartbeat
+    - name: be-rpc
+      port: 9060
+      targetPort: be-rpc
+    - name: brpc
+      port: 8060
+      targetPort: brpc
+    - name: http
+      port: 8040
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hospital-doris-be
+  labels:
+    app.kubernetes.io/part-of: hospital-doris
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: hospital-doris-be
+  ports:
+    - name: http
+      port: 8040
+      targetPort: http

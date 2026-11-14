@@ -34,7 +34,7 @@ describe('LeftSidebar Items', () => {
 
     expect(screen.getByTestId('app-bar-item-settings')).toBeInTheDocument();
 
-    expect(screen.getByText('label.setting-plural')).toBeInTheDocument();
+    expect(screen.getByText('hospitalNavigation.settings')).toBeInTheDocument();
   });
 
   it('should renders sidebar items with redirect url', () => {
@@ -46,7 +46,7 @@ describe('LeftSidebar Items', () => {
 
     expect(screen.getByTestId('app-bar-item-settings')).toBeInTheDocument();
 
-    expect(screen.getByText('label.setting-plural')).toBeInTheDocument();
+    expect(screen.getByText('hospitalNavigation.settings')).toBeInTheDocument();
 
     expect(screen.getByRole('link')).toBeInTheDocument();
   });

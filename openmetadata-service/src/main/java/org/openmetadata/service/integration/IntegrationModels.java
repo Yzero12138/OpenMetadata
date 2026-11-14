@@ -5,20 +5,39 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.StreamReadConstraints;
+import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.type.LogicalType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import org.openmetadata.service.integration.IntegrationCdcModels.CdcOptions;
+import org.openmetadata.service.integration.IntegrationCdcModels.CheckpointSummary;
+import org.openmetadata.service.integration.IntegrationCdcModels.RuntimeOptions;
 
 public final class IntegrationModels {
   private static final ObjectMapper JSON =
-      new ObjectMapper().enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+      JsonMapper.builder()
+          .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+          .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+          .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+          .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
+          .disable(MapperFeature.ALLOW_COERCION_OF_SCALARS)
+          .build();
   private static final int MAX_INPUT_BYTES = 32768;
 
   static {
+    JSON.coercionConfigFor(LogicalType.Textual)
+        .setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
+        .setCoercion(CoercionInputShape.Float, CoercionAction.Fail)
+        .setCoercion(CoercionInputShape.Boolean, CoercionAction.Fail);
     JSON.getFactory()
         .setStreamReadConstraints(StreamReadConstraints.builder().maxNestingDepth(40).build());
   }
@@ -39,6 +58,11 @@ public final class IntegrationModels {
     public String targetTable;
     public String mode;
     public String primaryKey;
+    public String sourceQuery;
+    public RuntimeOptions runtime;
+    public CdcOptions cdc;
+    public ScheduleConfig schedule;
+    public InitializationConfig initialization;
     public List<FieldMapping> fieldMappings;
 
     protected void copyInput(TaskInput input) {
@@ -52,6 +76,11 @@ public final class IntegrationModels {
       targetTable = input.targetTable;
       mode = input.mode;
       primaryKey = input.primaryKey;
+      sourceQuery = input.sourceQuery;
+      runtime = input.runtime;
+      cdc = input.cdc;
+      schedule = input.schedule == null ? null : input.schedule.copy();
+      initialization = input.initialization == null ? null : input.initialization.copy();
       fieldMappings = input.fieldMappings == null ? null : List.copyOf(input.fieldMappings);
     }
   }
@@ -70,6 +99,8 @@ public final class IntegrationModels {
     public RunSummary latestRun;
     public List<RunSummary> runs = new ArrayList<>();
     public CatalogSummary catalog = new CatalogSummary();
+    public ScheduleState scheduleState;
+    public InitializationState initializationState;
 
     public static IntegrationTask from(TaskInput input) {
       IntegrationTask task = new IntegrationTask();
@@ -90,10 +121,78 @@ public final class IntegrationModels {
     public Long finishedAt;
     public Long sourceReceivedCount;
     public Long sinkWriteCount;
+    public CheckpointSummary checkpoints;
+    public Long checkpointsCheckedAt;
+    public String configurationFingerprint;
     public String errorCode;
     public String errorMessage;
     public Boolean savepointRequested;
     public Boolean canResume;
+    public String businessDate;
+    public String windowStart;
+    public String windowEnd;
+    public String trigger;
+    public Long scheduledFor;
+    public String initializationId;
+    public Long batchIndex;
+  }
+
+  public static final class InitializationConfig {
+    public boolean enabled;
+    public String startDate;
+    public String batchUnit = "DAY";
+
+    public InitializationConfig copy() {
+      InitializationConfig result = new InitializationConfig();
+      result.enabled = enabled;
+      result.startDate = startDate;
+      result.batchUnit = batchUnit;
+      return result;
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public static final class InitializationState {
+    public String id;
+    public String status;
+    public String startDate;
+    public String cutoffDate;
+    public String nextDate;
+    public String batchUnit;
+    public long completedBatches;
+    public long totalBatches;
+    public String pendingStartDate;
+    public String pendingEndDate;
+    public String pendingJobId;
+    public String sourceRouteHash;
+    public String targetRouteHash;
+    public Long startedAt;
+    public Long completedAt;
+    public String lastError;
+  }
+
+  public record InitializationInput(String action, Long version) {}
+
+  public static final class ScheduleConfig {
+    public boolean enabled;
+    public String dailyTime = "02:00";
+    public String timeZone = "Asia/Shanghai";
+
+    public ScheduleConfig copy() {
+      ScheduleConfig result = new ScheduleConfig();
+      result.enabled = enabled;
+      result.dailyTime = dailyTime;
+      result.timeZone = timeZone;
+      return result;
+    }
+  }
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public static final class ScheduleState {
+    public Long nextRunAt;
+    public String lastBusinessDate;
+    public String pendingBusinessDate;
+    public String lastError;
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -117,7 +216,61 @@ public final class IntegrationModels {
       @JsonIgnore int scale,
       @JsonIgnore boolean hasDefault,
       @JsonIgnore boolean unicodeSafeTarget,
-      @JsonIgnore int unicodeCapacity) {
+      @JsonIgnore int unicodeCapacity,
+      @JsonIgnore JdbcDialect inspectedDialect,
+      @JsonIgnore Integer oracleDataLengthBytes) {
+    public ColumnDefinition(
+        String name,
+        String dataType,
+        boolean nullable,
+        boolean primaryKey,
+        int jdbcType,
+        int size,
+        int scale,
+        boolean hasDefault,
+        boolean unicodeSafeTarget,
+        int unicodeCapacity,
+        JdbcDialect inspectedDialect) {
+      this(
+          name,
+          dataType,
+          nullable,
+          primaryKey,
+          jdbcType,
+          size,
+          scale,
+          hasDefault,
+          unicodeSafeTarget,
+          unicodeCapacity,
+          inspectedDialect,
+          null);
+    }
+
+    public ColumnDefinition(
+        String name,
+        String dataType,
+        boolean nullable,
+        boolean primaryKey,
+        int jdbcType,
+        int size,
+        int scale,
+        boolean hasDefault,
+        boolean unicodeSafeTarget,
+        int unicodeCapacity) {
+      this(
+          name,
+          dataType,
+          nullable,
+          primaryKey,
+          jdbcType,
+          size,
+          scale,
+          hasDefault,
+          unicodeSafeTarget,
+          unicodeCapacity,
+          null);
+    }
+
     /** Unverified character receivers fail closed; inspectors supply explicit capabilities. */
     public ColumnDefinition(
         String name,
@@ -134,6 +287,49 @@ public final class IntegrationModels {
 
   public record TableDefinition(String schema, String name, List<ColumnDefinition> columns) {}
 
+  public record TargetTableInput(
+      String sourceConnectionId,
+      String sourceSchema,
+      String sourceTable,
+      String targetSchema,
+      String targetTable,
+      List<FieldMapping> fieldMappings,
+      String previewHash,
+      String mode,
+      String sourceQuery,
+      String primaryKey) {
+    public TargetTableInput(
+        String sourceConnectionId,
+        String sourceSchema,
+        String sourceTable,
+        String targetSchema,
+        String targetTable,
+        List<FieldMapping> fieldMappings,
+        String previewHash) {
+      this(
+          sourceConnectionId,
+          sourceSchema,
+          sourceTable,
+          targetSchema,
+          targetTable,
+          fieldMappings,
+          previewHash,
+          null,
+          null,
+          null);
+    }
+  }
+
+  public record QuerySchemaInput(
+      String connectionId, String schema, String query, String businessDate) {}
+
+  public record TargetTablePreview(
+      String targetConnectionId,
+      String previewHash,
+      String ddl,
+      TableDefinition table,
+      List<FieldMapping> fieldMappings) {}
+
   public static class ConnectionInput {
     public String name;
     public String displayName;
@@ -142,6 +338,7 @@ public final class IntegrationModels {
     public String databaseVersion;
     public String host;
     public Integer port;
+    public Integer dorisHttpPort;
     public String database;
     public String username;
 
@@ -161,6 +358,7 @@ public final class IntegrationModels {
       databaseVersion = input.databaseVersion;
       host = input.host;
       port = input.port;
+      dorisHttpPort = input.dorisHttpPort;
       database = input.database;
       username = input.username;
       schemas = input.schemas == null ? null : List.copyOf(input.schemas);
@@ -203,7 +401,11 @@ public final class IntegrationModels {
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public record ConnectionStatus(boolean connected, String errorCode) {}
 
-  public record RunInput(boolean resume) {}
+  public record RunInput(boolean resume, String businessDate, boolean retry) {
+    public RunInput(boolean resume) {
+      this(resume, null, false);
+    }
+  }
 
   public record StopInput(boolean savepoint) {}
 
@@ -263,6 +465,10 @@ public final class IntegrationModels {
   public static <T> T read(JsonNode input, Class<T> type) {
     if (input == null || !input.isObject() || input.toString().length() > MAX_INPUT_BYTES) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
+    if (type == DorisTableDesignModels.DorisTableDesignInput.class
+        || type == DorisTableDesignModels.DorisAddColumnsInput.class) {
+      DorisTableDesignModels.requireJsonTypes(input);
     }
     try {
       return JSON.treeToValue(input, type);

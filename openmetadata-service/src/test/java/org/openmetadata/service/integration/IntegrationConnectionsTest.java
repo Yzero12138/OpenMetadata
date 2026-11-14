@@ -142,7 +142,9 @@ class IntegrationConnectionsTest {
       assertFalse(endpoint.jdbcUrl().contains(input.password));
       assertFalse(endpoint.jdbcUrl().contains(input.username));
       assertEquals(
-          type.equals("Postgres") ? List.of("FULL", "CDC") : List.of("FULL"),
+          List.of("Postgres", "Oracle", "Mssql").contains(type)
+              ? List.of("FULL", "CDC")
+              : List.of("FULL"),
           created.supportedModes);
       assertEquals(
           type.equals("Mysql") ? "`patient`" : type.equals("Mssql") ? "[patient]" : "\"patient\"",
@@ -161,6 +163,26 @@ class IntegrationConnectionsTest {
     var input = input("Postgres");
     input.databaseVersion = "16.4";
     assertEquals(List.of("FULL", "CDC"), connections.create(input, "synthetic").supportedModes);
+  }
+
+  @Test
+  void refreshesStaleCapabilitiesWithoutSavingOrMutatingStoredConnections() {
+    var created = connections.create(input("Oracle"), "synthetic");
+    var stored = store.get(UUID.fromString(created.id));
+    stored.definition.supportedModes = List.of("FULL");
+    String before = IntegrationModels.serializeConnection(stored);
+    assertEquals(List.of("FULL", "CDC"), connections.connection(created.id).supportedModes);
+    assertEquals(
+        List.of("FULL", "CDC"),
+        connections.list().stream()
+            .filter(value -> created.id.equals(value.id))
+            .findFirst()
+            .orElseThrow()
+            .supportedModes);
+    connections.requireRole(created.id, "SOURCE", "CDC");
+    assertEquals(before, IntegrationModels.serializeConnection(stored));
+    assertEquals(1, stored.definition.version);
+    assertEquals(List.of("FULL"), stored.definition.supportedModes);
   }
 
   @Test

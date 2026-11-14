@@ -21,7 +21,7 @@ public final class IntegrationValidator {
   private static final Pattern IDENTIFIER = Pattern.compile("[\\p{L}_][\\p{L}\\p{N}_$#]{0,127}");
   private static final Pattern TASK_NAME = Pattern.compile("[a-z][a-z0-9_-]{0,62}");
   private static final List<Integer> INTEGERS =
-      List.of(Types.SMALLINT, Types.INTEGER, Types.BIGINT);
+      List.of(Types.TINYINT, Types.SMALLINT, Types.INTEGER, Types.BIGINT);
   private static final Set<Integer> STRINGS =
       Set.of(
           Types.CHAR,
@@ -92,8 +92,43 @@ public final class IntegrationValidator {
     identifier(errors, "sourceTable", input.sourceTable);
     identifier(errors, "targetTable", input.targetTable);
     identifier(errors, "primaryKey", input.primaryKey);
-    if (!Set.of("FULL", "CDC").contains(input.mode == null ? "" : input.mode)) {
-      error(errors, "mode", "INVALID_MODE", "Select FULL or CDC.");
+    if (!Set.of("FULL", "CDC", "SQL_T1").contains(input.mode == null ? "" : input.mode)) {
+      error(errors, "mode", "INVALID_MODE", "Select FULL, CDC or SQL_T1.");
+    }
+    errors.addAll(IntegrationRuntimeOptions.validate(input));
+    if (input.cdc != null && !"CDC".equals(input.mode)) {
+      error(errors, "cdc", "INVALID_CONFIGURATION", "CDC options require CDC mode.");
+    }
+    if ("SQL_T1".equals(input.mode)) {
+      if (!"sql_result".equals(input.sourceTable)) {
+        error(errors, "sourceTable", "INVALID_CONFIGURATION", "SQL results must use sql_result.");
+      }
+      if (safeIdentifier(input.sourceSchema)) {
+        try {
+          IntegrationSql.references(input.sourceQuery, input.sourceSchema);
+        } catch (IntegrationException exception) {
+          error(
+              errors,
+              "sourceQuery",
+              exception.code(),
+              "Provide one bounded read-only query with a business-date parameter.");
+        }
+      }
+    } else {
+      if (input.sourceQuery != null) {
+        error(
+            errors, "sourceQuery", "INVALID_CONFIGURATION", "Source queries require SQL_T1 mode.");
+      }
+      if (input.schedule != null) {
+        error(errors, "schedule", "INVALID_CONFIGURATION", "Daily schedules require SQL_T1 mode.");
+      }
+      if (input.initialization != null) {
+        error(
+            errors,
+            "initialization",
+            "INVALID_CONFIGURATION",
+            "Historical initialization requires SQL_T1 mode.");
+      }
     }
     if (input.fieldMappings == null
         || input.fieldMappings.isEmpty()
@@ -118,7 +153,20 @@ public final class IntegrationValidator {
 
   public static ValidationResult validateTables(
       TaskInput input, TableDefinition source, TableDefinition target) {
+    return validateTables(input, source, target, input != null && "SQL_T1".equals(input.mode));
+  }
+
+  public static ValidationResult validateTablesSql(
+      TaskInput input, TableDefinition source, TableDefinition target) {
+    return validateTables(input, source, target, true);
+  }
+
+  private static ValidationResult validateTables(
+      TaskInput input, TableDefinition source, TableDefinition target, boolean sql) {
     List<ValidationError> errors = new ArrayList<>(validateStructure(input).errors());
+    if (sql && input != null && !"SQL_T1".equals(input.mode)) {
+      error(errors, "mode", "INVALID_MODE", "SQL result validation requires SQL_T1 mode.");
+    }
     if (!errors.isEmpty()) {
       return result(errors);
     }
@@ -146,7 +194,15 @@ public final class IntegrationValidator {
             "fieldMappings",
             "COLUMN_NOT_FOUND",
             "Each mapped column must exist in its selected table.");
-      } else if (!compatible(from, to) || (from.nullable() && !to.nullable())) {
+      } else if (("CDC".equals(input.mode)
+              && from.inspectedDialect() == JdbcDialect.Mssql
+              && "tinyint".equalsIgnoreCase(from.dataType())
+              && to.inspectedDialect() == JdbcDialect.Doris
+              && to.jdbcType() == Types.TINYINT)
+          || !compatible(from, to)
+          || (from.nullable()
+              && !to.nullable()
+              && !(sql && from.name().equals(input.primaryKey)))) {
         error(
             errors,
             "fieldMappings",
@@ -164,15 +220,23 @@ public final class IntegrationValidator {
             .map(FieldMapping::target)
             .findFirst()
             .orElse(null);
-    if (sourceKeys.size() != 1
+    boolean invalidSourceKey =
+        sql
+            ? !sourceColumns.containsKey(input.primaryKey)
+            : sourceKeys.size() != 1
+                || !sourceKeys.getFirst().name().equals(input.primaryKey)
+                || sourceKeys.getFirst().nullable();
+    if (invalidSourceKey
         || targetKeys.size() != 1
-        || !sourceKeys.getFirst().name().equals(input.primaryKey)
-        || !targetKeys.getFirst().name().equals(mappedKey)) {
+        || !targetKeys.getFirst().name().equals(mappedKey)
+        || targetKeys.getFirst().nullable()) {
       error(
           errors,
           "primaryKey",
           "INVALID_PRIMARY_KEY",
-          "Map the actual single-column source primary key to the target primary key.");
+          sql
+              ? "Declare one non-null unique result key and map it to the target primary key."
+              : "Map the actual single-column non-null source primary key to a non-null target primary key.");
     }
     for (ColumnDefinition column : target.columns()) {
       if (!column.nullable() && !column.hasDefault() && !targets.contains(column.name())) {
@@ -189,6 +253,22 @@ public final class IntegrationValidator {
   private static boolean compatible(ColumnDefinition source, ColumnDefinition target) {
     int from = source.jdbcType();
     int to = target.jdbcType();
+    if (Set.of(Types.CLOB, Types.NCLOB).contains(from)) {
+      if (source.primaryKey() || target.primaryKey()) {
+        return false;
+      }
+      if (from == to && source.dataType().equalsIgnoreCase(target.dataType())) {
+        return true;
+      }
+      // Unbounded LOB metadata relies on strict sink rejection of values exceeding STRING limits.
+      return source.inspectedDialect() == JdbcDialect.Oracle
+          && target.inspectedDialect() == JdbcDialect.Doris
+          && to == Types.LONGVARCHAR
+          && "STRING".equalsIgnoreCase(target.dataType());
+    }
+    if (from == Types.BIT && to == Types.BOOLEAN && source.size() == 1) {
+      return true;
+    }
     if (INTEGERS.contains(from) && INTEGERS.contains(to)) {
       boolean sourceUnsigned = source.dataType().toUpperCase(Locale.ROOT).contains("UNSIGNED");
       boolean targetUnsigned = target.dataType().toUpperCase(Locale.ROOT).contains("UNSIGNED");
@@ -212,6 +292,7 @@ public final class IntegrationValidator {
     if (DECIMALS.contains(from) && INTEGERS.contains(to) && source.scale() == 0) {
       return source.size()
           <= switch (to) {
+            case Types.TINYINT -> 2;
             case Types.SMALLINT -> 4;
             case Types.INTEGER -> 9;
             default -> 18;
@@ -220,7 +301,11 @@ public final class IntegrationValidator {
     if (from == to
         && Set.of(Types.TIME, Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE).contains(from)) {
       if (Set.of("datetime", "smalldatetime").contains(target.dataType().toLowerCase(Locale.ROOT))
-          && !source.dataType().equalsIgnoreCase(target.dataType())) {
+          && !source.dataType().equalsIgnoreCase(target.dataType())
+          && !(source.inspectedDialect() == JdbcDialect.Oracle
+              && target.inspectedDialect() == JdbcDialect.Doris
+              && "DATE".equalsIgnoreCase(source.dataType())
+              && "DATETIME".equalsIgnoreCase(target.dataType()))) {
         return false;
       }
       return source.scale() <= target.scale();
@@ -244,7 +329,8 @@ public final class IntegrationValidator {
 
   private static boolean connectionId(String id) {
     if (IntegrationConfiguration.SOURCE_ID.equals(id)
-        || IntegrationConfiguration.TARGET_ID.equals(id)) {
+        || IntegrationConfiguration.TARGET_ID.equals(id)
+        || IntegrationConfiguration.DORIS_TARGET_ID.equals(id)) {
       return true;
     }
     try {

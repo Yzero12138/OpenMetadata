@@ -1,0 +1,64 @@
+{
+  "finding": "F1",
+  "scope": "Only shared CREATE preview copy; two full viewports refreshed",
+  "expected": "确认后将创建表，不覆盖已有同名表；创建完成后可用于集成任务。",
+  "localeCount": 20,
+  "checks": [
+    {
+      "name": "create-preview",
+      "width": 1440,
+      "bounds": {
+        "x": 340,
+        "y": 0,
+        "width": 1100,
+        "height": 1080
+      },
+      "rightAligned": true,
+      "overflow": false,
+      "errors": [],
+      "hint": {
+        "text": "确认后将创建表，不覆盖已有同名表；创建完成后可用于集成任务。",
+        "fontSize": "12px",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgba(0, 0, 0, 0)",
+        "bounds": {
+          "x": 364,
+          "y": 929.578125,
+          "width": 506.671875,
+          "height": 18
+        },
+        "clientWidth": 507,
+        "scrollWidth": 507,
+        "fullyVisible": true
+      }
+    },
+    {
+      "name": "create-preview",
+      "width": 1920,
+      "bounds": {
+        "x": 820,
+        "y": 0,
+        "width": 1100,
+        "height": 1080
+      },
+      "rightAligned": true,
+      "overflow": false,
+      "errors": [],
+      "hint": {
+        "text": "确认后将创建表，不覆盖已有同名表；创建完成后可用于集成任务。",
+        "fontSize": "12px",
+        "color": "rgb(0, 0, 0)",
+        "background": "rgba(0, 0, 0, 0)",
+        "bounds": {
+          "x": 844,
+          "y": 929.578125,
+          "width": 506.671875,
+          "height": 18
+        },
+        "clientWidth": 507,
+        "scrollWidth": 507,
+        "fullyVisible": true
+      }
+    }
+  ]
+}

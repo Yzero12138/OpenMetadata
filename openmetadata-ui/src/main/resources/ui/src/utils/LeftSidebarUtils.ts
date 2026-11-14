@@ -10,8 +10,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import { LeftSidebarItem } from '../components/MyData/LeftSidebar/LeftSidebar.interface';
 import { PLACEHOLDER_ROUTE_FQN, ROUTES } from '../constants/constants';
-import { SIDEBAR_ENTITY_PATH_ALIASES } from '../constants/LeftSidebar.constants';
+import {
+  SIDEBAR_ENTITY_PATH_ALIASES,
+  SIDEBAR_LIST,
+} from '../constants/LeftSidebar.constants';
 
 interface BreadcrumbLocationState {
   breadcrumbData?: Array<{ url?: string }>;
@@ -56,20 +60,48 @@ export const getSidebarPathname = (
 export const getSidebarActiveKeys = (
   pathname: string,
   nestedKeys: Record<string, string>,
-  aliases: Record<string, string> = SIDEBAR_ENTITY_PATH_ALIASES
+  aliases: Record<string, string> = SIDEBAR_ENTITY_PATH_ALIASES,
+  items: LeftSidebarItem[] = SIDEBAR_LIST
 ): string[] => {
-  const pathArray = pathname.split('/');
-  const deepPath = [...pathArray].splice(0, 3).join('/');
+  const routes = new Map<string, string>();
+  const collectRoutes = (sidebarItems: LeftSidebarItem[]) => {
+    sidebarItems.forEach((item) => {
+      if (item.redirect_url) {
+        routes.set(item.key, item.key);
+      }
+      collectRoutes(item.children ?? []);
+    });
+  };
+  collectRoutes(items);
+  Object.keys(nestedKeys).forEach((key) => routes.set(key, key));
+  Object.entries(aliases).forEach(([path, key]) => routes.set(path, key));
+  const path = pathname.split(/[?#]/)[0];
+  const match = [...routes.keys()]
+    .filter((route) => path === route || path.startsWith(`${route}/`))
+    .sort((a, b) => b.length - a.length)[0];
 
-  if (nestedKeys[deepPath]) {
-    return [deepPath];
-  }
+  return [
+    match ? routes.get(match) ?? match : path.split('/').slice(0, 2).join('/'),
+  ];
+};
 
-  if (aliases[deepPath]) {
-    return [aliases[deepPath]];
-  }
+export const getSidebarParentKeys = (
+  selectedKeys: string[],
+  items: LeftSidebarItem[]
+): string[] => {
+  const parents = new Set<string>();
+  const collectParents = (
+    sidebarItems: LeftSidebarItem[],
+    ancestors: string[]
+  ) => {
+    sidebarItems.forEach((item) => {
+      if (selectedKeys.includes(item.key)) {
+        ancestors.forEach((key) => parents.add(key));
+      }
+      collectParents(item.children ?? [], [...ancestors, item.key]);
+    });
+  };
+  collectParents(items, []);
 
-  const shallowPath = pathArray.splice(0, 2).join('/');
-
-  return [aliases[shallowPath] ?? shallowPath];
+  return [...parents];
 };

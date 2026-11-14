@@ -109,6 +109,8 @@ import org.openmetadata.service.exception.JsonMappingExceptionMapper;
 import org.openmetadata.service.exception.OMErrorPageHandler;
 import org.openmetadata.service.fernet.Fernet;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
+import org.openmetadata.service.integration.HospitalIntegrationScheduler;
+import org.openmetadata.service.integration.IntegrationConfiguration;
 import org.openmetadata.service.jdbi3.BulkExecutor;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.EntityCacheRepair;
@@ -1137,6 +1139,12 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
 
     // Start the Quartz scheduler after all resources are initialized to avoid race conditions
     // where stale triggers fire before entity repositories have seeded their data
+    try {
+      HospitalIntegrationScheduler.register(
+          AppScheduler.getInstance().getScheduler(), IntegrationConfiguration.fromEnvironment());
+    } catch (SchedulerException e) {
+      LOG.error("Failed to register hospital integration scheduler", e);
+    }
     try {
       AppScheduler.getInstance().start();
     } catch (SchedulerException e) {

@@ -43,9 +43,12 @@ public final class IntegrationConnections {
       List<ConnectionDefinition> connections = new ArrayList<>();
       connections.add(seed(IntegrationConfiguration.SOURCE_ID));
       connections.add(seed(IntegrationConfiguration.TARGET_ID));
+      if (configuration.hasDorisTarget()) {
+        connections.add(seed(IntegrationConfiguration.DORIS_TARGET_ID));
+      }
       connections.addAll(
           store.list().stream()
-              .map(value -> value.definition)
+              .map(value -> withCurrentCapabilities(value.definition))
               .sorted(Comparator.comparing(value -> value.name))
               .toList());
       return List.copyOf(connections);
@@ -54,7 +57,7 @@ public final class IntegrationConnections {
 
   public ConnectionDefinition connection(String id) {
     configuration.requireReady();
-    return isSeed(id) ? seed(id) : store.get(uuid(id)).definition;
+    return isSeed(id) ? seed(id) : withCurrentCapabilities(store.get(uuid(id)).definition);
   }
 
   public JdbcEndpoint endpoint(String id) {
@@ -111,6 +114,24 @@ public final class IntegrationConnections {
       if (tasks.list().stream().anyMatch(task -> references(task, id) && blocked(task))) {
         throw new IntegrationException("TASK_ACTIVE", 409);
       }
+      ConnectionDefinition proposed = new ConnectionDefinition();
+      proposed.copyInput(input);
+      String proposedRoute = IntegrationConnectionFingerprint.of(new JdbcEndpoint(proposed, ""));
+      for (IntegrationTask task : tasks.list()) {
+        if (references(task, id) && IntegrationInitialization.started(task.initializationState)) {
+          String boundRoute =
+              id.equals(task.sourceConnectionId)
+                  ? task.initializationState.sourceRouteHash
+                  : task.initializationState.targetRouteHash;
+          if (boundRoute == null) {
+            boundRoute =
+                IntegrationConnectionFingerprint.of(new JdbcEndpoint(stored.definition, ""));
+          }
+          if (!boundRoute.equals(proposedRoute)) {
+            throw new IntegrationException("INITIALIZATION_CONFIGURATION_LOCKED", 409);
+          }
+        }
+      }
       uniqueName(input.name, id, store.list());
       stored.definition.copyInput(input);
       stored.definition.version++;
@@ -148,7 +169,8 @@ public final class IntegrationConnections {
     if (!Boolean.TRUE.equals(connection.enabled)) {
       throw new IntegrationException("CONNECTION_DISABLED", 409);
     }
-    if ("SOURCE".equals(role) && !connection.supportedModes.contains(mode)) {
+    if ("SOURCE".equals(role)
+        && !connection.supportedModes.contains("SQL_T1".equals(mode) ? "FULL" : mode)) {
       throw new IntegrationException("MODE_UNSUPPORTED", 400);
     }
   }
@@ -159,11 +181,17 @@ public final class IntegrationConnections {
     ConnectionDefinition definition = new ConnectionDefinition();
     definition.id = id;
     definition.name = id;
-    definition.displayName = IntegrationConfiguration.SOURCE_ID.equals(id) ? "合成业务源" : "合成 ODS 目标";
+    boolean doris = IntegrationConfiguration.DORIS_TARGET_ID.equals(id);
+    definition.displayName =
+        doris
+            ? "Doris 验证目标"
+            : IntegrationConfiguration.SOURCE_ID.equals(id) ? "合成业务源" : "合成 ODS 目标";
     definition.role = IntegrationConfiguration.SOURCE_ID.equals(id) ? "SOURCE" : "TARGET";
-    definition.databaseType = "Postgres";
+    definition.databaseType = doris ? "Doris" : "Postgres";
+    definition.databaseVersion = doris ? "4.0.8" : null;
     definition.host = uri.getHost();
     definition.port = uri.getPort() == -1 ? 5432 : uri.getPort();
+    definition.dorisHttpPort = endpoint.dorisHttpPort();
     definition.database = endpoint.database();
     definition.username = endpoint.username();
     definition.schemas = endpoint.schemas();
@@ -172,7 +200,7 @@ public final class IntegrationConnections {
     definition.managed = true;
     definition.synthetic = true;
     definition.passwordSet = true;
-    definition.supportedModes = List.of("FULL", "CDC");
+    definition.supportedModes = doris ? List.of("FULL") : List.of("FULL", "CDC");
     return definition;
   }
 
@@ -184,7 +212,8 @@ public final class IntegrationConnections {
         || input.displayName.isBlank()
         || !text(input.displayName, 120)
         || !Set.of("SOURCE", "TARGET").contains(value(input.role))
-        || !Set.of("Oracle", "Mssql", "Mysql", "Postgres").contains(value(input.databaseType))
+        || !Set.of("Oracle", "Mssql", "Mysql", "Postgres", "Doris")
+            .contains(value(input.databaseType))
         || input.host == null
         || !HOST.matcher(input.host).matches()
         || input.host.contains("..")
@@ -217,19 +246,41 @@ public final class IntegrationConnections {
     } else if (input.oracleConnectionType != null && !input.oracleConnectionType.isEmpty()) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
-    if ("Mysql".equals(input.databaseType) && !input.schemas.equals(List.of(input.database))) {
+    if (Set.of("Mysql", "Doris").contains(input.databaseType)
+        && !input.schemas.equals(List.of(input.database))) {
+      throw new IntegrationException("INVALID_CONFIGURATION", 400);
+    }
+    if ("Doris".equals(input.databaseType)) {
+      if (!"TARGET".equals(input.role)
+          || !IntegrationValidator.safeIdentifier(input.database)
+          || !"DISABLED".equals(input.tlsMode)
+          || input.dorisHttpPort == null
+          || input.dorisHttpPort < 1
+          || input.dorisHttpPort > 65535) {
+        throw new IntegrationException("INVALID_CONFIGURATION", 400);
+      }
+    } else if (input.dorisHttpPort != null) {
       throw new IntegrationException("INVALID_CONFIGURATION", 400);
     }
   }
 
   private List<String> supportedModes(ConnectionInput input) {
-    if ("Postgres".equals(input.databaseType)
-        && !input.database.contains(".")
-        && input.databaseVersion.matches("[0-9]{1,2}(?:[.][0-9]+)*")
-        && Integer.parseInt(input.databaseVersion.split("[.]", 2)[0]) >= 10) {
-      return List.of("FULL", "CDC");
-    }
-    return List.of("FULL");
+    return CdcAdapters.supportedModes(input);
+  }
+
+  private ConnectionDefinition withCurrentCapabilities(ConnectionDefinition stored) {
+    ConnectionDefinition result = new ConnectionDefinition();
+    result.copyInput(stored);
+    result.id = stored.id;
+    result.version = stored.version;
+    result.managed = stored.managed;
+    result.synthetic = stored.synthetic;
+    result.passwordSet = stored.passwordSet;
+    result.createdAt = stored.createdAt;
+    result.updatedAt = stored.updatedAt;
+    result.updatedBy = stored.updatedBy;
+    result.supportedModes = supportedModes(stored);
+    return result;
   }
 
   private String encrypt(String password) {
@@ -254,6 +305,12 @@ public final class IntegrationConnections {
   }
 
   private boolean blocked(IntegrationTask task) {
+    if (task.latestRun != null
+        && "INITIALIZATION".equals(task.latestRun.trigger)
+        && "SAVEPOINT_DONE".equals(task.latestRun.status)
+        && !Boolean.TRUE.equals(task.latestRun.canResume)) {
+      return false;
+    }
     return task.latestRun != null
         && (!TERMINAL.contains(task.latestRun.status)
             || Boolean.TRUE.equals(task.latestRun.canResume));
@@ -261,7 +318,8 @@ public final class IntegrationConnections {
 
   private boolean isSeed(String id) {
     return IntegrationConfiguration.SOURCE_ID.equals(id)
-        || IntegrationConfiguration.TARGET_ID.equals(id);
+        || IntegrationConfiguration.TARGET_ID.equals(id)
+        || IntegrationConfiguration.DORIS_TARGET_ID.equals(id);
   }
 
   private void requireMutable(String id) {

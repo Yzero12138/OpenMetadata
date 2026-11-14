@@ -1,0 +1,13 @@
+# The approved hospital runtime is retained; replace only verified backend and UI archives.
+FROM harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:287323f97a2643a6c009f977eca3d438a83dcde0fa6c28b922c09287fcb1a2e1
+ARG SOURCE_REVISION
+ARG SERVICE_SHA256
+ARG UI_SHA256
+LABEL org.opencontainers.image.source="https://github.com/Yzero12138/OpenMetadata" \
+      org.opencontainers.image.version="2.0.4-integrate-v11-doris" \
+      org.opencontainers.image.revision="$SOURCE_REVISION"
+COPY --chown=1000:1000 openmetadata-service-2.0.4.jar /opt/openmetadata/libs/openmetadata-service-2.0.4.jar
+COPY --chown=1000:1000 openmetadata-ui-2.0.4.jar /opt/openmetadata/libs/openmetadata-ui-2.0.4.jar
+RUN echo "$SERVICE_SHA256  /opt/openmetadata/libs/openmetadata-service-2.0.4.jar" | sha256sum -c - \
+    && echo "$UI_SHA256  /opt/openmetadata/libs/openmetadata-ui-2.0.4.jar" | sha256sum -c - \
+    && echo "b709d6cee59d23658b4dbd66cd1088b65380b43c68678bc107f2a1a5cd112c56  /opt/openmetadata/libs/orai18n-19.32.0.0.jar" | sha256sum -c -

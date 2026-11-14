@@ -54,14 +54,37 @@ public final class CatalogProjector {
       TableDefinition targetDefinition,
       UriInfo uriInfo,
       String actor) {
-    Table source =
-        table(
-            serviceName(task.sourceConnectionId),
-            connections.connection(task.sourceConnectionId).displayName,
-            task.sourceConnectionId,
-            sourceDefinition,
-            uriInfo,
-            actor);
+    return project(task, List.of(sourceDefinition), targetDefinition, uriInfo, actor, false);
+  }
+
+  public CatalogSummary syncSql(
+      IntegrationTask task,
+      List<TableDefinition> sourceDefinitions,
+      TableDefinition targetDefinition,
+      UriInfo uriInfo,
+      String actor) {
+    return project(task, sourceDefinitions, targetDefinition, uriInfo, actor, true);
+  }
+
+  private CatalogSummary project(
+      IntegrationTask task,
+      List<TableDefinition> sourceDefinitions,
+      TableDefinition targetDefinition,
+      UriInfo uriInfo,
+      String actor,
+      boolean sql) {
+    List<Table> sources =
+        sourceDefinitions.stream()
+            .map(
+                definition ->
+                    table(
+                        serviceName(task.sourceConnectionId),
+                        connections.connection(task.sourceConnectionId).displayName,
+                        task.sourceConnectionId,
+                        definition,
+                        uriInfo,
+                        actor))
+            .toList();
     Table target =
         table(
             serviceName(task.targetConnectionId),
@@ -99,7 +122,7 @@ public final class CatalogProjector {
                     "SeaTunnel "
                         + task.mode
                         + " integration from "
-                        + source.getFullyQualifiedName()
+                        + sources.stream().map(Table::getFullyQualifiedName).toList()
                         + " to "
                         + target.getFullyQualifiedName()
                         + ". Control task: "
@@ -108,35 +131,39 @@ public final class CatalogProjector {
                 .withTasks(List.of(new Task().withName(task.name).withTaskType(task.mode))),
             uriInfo,
             actor);
-    List<ColumnLineage> columns =
-        task.fieldMappings.stream()
-            .map(
-                mapping ->
-                    new ColumnLineage()
-                        .withFromColumns(
-                            List.of(
-                                FullyQualifiedName.add(
-                                    source.getFullyQualifiedName(), mapping.source())))
-                        .withToColumn(
-                            FullyQualifiedName.add(
-                                target.getFullyQualifiedName(), mapping.target())))
-            .toList();
-    Entity.getLineageRepository()
-        .addLineage(
-            new AddLineage()
-                .withEdge(
-                    new EntitiesEdge()
-                        .withFromEntity(source.getEntityReference())
-                        .withToEntity(target.getEntityReference())
-                        .withLineageDetails(
-                            new LineageDetails()
-                                .withPipeline(pipeline.getEntityReference())
-                                .withColumnsLineage(columns))),
-            actor);
+    for (Table source : sources) {
+      List<ColumnLineage> columns =
+          sql
+              ? List.of()
+              : task.fieldMappings.stream()
+                  .map(
+                      mapping ->
+                          new ColumnLineage()
+                              .withFromColumns(
+                                  List.of(
+                                      FullyQualifiedName.add(
+                                          source.getFullyQualifiedName(), mapping.source())))
+                              .withToColumn(
+                                  FullyQualifiedName.add(
+                                      target.getFullyQualifiedName(), mapping.target())))
+                  .toList();
+      Entity.getLineageRepository()
+          .addLineage(
+              new AddLineage()
+                  .withEdge(
+                      new EntitiesEdge()
+                          .withFromEntity(source.getEntityReference())
+                          .withToEntity(target.getEntityReference())
+                          .withLineageDetails(
+                              new LineageDetails()
+                                  .withPipeline(pipeline.getEntityReference())
+                                  .withColumnsLineage(columns))),
+              actor);
+    }
     CatalogSummary summary = new CatalogSummary();
     summary.status = "SYNCED";
     summary.syncedAt = System.currentTimeMillis();
-    summary.sourceFqn = source.getFullyQualifiedName();
+    summary.sourceFqn = sources.isEmpty() ? null : sources.getFirst().getFullyQualifiedName();
     summary.targetFqn = target.getFullyQualifiedName();
     summary.pipelineFqn = pipeline.getFullyQualifiedName();
     return summary;
@@ -236,6 +263,7 @@ public final class CatalogProjector {
 
   private static ColumnDataType dataType(ColumnDefinition column) {
     return switch (column.jdbcType()) {
+      case Types.TINYINT -> ColumnDataType.TINYINT;
       case Types.SMALLINT -> ColumnDataType.SMALLINT;
       case Types.INTEGER -> ColumnDataType.INT;
       case Types.BIGINT -> ColumnDataType.BIGINT;
