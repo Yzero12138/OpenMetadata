@@ -20,11 +20,30 @@
 
 页面质量审查还修复了原生运行/恢复前置拒绝后旧的绿色预检状态残留：六个明确拒绝码共享同一列表，12个回归用例确认清除旧结果后必须重新检查。`80218538`没有改变样式或翻译，PC产物和24张截屏已刷新。
 
+以下是当前组件在1440像素桌面宽度下的合成数据截屏，不代表实库已接入或CDC已通过验收。
+
+![SQL Server 来源条件与时区设置](screenshots/sqlserver-cdc-source-settings.png)
+
+![任务必需条件阻断与重新检查](screenshots/sqlserver-cdc-task-preflight.png)
+
 原生负微秒转换缺陷已复现，首版阻断捕获时间字段精度超过3的组合。未捕获且未映射的物理字段不被无依据地新增类型限制；其快照读取权限仍必须满足。范围和操作流程见 [接入说明](sqlserver-cdc-support.md)。
 
 ## 测试升级执行
 
-代码与界面验证已完成，固定镜像打包和升级执行记录将在本节追加。旧的 Oracle 单独候选没有作为中间版本发布；本轮直接发布组合候选。执行前重新核对应用、引擎及任务状态，并在元数据库既有 PVC 备份精确的 `hospital.integration.task` 扩展后再替换镜像。
+**已部署并验证。** 2026-11-14 12:43（北京时间），两个工作负载恢复单副本且就绪，3项应用健康检查全部通过。新引擎实际加载 Oracle-CDC、SqlServer-CDC 和 Postgres-CDC；引擎运行和待提交作业均为0。旧的 Oracle 单独候选没有作为中间版本发布。
+
+| 工作负载 | 实际部署固定摘要 |
+| --- | --- |
+| 应用 | `harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:a7008338dc47e49f0cb11690a334d61660a3d248ce124078ceefb07395153ed3` |
+| 引擎 | `harbor.qcrmyy.local/coop/hospital-seatunnel@sha256:0f878ad69e1aea9af967a4295d27d631a0baf77cdf5ec7140f292a44056efe63` |
+
+应用源码标识为 `96b9d8fe9e09522d368714c22405ee4b2c443e0d`；服务 JAR 为上表 d12af4…，UI JAR SHA256 为 `a070200ee69d72e59a269e7d2f7d4f54c1c25dce5860a49367386998e652a85a`。生产 UI 共4424个文件，2536个压缩文件逐项匹配；最终 Impeccable 批量检查无发现。实际入口 [数据中台](http://172.16.120.211:30925) 提供本次 `/assets/index-zAfsczDl.js`，响应字节摘要与发布包一致；两个集成接口对未认证请求返回401。没有使用员工登录或模拟票据来冒充 SSO 验收。
+
+升级前应用冻结、实际 Pod 退出及引擎空闲均已核对，随后在既有 PostgreSQL PVC 的 `/var/lib/postgresql/data/hospital-integration-upgrades/81bc28f0df46` 保存1条任务扩展，SHA256 `1f9f413e51051047769da692646f2a5e27a44505a35b683d5a95afc2a03309dc`，目录0700、文件0600，未导出内容到工作区。升级后仍为1条FAILED任务、0启用调度、0待初始化。
+
+Harbor 回拉后同时核对原生归档、配置及文件层。Docker 当前返回 OCI 清单/索引标识，配置摘要属于另一层；引擎索引 `harbor.qcrmyy.local/coop/hospital-seatunnel@sha256:83cec60646a1e6159f49896c1b2849c227555f13c9d7707cd17e8bf84c4f8398` 保留为溯源，部署明确选择已核验的 linux/amd64 子清单。记录中区分这些标识，没有以可变标签或本地标识冒充部署摘要。机器可读信息见 [本轮发布清单](sqlserver-cdc-test-release.json)。
+
+两个原镜像仍记录在发布清单中。旧服务不能直接读取新任务字段；回退必须先冻结、归档当前任务并按受限备份恢复精确扩展，不能仅回退镜像。原有备份/恢复脚本字节未变，本轮未执行恢复。
 
 仅升级 `datahub-open-test` 内既有 `Deployment/hospital-openmetadata` 和 `StatefulSet/hospital-seatunnel`。身份、Secret、PVC、检查点、Doris 与网络策略保持。应用冻结和恢复单副本属于本次受控升级窗口。
 

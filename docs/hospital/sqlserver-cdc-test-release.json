@@ -1,0 +1,94 @@
+{
+  "date": "2026-11-14",
+  "namespace": "datahub-open-test",
+  "verifiedAt": "2026-11-14T04:43:26.423Z",
+  "release": "81bc28f0df46",
+  "application": {
+    "tag": "harbor.qcrmyy.local/coop/hospital-openmetadata:2.0.4-integrate-v16-sqlserver-cdc-20261114-96b9d8fe",
+    "reference": "harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:a7008338dc47e49f0cb11690a334d61660a3d248ce124078ceefb07395153ed3",
+    "rootReference": "harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:a7008338dc47e49f0cb11690a334d61660a3d248ce124078ceefb07395153ed3",
+    "imageId": "sha256:a7008338dc47e49f0cb11690a334d61660a3d248ce124078ceefb07395153ed3",
+    "runtimeImageId": "sha256:a7008338dc47e49f0cb11690a334d61660a3d248ce124078ceefb07395153ed3",
+    "configDigest": "sha256:6f368017c2bbb8d1fcd153b2b073dff83a310d201eb82e326a101ccd37f249e8",
+    "sourceRevision": "96b9d8fe9e09522d368714c22405ee4b2c443e0d",
+    "remoteVerified": true,
+    "serviceSha256": "d12af4ef72ab7d2b7cd66223dc417ba942ab77e41b0c1393a76633a5ae8e7e9e",
+    "uiSha256": "a070200ee69d72e59a269e7d2f7d4f54c1c25dce5860a49367386998e652a85a",
+    "entryPath": "/assets/index-zAfsczDl.js",
+    "entrySha256": "2669b0fb32a96cdf37a011eb30d4a3a70c01c5980fadb587b4c691d24f1715d8"
+  },
+  "engine": {
+    "tag": "harbor.qcrmyy.local/coop/hospital-seatunnel:3.0.0-cdc-v2-20261114-72274243",
+    "reference": "harbor.qcrmyy.local/coop/hospital-seatunnel@sha256:0f878ad69e1aea9af967a4295d27d631a0baf77cdf5ec7140f292a44056efe63",
+    "rootReference": "harbor.qcrmyy.local/coop/hospital-seatunnel@sha256:83cec60646a1e6159f49896c1b2849c227555f13c9d7707cd17e8bf84c4f8398",
+    "imageId": "sha256:83cec60646a1e6159f49896c1b2849c227555f13c9d7707cd17e8bf84c4f8398",
+    "runtimeImageId": "sha256:0f878ad69e1aea9af967a4295d27d631a0baf77cdf5ec7140f292a44056efe63",
+    "configDigest": "sha256:8380bed68ed93e4c18f577e99c2412ef09c97f2a465faffcc93b98275a136627",
+    "sourceRevision": "72274243d350c88e4ce988bb26d18278e81eef72",
+    "remoteVerified": true
+  },
+  "previous": {
+    "application": "harbor.qcrmyy.local/coop/hospital-openmetadata@sha256:f9fac7c3c8230093c501e9730be4486234fd17e1e498b928fc9e36b9f559b518",
+    "engine": "harbor.qcrmyy.local/coop/hospital-seatunnel@sha256:477f41ca16167c9fbec07f188235a781aa7bf6ec844de4826c31016b638367c0"
+  },
+  "backup": {
+    "at": "2026-11-14T04:41:04.033Z",
+    "records": 1,
+    "sha256": "1f9f413e51051047769da692646f2a5e27a44505a35b683d5a95afc2a03309dc",
+    "pvcPath": "/var/lib/postgresql/data/hospital-integration-upgrades/81bc28f0df46"
+  },
+  "verification": {
+    "backendUnitTests": 439,
+    "backendClasses": 40,
+    "externalDatabaseFixtureClassesExcluded": 4,
+    "uiTestSuites": 13,
+    "uiTests": 299,
+    "typeScriptBaselineDiagnostics": 550,
+    "typeScriptOwnedDiagnostics": 0,
+    "locales": 20,
+    "newTranslations": 480,
+    "pcCaptures": 24,
+    "pcSourceHashes": 69,
+    "impeccableFindings": 0,
+    "healthChecks": 3,
+    "allHealthy": true,
+    "taskCounts": {
+      "tasks": 1,
+      "activeOrUncertain": 0,
+      "enabledSchedules": 0,
+      "pendingInitializations": 0
+    },
+    "publicUi": {
+      "checkedAt": "2026-11-14T04:43:22.862Z",
+      "publicUrl": "http://172.16.120.211:30925",
+      "signinStatus": 200,
+      "entryPath": "/assets/index-zAfsczDl.js",
+      "entrySha256": "2669b0fb32a96cdf37a011eb30d4a3a70c01c5980fadb587b4c691d24f1715d8",
+      "servedArtifactMatches": true,
+      "authentication": [
+        {
+          "route": "/api/v1/hospital/integration/connections",
+          "method": "GET",
+          "status": 401
+        },
+        {
+          "route": "/api/v1/hospital/integration/tasks/cdc-preflight",
+          "method": "POST",
+          "status": 401
+        }
+      ],
+      "loginAttempted": false,
+      "realSqlServerSourceAccessed": false
+    }
+  },
+  "preservation": {
+    "applicationSpecSha256": "9291ee16d9f0f936037862c0fdc213284600e3acf9169247fc67c98c255869ce",
+    "engineSpecSha256": "fd464ce839aa64e5745e84d006ed8fb1361a85eee492b57710d7b9c81389c52c",
+    "otherSpecsUnchanged": true,
+    "sourceDatabaseModified": false,
+    "networkPoliciesModified": false,
+    "credentialsExported": false,
+    "localTestServicesStarted": false
+  },
+  "realSqlServerCdcAccepted": false
+}
