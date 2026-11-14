@@ -1,12 +1,12 @@
 param(
-    [string]$Image = 'hospital-openmetadata:2.0.4-integrate-v15-oracle-cdc-20261113',
+    [string]$Image = 'hospital-openmetadata:2.0.4-integrate-v16-sqlserver-cdc-20261114',
     [Parameter(Mandatory = $true)]
     [Alias('SourceRevision')]
     [string]$Revision,
     [string]$NodeExecutable = 'node',
     [string]$JarExecutable = 'jar',
     [string]$MavenExecutable = 'mvn',
-    [string]$SourceDate = '2026-11-13T00:00:00Z',
+    [string]$SourceDate = '2026-11-14T00:00:00Z',
     [switch]$SkipBackendBuild,
     [switch]$SkipUiBuild,
     [string]$ExpectedServiceSha256,

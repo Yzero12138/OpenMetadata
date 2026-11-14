@@ -3,7 +3,7 @@ ARG SOURCE_REVISION
 ARG SERVICE_SHA256
 ARG UI_SHA256
 LABEL org.opencontainers.image.source="https://github.com/Yzero12138/OpenMetadata" \
-      org.opencontainers.image.version="2.0.4-integrate-v15-oracle-cdc" \
+      org.opencontainers.image.version="2.0.4-integrate-v16-sqlserver-cdc" \
       org.opencontainers.image.revision="$SOURCE_REVISION" \
       hospital.openmetadata.service.sha256="$SERVICE_SHA256" \
       hospital.openmetadata.ui.sha256="$UI_SHA256"
