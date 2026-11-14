@@ -1285,6 +1285,98 @@ describe('Hospital integration workbench behavior', () => {
     }
   );
 
+  it.each(
+    [
+      ['MSSQL_CDC_OPTIONS_INVALID', 'mssqlOptions'],
+      ['MSSQL_CDC_ROUTE_UNSUPPORTED', 'mssqlRoute'],
+      ['MSSQL_DB_NAME_MISMATCH', 'mssqlDatabaseHint'],
+      ['MSSQL_CDC_IDENTIFIER_UNSUPPORTED', 'mssqlIdentifiers'],
+      ['MSSQL_CDC_TYPE_UNSUPPORTED', 'mssqlTypes'],
+      ['MSSQL_CDC_TARGET_PROJECTION_INCOMPLETE', 'targetProjection'],
+    ].flatMap(([code, message]) =>
+      [false, true].map((resume) => ({
+        code,
+        message,
+        resume,
+        action: resume ? 'label.resume' : 'label.run',
+      }))
+    )
+  )(
+    'removes SQL Server readiness after $action rejects $code until another successful check',
+    async ({ code, message, resume, action }) => {
+      mockApi.getIntegrationConnections.mockResolvedValue([
+        mssqlConnection,
+        targetConnection,
+      ]);
+      mockApi.getIntegrationTask.mockResolvedValue({
+        ...(resume
+          ? withRun({ ...finished, status: 'SAVEPOINT_DONE', canResume: true })
+          : task),
+        sourceConnectionId: mssqlConnection.id,
+      });
+      mockApi.preflightIntegrationTask.mockResolvedValue({
+        connectionId: mssqlConnection.id,
+        databaseType: 'Mssql',
+        implemented: true,
+        ready: true,
+        checks: [],
+      });
+      mockApi.runIntegrationTask.mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          status: 409,
+          data: { code, message: 'Private SQL Server SELECT diagnostic' },
+        },
+      });
+      await renderWorkspace();
+      await openTask();
+      await click(
+        screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+      );
+      await click(screen.getByRole('button', { name: 'label.close' }));
+
+      expect(screen.getByText('hospitalCdc.ready')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: action })).toBeEnabled();
+
+      await click(screen.getByRole('button', { name: action }));
+
+      expect(mockApi.preflightIntegrationTask).toHaveBeenCalledTimes(2);
+      expect(mockApi.runIntegrationTask).toHaveBeenCalledWith(task.id, resume);
+      expect(screen.getByText('hospitalCdc.' + message)).toBeInTheDocument();
+      expect(screen.queryByText('hospitalCdc.ready')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'label.run' })).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'label.resume' })
+      ).toBeDisabled();
+      expect(screen.queryByText(code)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('Private SQL Server SELECT diagnostic')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText('hospitalIntegration.errors.SUBMISSION_UNKNOWN')
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('integration-task-reload')
+      ).not.toBeInTheDocument();
+
+      await click(
+        screen.getByRole('button', { name: 'hospitalCdc.taskPreflight' })
+      );
+
+      expect(mockApi.preflightIntegrationTask).toHaveBeenCalledTimes(3);
+      expect(
+        within(
+          screen.getByTestId('integration-task-preflight-drawer')
+        ).getByText('hospitalCdc.ready')
+      ).toBeInTheDocument();
+
+      await click(screen.getByRole('button', { name: 'label.close' }));
+
+      expect(screen.getByRole('button', { name: action })).toBeEnabled();
+      expect(mockApi.runIntegrationTask).toHaveBeenCalledTimes(1);
+    }
+  );
+
   it('opens a new task with the actual Doris table chosen from table management', async () => {
     const target: api.IntegrationConnection = {
       ...targetConnection,

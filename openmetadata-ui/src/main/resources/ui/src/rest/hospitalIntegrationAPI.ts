@@ -707,6 +707,15 @@ export const syncIntegrationCatalog = async (id: string) => {
   return data;
 };
 
+export const MSSQL_CDC_PREREQUISITE_REJECTION_CODES = [
+  'MSSQL_CDC_OPTIONS_INVALID',
+  'MSSQL_CDC_ROUTE_UNSUPPORTED',
+  'MSSQL_DB_NAME_MISMATCH',
+  'MSSQL_CDC_IDENTIFIER_UNSUPPORTED',
+  'MSSQL_CDC_TYPE_UNSUPPORTED',
+  'MSSQL_CDC_TARGET_PROJECTION_INCOMPLETE',
+] as const;
+
 export const getIntegrationFailure = (error: unknown): IntegrationFailure => {
   if (isAxiosError<{ code?: string; errorCode?: string }>(error)) {
     const status = error.response?.status;
@@ -753,12 +762,7 @@ export const getIntegrationFailure = (error: unknown): IntegrationFailure => {
       'ORACLE_CDC_LOB_UNVERIFIED',
       'ORACLE_CDC_STRING_BYTES_UNVERIFIED',
       'ORACLE_CDC_EXTENDED_STRING_UNVERIFIED',
-      'MSSQL_CDC_OPTIONS_INVALID',
-      'MSSQL_CDC_ROUTE_UNSUPPORTED',
-      'MSSQL_DB_NAME_MISMATCH',
-      'MSSQL_CDC_IDENTIFIER_UNSUPPORTED',
-      'MSSQL_CDC_TYPE_UNSUPPORTED',
-      'MSSQL_CDC_TARGET_PROJECTION_INCOMPLETE',
+      ...MSSQL_CDC_PREREQUISITE_REJECTION_CODES,
     ]);
 
     return {

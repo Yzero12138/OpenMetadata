@@ -36,6 +36,7 @@ import {
   IntegrationTargetCount,
   IntegrationTask,
   IntegrationTaskInput,
+  MSSQL_CDC_PREREQUISITE_REJECTION_CODES,
   preflightIntegrationTask,
   runIntegrationTask,
   stopIntegrationTask,
@@ -889,6 +890,7 @@ export const HospitalIntegrationWorkspace = ({
               'ORACLE_CDC_STRING_BYTES_UNVERIFIED',
               'ORACLE_CDC_EXTENDED_STRING_UNVERIFIED',
               'ORACLE_CDC_IDENTIFIER_UNSUPPORTED',
+              ...MSSQL_CDC_PREREQUISITE_REJECTION_CODES,
             ].includes(failure.code)
           ) {
             taskPreflight.invalidate();
